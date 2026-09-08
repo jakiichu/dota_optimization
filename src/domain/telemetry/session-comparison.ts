@@ -1,3 +1,4 @@
+import { compareScenes, describeScene, UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { BottleneckKind, Percentiles } from './frame-metrics.ts';
 
 /**
@@ -45,6 +46,8 @@ export interface SessionSummary {
   /** Доля времени в кадрах, кратно длиннее базового интервала. */
   readonly pacingTimeShare: number;
   readonly bottleneck: BottleneckKind;
+  /** Что записывали: без этого сравнение выдаёт разницу сцен за результат. */
+  readonly scene: CaptureScene;
 }
 
 export type Verdict = 'better' | 'worse' | 'same';
@@ -64,6 +67,13 @@ export interface MetricDelta {
 export interface SessionComparison {
   readonly before: SessionSummary;
   readonly after: SessionSummary;
+  /**
+   * Можно ли вообще делать вывод.
+   *
+   * `false` — числа посчитаны, но сравнивать их нельзя: сцены разные, и
+   * разница между ними не имеет отношения к правке.
+   */
+  readonly comparable: boolean;
   readonly metrics: readonly MetricDelta[];
   readonly bottleneckChanged: boolean;
   readonly verdict: Verdict;
@@ -159,16 +169,22 @@ export function compareSessions(
     (metric): metric is MetricDelta => metric !== null,
   );
 
-  const verdict = overallVerdict(metrics);
+  const scenes = compareScenes(before.scene ?? UNKNOWN_SCENE, after.scene ?? UNKNOWN_SCENE);
+  // Несравнимые записи не получают вердикта вовсе. Показать числа и приписать
+  // к ним «стало лучше» — значит выдать разницу сцен за результат правки.
+  const verdict = scenes.comparable ? overallVerdict(metrics) : 'same';
 
   return {
     before,
     after,
     metrics,
+    comparable: scenes.comparable,
     bottleneckChanged: before.bottleneck !== after.bottleneck,
     verdict,
-    summary: describe(verdict, metrics),
-    caveats: collectCaveats(before, after),
+    summary: scenes.comparable
+      ? describe(verdict, metrics)
+      : 'Эти записи сравнивать нельзя.',
+    caveats: [...scenes.reasons, ...collectCaveats(before, after)],
   };
 }
 
@@ -287,8 +303,8 @@ function collectCaveats(before: SessionSummary, after: SessionSummary): string[]
   }
 
   caveats.push(
-    'Сравнение честно только если сцена была одинаковой: бой и меню дают разные ' +
-      'числа при любых настройках.',
+    `Сцены: «${describeScene(before.scene ?? UNKNOWN_SCENE)}» и ` +
+      `«${describeScene(after.scene ?? UNKNOWN_SCENE)}».`,
   );
 
   return caveats;

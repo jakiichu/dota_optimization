@@ -13,6 +13,7 @@ function withOptions(launchOptions: string | null) {
         launchOptions,
         configPath: null,
         config: null,
+        replays: [],
       },
     ],
   });

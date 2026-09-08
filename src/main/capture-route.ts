@@ -4,6 +4,7 @@ import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
 import type { SensorStream } from '../application/ports/sensor-stream.port.ts';
 import type { SessionStore } from '../application/ports/session-store.port.ts';
+import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
 
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
 const DEFAULT_SECONDS = 60;
@@ -37,6 +38,7 @@ export function createCaptureRoute(sensors: SensorStream, store: SessionStore): 
       const running = session.execute(request).then(async (result) => {
         const summary = await store.save(
           query.get('label') ?? '',
+          sceneFromQuery(query),
           result.capture,
           result.sensorSamples,
         );
@@ -50,6 +52,27 @@ export function createCaptureRoute(sensors: SensorStream, store: SessionStore): 
         inFlight = null;
       }
     },
+  };
+}
+
+const SCENE_KINDS: readonly SceneKind[] = ['replay', 'hero-demo', 'match', 'menu', 'unknown'];
+
+/**
+ * Сцена из параметров запроса.
+ *
+ * Не указали — так и пишем: выдуманная сцена хуже отсутствующей, потому что
+ * по ней потом сделают вывод.
+ */
+function sceneFromQuery(query: URLSearchParams): CaptureScene {
+  const kind = SCENE_KINDS.find((candidate) => candidate === query.get('scene'));
+  if (kind === undefined) return UNKNOWN_SCENE;
+
+  const tick = Number.parseInt(query.get('tick') ?? '', 10);
+  return {
+    kind,
+    replayFile: query.get('replay'),
+    startTick: Number.isFinite(tick) ? tick : null,
+    note: query.get('note'),
   };
 }
 

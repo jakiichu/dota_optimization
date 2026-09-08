@@ -1,4 +1,5 @@
 import { computeFrameStatistics, type FrameStatistics } from './frame-metrics.ts';
+import { UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { FrameCapture } from './frame-sample.ts';
 import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
 import type { SensorSample } from './sensor-sample.ts';
@@ -25,8 +26,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 2 — добавлены инпут-лаг и ритм кадров.
  * 3 — ровность ритма попала в сводку и участвует в сравнении.
  * 4 — добавлено качество сети.
+ * 5 — записи помечаются сценой; без неё сравнение считается невозможным.
  */
-export const METRICS_VERSION = 4;
+export const METRICS_VERSION = 5;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -65,6 +67,7 @@ export function summarize(
   capturedAt: string,
   capture: FrameCapture,
   statistics: FrameStatistics,
+  scene: CaptureScene = UNKNOWN_SCENE,
 ): SessionSummary {
   return {
     id,
@@ -80,5 +83,6 @@ export function summarize(
     stuttersPerMinute: statistics.stuttersPerMinute,
     pacingTimeShare: statistics.pacing.timeShareInLongFrames,
     bottleneck: statistics.bottleneck.kind,
+    scene,
   };
 }

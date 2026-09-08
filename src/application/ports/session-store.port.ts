@@ -1,3 +1,4 @@
+import type { CaptureScene } from '../../domain/telemetry/capture-scene.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
 import type { SessionSummary } from '../../domain/telemetry/session-comparison.ts';
@@ -17,11 +18,14 @@ export interface SessionRecord {
   readonly metricsVersion: number;
   readonly capture: FrameCapture;
   readonly sensors: readonly SensorSample[];
+  /** Что записывали: без этого записи несравнимы. */
+  readonly scene: CaptureScene;
 }
 
 export interface SessionStore {
   save(
     label: string,
+    scene: CaptureScene,
     capture: FrameCapture,
     sensors: readonly SensorSample[],
   ): Promise<SessionSummary>;

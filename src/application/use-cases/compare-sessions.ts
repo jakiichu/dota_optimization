@@ -1,4 +1,5 @@
 import { analyzeCapture, summarize } from '../../domain/telemetry/capture-analysis.ts';
+import { UNKNOWN_SCENE } from '../../domain/telemetry/capture-scene.ts';
 import {
   compareSessions,
   type SessionComparison,
@@ -37,5 +38,6 @@ function summaryOf(record: SessionRecord): SessionSummary {
     record.capturedAt,
     record.capture,
     statistics,
+    record.scene ?? UNKNOWN_SCENE,
   );
 }

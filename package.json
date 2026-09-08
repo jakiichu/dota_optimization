@@ -13,6 +13,7 @@
     "audit": "node src/main/cli.ts audit",
     "sensors": "node src/main/cli.ts sensors",
     "capture": "node src/main/cli.ts capture",
+    "bench": "node src/main/cli.ts bench",
     "sessions": "node src/main/cli.ts sessions",
     "analyze": "node src/main/cli.ts analyze",
     "compare": "node src/main/cli.ts compare",

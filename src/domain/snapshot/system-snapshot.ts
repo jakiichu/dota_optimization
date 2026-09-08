@@ -116,6 +116,18 @@ export interface GameProfile {
    * машину по присланному файлу не выйдет.
    */
   readonly config: Maybe<string>;
+  /**
+   * Повторы матчей, лежащие у игры.
+   *
+   * Единственный способ померить одну и ту же сцену дважды: повтор проигрывает
+   * те же кадры, а живой матч — нет.
+   */
+  readonly replays: readonly ReplayFile[];
+}
+
+export interface ReplayFile {
+  readonly name: string;
+  readonly sizeBytes: number;
 }
 
 export interface SystemSnapshot {

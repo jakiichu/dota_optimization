@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { CaptureScene } from '../../src/domain/telemetry/capture-scene.ts';
 import {
   compareSessions,
   type SessionSummary,
 } from '../../src/domain/telemetry/session-comparison.ts';
+
+/** По умолчанию сравниваем один и тот же повтор с одного тика — точный случай. */
+const SAME_REPLAY: CaptureScene = {
+  kind: 'replay',
+  replayFile: '8937378139.dem',
+  startTick: 40000,
+  note: null,
+};
 
 interface SessionOptions {
   readonly p50?: number;
@@ -16,6 +25,7 @@ interface SessionOptions {
   readonly bottleneck?: SessionSummary['bottleneck'];
   readonly inputP99?: number;
   readonly pacingTimeShare?: number;
+  readonly scene?: CaptureScene;
 }
 
 function session(id: string, options: SessionOptions = {}): SessionSummary {
@@ -42,6 +52,7 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
     pacingTimeShare: options.pacingTimeShare ?? 0.05,
     stuttersPerMinute: options.stuttersPerMinute ?? 10,
     bottleneck: options.bottleneck ?? 'gpu',
+    scene: options.scene ?? SAME_REPLAY,
   };
 }
 
@@ -185,12 +196,56 @@ describe('compareSessions', () => {
     expect(comparison.caveats.some((text) => text.includes('слишком мало'))).toBe(true);
   });
 
-  it('всегда напоминает про одинаковую сцену', () => {
+  it('называет сцены обеих записей', () => {
     const comparison = compareSessions(session('до'), session('после'));
 
-    expect(comparison.caveats.some((text) => text.includes('сцена была одинаковой'))).toBe(
-      true,
+    expect(comparison.comparable).toBe(true);
+    expect(comparison.caveats.some((text) => text.includes('8937378139.dem'))).toBe(true);
+  });
+
+  it('отказывается сравнивать записи из разных сцен', () => {
+    // Ровно та ошибка, на которой инструмент однажды выдал разницу нагрузки за
+    // результат правки настроек.
+    const comparison = compareSessions(
+      session('до', { scene: { kind: 'hero-demo', replayFile: null, startTick: null, note: null } }),
+      session('после', { scene: { kind: 'match', replayFile: null, startTick: null, note: null } }),
     );
+
+    expect(comparison.comparable).toBe(false);
+    expect(comparison.verdict).toBe('same');
+    expect(comparison.summary).toContain('сравнивать нельзя');
+  });
+
+  it('не сравнивает разные точки одного повтора', () => {
+    const comparison = compareSessions(
+      session('до', { scene: { ...SAME_REPLAY, startTick: 10000 } }),
+      session('после'),
+    );
+
+    expect(comparison.comparable).toBe(false);
+    expect(comparison.caveats.some((text) => text.includes('Разные точки повтора'))).toBe(true);
+  });
+
+  it('предупреждает, что живой матч не воспроизводится', () => {
+    const live: CaptureScene = { kind: 'match', replayFile: null, startTick: null, note: null };
+    const comparison = compareSessions(
+      session('до', { scene: live }),
+      session('после', { scene: live }),
+    );
+
+    // Считать можно, но полагаться на разницу — нет.
+    expect(comparison.comparable).toBe(true);
+    expect(comparison.caveats.some((text) => text.includes('воспроизвести нельзя'))).toBe(true);
+  });
+
+  it('без указанной сцены сравнение не считается возможным', () => {
+    const unknown: CaptureScene = { kind: 'unknown', replayFile: null, startTick: null, note: null };
+    const comparison = compareSessions(
+      session('до', { scene: unknown }),
+      session('после', { scene: unknown }),
+    );
+
+    expect(comparison.comparable).toBe(false);
   });
 
   it('не объявляет улучшением разнонаправленные изменения', () => {

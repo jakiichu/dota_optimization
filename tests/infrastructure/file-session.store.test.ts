@@ -5,7 +5,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { METRICS_VERSION } from '../../src/domain/telemetry/capture-analysis.ts';
 import type { FrameCapture } from '../../src/domain/telemetry/frame-sample.ts';
 import { FileSessionStore } from '../../src/infrastructure/sessions/file-session.store.ts';
+import type { CaptureScene } from '../../src/domain/telemetry/capture-scene.ts';
 import { frameTrace } from '../support/frame-builder.ts';
+
+const SCENE: CaptureScene = {
+  kind: 'replay',
+  replayFile: '8937378139.dem',
+  startTick: 40000,
+  note: null,
+};
 
 function capture(): FrameCapture {
   return {
@@ -30,7 +38,7 @@ describe('FileSessionStore', () => {
   });
 
   it('сохраняет запись и находит её в списке', async () => {
-    const saved = await store.save('до правки', capture(), []);
+    const saved = await store.save('до правки', SCENE, capture(), []);
     const list = await store.list();
 
     expect(list).toHaveLength(1);
@@ -39,7 +47,7 @@ describe('FileSessionStore', () => {
   });
 
   it('подставляет имя приложения вместо пустой подписи', async () => {
-    const saved = await store.save('   ', capture(), []);
+    const saved = await store.save('   ', SCENE, capture(), []);
 
     expect(saved.label).toBe('dota2.exe');
   });
@@ -47,7 +55,7 @@ describe('FileSessionStore', () => {
   it('хранит сырые кадры, а не посчитанные метрики', async () => {
     // Метрики в файле законсервировали бы версию кода: новый детектор пришлось
     // бы применять к каждому файлу руками.
-    const saved = await store.save('запись', capture(), []);
+    const saved = await store.save('запись', SCENE, capture(), []);
     const raw = JSON.parse(await readFile(join(directory, `${saved.id}.json`), 'utf8'));
 
     expect(raw.record.capture.frames).toHaveLength(200);
@@ -56,7 +64,7 @@ describe('FileSessionStore', () => {
   });
 
   it('пересчитывает сводку, посчитанную прошлой версией метрик', async () => {
-    const saved = await store.save('запись', capture(), []);
+    const saved = await store.save('запись', SCENE, capture(), []);
     const path = join(directory, `${saved.id}.json`);
 
     // Подделываем файл так, будто его записала прошлая версия с чужими числами.
@@ -88,6 +96,7 @@ describe('FileSessionStore', () => {
         stutterCount: 0,
         stuttersPerMinute: 0,
         bottleneck: 'unknown',
+        scene: { kind: 'unknown', replayFile: null, startTick: null, note: null },
       },
       result: { capture: capture() },
     };
@@ -101,6 +110,25 @@ describe('FileSessionStore', () => {
     expect(record.metricsVersion).toBe(METRICS_VERSION);
   });
 
+  it('дополняет запись полями, которых не было в её версии', async () => {
+    // Файл переживает несколько версий модели, а читается как обычный JSON без
+    // проверок: замер без поля сети роняет разбор на первом же цикле по нему.
+    const saved = await store.save('запись', SCENE, capture(), []);
+    const path = join(directory, `${saved.id}.json`);
+
+    const stored = JSON.parse(await readFile(path, 'utf8'));
+    stored.record.sensors = [
+      { capturedAt: '2026-09-08T00:00:00Z', qpcTimestamp: 1, qpcFrequency: 1, gpus: [], errors: [] },
+    ];
+    delete stored.record.scene;
+    await writeFile(path, JSON.stringify(stored), 'utf8');
+
+    const record = await store.load(saved.id);
+
+    expect(record.sensors[0]?.network).toEqual([]);
+    expect(record.scene.kind).toBe('unknown');
+  });
+
   it('не даёт идентификатору увести запись в соседний каталог', async () => {
     await expect(store.load('../../тайное')).rejects.toThrow();
     // Разделитель пути Windows — тот же обход, только с другим символом.
@@ -111,7 +139,7 @@ describe('FileSessionStore', () => {
   it('не калечит имя с кириллицей', async () => {
     // Замена «недопустимых» символов молча превращала такое имя в
     // подчёркивания, и файл потом не находился.
-    const saved = await store.save('запись', capture(), []);
+    const saved = await store.save('запись', SCENE, capture(), []);
 
     await expect(store.load(saved.id)).resolves.toBeDefined();
   });

@@ -10,6 +10,7 @@ import type {
   Maybe,
   NetworkAdapterInfo,
   OsInfo,
+  ReplayFile,
   PowerInfo,
   SecurityInfo,
   SystemSnapshot,
@@ -153,6 +154,14 @@ function toAppCompat(raw: unknown): AppCompatEntry {
   };
 }
 
+function toReplay(raw: unknown): ReplayFile {
+  const record = asRecord(raw) ?? {};
+  return {
+    name: asString(record['name']) ?? '',
+    sizeBytes: asNumber(record['sizeBytes']) ?? 0,
+  };
+}
+
 function toGpuPreference(raw: unknown): GpuPreferenceEntry {
   const record = asRecord(raw) ?? {};
   return {
@@ -171,6 +180,7 @@ function toGame(raw: unknown): GameProfile {
     launchOptions: asString(record['launchOptions']),
     configPath: asString(record['configPath']),
     config: asString(record['config']),
+    replays: asArray(record['replays']).map(toReplay),
   };
 }
 

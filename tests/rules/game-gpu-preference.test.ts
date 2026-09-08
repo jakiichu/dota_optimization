@@ -21,6 +21,7 @@ function laptopWith(preference: string | null): SystemSnapshot {
         launchOptions: null,
         configPath: null,
         config: null,
+        replays: [],
       },
     ],
     gpuPreferences:
@@ -56,6 +57,7 @@ describe('gameGpuPreferenceRule', () => {
           launchOptions: null,
         configPath: null,
         config: null,
+        replays: [],
         },
       ],
     });

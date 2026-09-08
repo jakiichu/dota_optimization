@@ -11,6 +11,11 @@ import { renderConsoleReport } from '../adapters/presenters/console-report.prese
 import { renderSensorSample } from '../adapters/presenters/console-sensors.presenter.ts';
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
+import {
+  isUsableReplay,
+  planReplayBenchmark,
+} from '../domain/gameconfig/benchmark-plan.ts';
+import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
 import type { SnapshotCollector } from '../application/ports/snapshot-collector.port.ts';
 import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snapshot.collector.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
@@ -31,6 +36,8 @@ const EXIT_ERROR = 2;
 const DEFAULT_CAPTURE_SECONDS = 60;
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
 const NEWLINE = String.fromCharCode(10);
+/** Тик по умолчанию: середина матча, где нагрузка уже настоящая. */
+const DEFAULT_BENCH_TICK = 40000;
 
 interface Options {
   readonly verbose: boolean;
@@ -42,6 +49,7 @@ interface Options {
   readonly seconds: number;
   readonly rawCsvPath: string | null;
   readonly label: string | null;
+  readonly scene: CaptureScene;
 }
 
 const USAGE = `frameloss — диагностика потерь кадров на Windows
@@ -52,12 +60,16 @@ const USAGE = `frameloss — диагностика потерь кадров н
   node src/main/cli.ts sessions          список сохранённых записей
   node src/main/cli.ts analyze <id>      пересчитать запись текущими метриками
   node src/main/cli.ts compare <до> <после>  сравнить две записи
+  node src/main/cli.ts bench [опции]     план повторяемого замера по повтору
 
 Опции capture:
   --process <exe>         что записывать (по умолчанию dota2.exe)
   --seconds <N>           длительность записи (по умолчанию 60)
   --save-csv <путь>       сохранить сырой CSV от PresentMon
   --label <текст>         подпись записи, например «до отключения MPO»
+  --scene <вид>           replay | hero-demo | match | menu — что записывали
+  --replay <файл>         имя повтора, если сцена replay
+  --tick <N>              тик, с которого начинали повтор
 
 Опции audit:
   --verbose               показать и успешные проверки
@@ -86,7 +98,24 @@ function parseOptions(args: readonly string[]): Options {
     processName: valueAfter('--process') ?? DEFAULT_PROCESS_NAME,
     rawCsvPath: valueAfter('--save-csv'),
     label: valueAfter('--label'),
+    scene: sceneFrom(valueAfter),
     seconds: Number.parseInt(valueAfter('--seconds') ?? '', 10) || DEFAULT_CAPTURE_SECONDS,
+  };
+}
+
+const SCENE_KINDS: readonly SceneKind[] = ['replay', 'hero-demo', 'match', 'menu', 'unknown'];
+
+/** Не указали сцену — так и пишем: выдуманная хуже отсутствующей. */
+function sceneFrom(valueAfter: (flag: string) => string | null): CaptureScene {
+  const kind = SCENE_KINDS.find((candidate) => candidate === valueAfter('--scene'));
+  if (kind === undefined) return UNKNOWN_SCENE;
+
+  const tick = Number.parseInt(valueAfter('--tick') ?? '', 10);
+  return {
+    kind,
+    replayFile: valueAfter('--replay'),
+    startTick: Number.isFinite(tick) ? tick : null,
+    note: valueAfter('--note'),
   };
 }
 
@@ -147,6 +176,7 @@ async function runCapture(options: Options): Promise<number> {
   });
   const summary = await sessionStore.save(
     options.label ?? '',
+    options.scene,
     session.capture,
     session.sensorSamples,
   );
@@ -239,6 +269,51 @@ async function runCompare(
   return EXIT_OK;
 }
 
+/**
+ * План замера, который можно повторить.
+ *
+ * Записи из разных сцен несравнимы, а повтор проигрывает одни и те же кадры —
+ * это единственный способ померить одно и то же дважды.
+ */
+async function runBench(options: Options): Promise<number> {
+  const { snapshot } = await new RunConfigurationAudit(
+    new WindowsSnapshotCollector(),
+    allAuditRules,
+  ).execute();
+
+  const replays = snapshot.games
+    .flatMap((game) => game.replays)
+    .filter(isUsableReplay);
+
+  if (replays.length === 0) {
+    stdout.write(
+      'Повторов не нашлось. Скачайте любой матч в игре: вкладка «Повторы» → ' +
+        'скачать. Без повтора замер нельзя воспроизвести точно.' + NEWLINE,
+    );
+    return EXIT_OK;
+  }
+
+  const chosen = options.scene.replayFile ?? replays[0]?.name ?? '';
+  const tick = options.scene.startTick ?? DEFAULT_BENCH_TICK;
+
+  stdout.write('Доступные повторы:' + NEWLINE);
+  for (const replay of replays) {
+    const size = (replay.sizeBytes / (1024 * 1024)).toFixed(0);
+    stdout.write(`  ${replay.name} · ${size} МБ` + NEWLINE);
+  }
+  stdout.write(NEWLINE);
+
+  const plan = planReplayBenchmark(chosen, tick, options.seconds, options.label ?? 'замер');
+
+  stdout.write(`План замера: ${chosen}, тик ${tick}` + NEWLINE);
+  plan.steps.forEach((step, index) => {
+    stdout.write(`  ${index + 1}. ${step}` + NEWLINE);
+  });
+  stdout.write(NEWLINE + 'Команда записи:' + NEWLINE);
+  stdout.write(`  ${plan.captureCommand}` + NEWLINE);
+  return EXIT_OK;
+}
+
 async function main(): Promise<number> {
   const args = argv.slice(2);
   const command = args[0];
@@ -256,6 +331,7 @@ async function main(): Promise<number> {
   if (command === 'sessions') return runSessions(options);
   if (command === 'analyze') return runAnalyze(args[1], options);
   if (command === 'compare') return runCompare(args[1], args[2], options);
+  if (command === 'bench') return runBench(options);
 
   stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
   return EXIT_ERROR;

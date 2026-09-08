@@ -1,8 +1,8 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join } from 'node:path';
-import type { GameProfile, Maybe } from '../../domain/snapshot/system-snapshot.ts';
+import type { GameProfile, Maybe, ReplayFile } from '../../domain/snapshot/system-snapshot.ts';
 import { parseVdf, vdfObject, vdfString, type VdfObject } from './vdf.parser.ts';
 
 /**
@@ -14,11 +14,14 @@ const KNOWN_GAMES: readonly {
   relativeExecutable: string;
   /** Где игра держит autoexec.cfg относительно папки установки. */
   relativeConfig: string;
+  /** Где лежат повторы матчей. */
+  relativeReplays: string;
 }[] = [
   {
     appId: '570',
     relativeExecutable: join('game', 'bin', 'win64', 'dota2.exe'),
     relativeConfig: join('game', 'dota', 'cfg', 'autoexec.cfg'),
+    relativeReplays: join('game', 'dota', 'replays'),
   },
 ];
 
@@ -78,7 +81,12 @@ async function readLibraryPaths(
 
 async function findInstalledGame(
   libraries: readonly string[],
-  known: { appId: string; relativeExecutable: string; relativeConfig: string },
+  known: {
+    appId: string;
+    relativeExecutable: string;
+    relativeConfig: string;
+    relativeReplays: string;
+  },
   errors: string[],
 ): Promise<Omit<GameProfile, 'launchOptions'> | null> {
   for (const library of libraries) {
@@ -102,6 +110,7 @@ async function findInstalledGame(
         executablePath: null,
         configPath: null,
         config: null,
+        replays: [],
       };
     }
 
@@ -110,6 +119,7 @@ async function findInstalledGame(
     // чужую машину по присланному файлу.
     const configPath = join(installRoot, known.relativeConfig);
     const config = await readTextIfExists(configPath);
+    const replays = await listReplays(join(installRoot, known.relativeReplays));
 
     const executablePath = join(
       library,
@@ -130,6 +140,7 @@ async function findInstalledGame(
       executablePath: exists ? executablePath : null,
       configPath: config === null ? null : configPath,
       config,
+      replays,
     };
   }
   return null;
@@ -200,6 +211,22 @@ async function readVdf(
       errors.push(`Не прочитан ${path}: ${describe(error)}`);
     }
     return null;
+  }
+}
+
+/** Повторы матчей: по ним и делается повторяемый замер. */
+async function listReplays(directory: string): Promise<ReplayFile[]> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const replays: ReplayFile[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.dem')) continue;
+      const info = await stat(join(directory, entry.name));
+      replays.push({ name: entry.name, sizeBytes: info.size });
+    }
+    return replays.sort((left, right) => right.sizeBytes - left.sizeBytes);
+  } catch {
+    return [];
   }
 }
 
