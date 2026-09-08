@@ -24,17 +24,29 @@ const EXE_NAME = 'frameloss.exe';
  * `shell: true` нужен только для npm и dotnet — это .cmd-обёртки, напрямую они
  * не запускаются. Для обычных exe оболочка вредна: путь с пробелом (а Node
  * живёт в «Program Files») она разорвёт на две части.
+ *
+ * Через оболочку команда собирается одной строкой с ручными кавычками: Node
+ * ругается на массив аргументов вместе с `shell: true`, потому что сам их не
+ * экранирует, — и ругается справедливо.
  */
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    cwd: ROOT,
-    stdio: 'inherit',
-    shell: options.shell ?? true,
-    ...options,
-  });
+  const useShell = options.shell ?? true;
+  const result = useShell
+    ? spawnSync([command, ...args.map(quote)].join(' '), {
+        cwd: ROOT,
+        stdio: 'inherit',
+        shell: true,
+      })
+    : spawnSync(command, args, { cwd: ROOT, stdio: 'inherit', shell: false });
+
   if (result.status !== 0) {
     throw new Error(`Команда не выполнилась: ${command} ${args.join(' ')}`);
   }
+}
+
+/** Кавычки нужны там, где в пути есть пробел; лишние кавычки безвредны. */
+function quote(argument) {
+  return /[\s"]/.test(argument) ? `"${argument.replace(/"/g, '\\"')}"` : argument;
 }
 
 function step(message) {
@@ -84,6 +96,12 @@ await build({
   outfile: bundlePath,
   minify: false,
   legalComments: 'none',
+  // Приложение узнаёт, что оно собрано, отсюда: ресурсы лежат рядом с exe, а
+  // не в дереве исходников.
+  define: { FRAMELOSS_PACKAGED: 'true' },
+  // `import.meta` в CommonJS не существует — мы это знаем и обрабатываем.
+  // Предупреждение об этом каждый раз выглядит как поломка сборки.
+  logOverride: { 'empty-import-meta': 'silent' },
 });
 
 // --- 4. Запекаем в exe ------------------------------------------------------
@@ -109,11 +127,19 @@ writeFileSync(
 
 run(process.execPath, ['--experimental-sea-config', seaConfig], { shell: false });
 
-rmSync(OUT, { recursive: true, force: true });
+clearOutputFolder();
 mkdirSync(OUT, { recursive: true });
 
 const exePath = join(OUT, EXE_NAME);
 cpSync(process.execPath, exePath);
+
+// postject неизбежно портит подпись Node: мы дописываем данные в подписанный
+// exe. Убрать подпись заранее нечем — signtool входит в Windows SDK, которого
+// на машине сборки может не быть. Для локального инструмента это безвредно,
+// но SmartScreen на чужой машине будет ворчать громче.
+process.stdout.write(
+  'Подпись Node станет недействительной — так и должно быть при внедрении кода.\n',
+);
 
 run('npx', [
   'postject',
@@ -148,6 +174,33 @@ writeFileSync(join(OUT, 'ЧИТАЙ.txt'), readmeText(), 'utf8');
 
 step('Готово');
 process.stdout.write(`Папка со сборкой: ${OUT}\nЗапуск: ${EXE_NAME}\n`);
+
+/**
+ * Очищает папку сборки.
+ *
+ * Если из неё сейчас запущено приложение, Windows не даст удалить файлы. Это
+ * штатная ситуация, а не поломка сборки, и человеку надо сказать что делать —
+ * а не показывать стектрейс из глубин fs.
+ */
+function clearOutputFolder() {
+  try {
+    rmSync(OUT, { recursive: true, force: true });
+  } catch (error) {
+    if (error.code !== 'EPERM' && error.code !== 'EBUSY' && error.code !== 'ENOTEMPTY') {
+      throw error;
+    }
+    process.stderr.write(
+      [
+        `Не удалось очистить ${OUT}: файлы заняты.`,
+        'Скорее всего, из этой папки запущено приложение.',
+        'Закройте frameloss.exe и frameloss-sidecar.exe — через диспетчер задач,',
+        'если окна уже нет.',
+        '',
+      ].join('\n'),
+    );
+    process.exit(1);
+  }
+}
 
 function readmeText() {
   const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;

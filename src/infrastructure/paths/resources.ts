@@ -14,20 +14,33 @@ import { fileURLToPath } from 'node:url';
  */
 
 /**
- * Корень дерева исходников, либо пусто, если исходников нет.
+ * Флаг, который подставляет сборщик.
  *
- * В сборке код собирается в CommonJS, где `import.meta` не существует, и
- * сборщик подставляет сюда пустую строку. Это и есть надёжный признак того,
- * что мы запущены как exe, — надёжнее, чем расспрашивать рантайм.
+ * Объявлен, но нигде не определён: в разработке идентификатора не существует,
+ * поэтому проверять его можно только через `typeof`. В сборке esbuild заменяет
+ * его на `true` ещё до выполнения.
  */
-const SOURCE_ROOT = ((): string => {
+declare const FRAMELOSS_PACKAGED: boolean;
+
+/**
+ * Запущены ли мы как собранный exe.
+ *
+ * Раньше признаком служил пустой `import.meta.url`: в CommonJS-бандле его не
+ * существует. Работало, но опиралось на побочный эффект сборки, а такие опоры
+ * ломаются молча. Теперь сборщик говорит об этом прямо, а проверка пустого
+ * `import.meta` осталась запасной — на случай сборки без флага.
+ */
+const PACKAGED = ((): boolean => {
+  if (typeof FRAMELOSS_PACKAGED !== 'undefined' && FRAMELOSS_PACKAGED) return true;
   const moduleUrl: string | undefined = import.meta.url;
-  if (moduleUrl === undefined || moduleUrl === '') return '';
-  // Этот файл лежит в src/infrastructure/paths — отсюда три уровня вверх.
-  return resolve(fileURLToPath(new URL('../../..', moduleUrl)));
+  return moduleUrl === undefined || moduleUrl === '';
 })();
 
-const PACKAGED = SOURCE_ROOT === '';
+/** Корень дерева исходников. В сборке не используется. */
+const SOURCE_ROOT = PACKAGED
+  ? ''
+  : // Этот файл лежит в src/infrastructure/paths — отсюда три уровня вверх.
+    resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
 const ROOT = PACKAGED ? dirname(process.execPath) : SOURCE_ROOT;
 
