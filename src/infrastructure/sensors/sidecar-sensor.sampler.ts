@@ -2,7 +2,11 @@ import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import type { SensorSampler } from '../../application/ports/sensor-sampler.port.ts';
 import type { GpuVendor, Maybe } from '../../domain/snapshot/system-snapshot.ts';
-import type { GpuReading, SensorSample } from '../../domain/telemetry/sensor-sample.ts';
+import type {
+  GpuReading,
+  NetworkProbe,
+  SensorSample,
+} from '../../domain/telemetry/sensor-sample.ts';
 import { RESOURCES } from '../paths/resources.ts';
 import { runJsonProducingProcess } from '../process/json-process.runner.ts';
 
@@ -53,9 +57,21 @@ export function toSensorSample(raw: unknown): SensorSample {
     qpcTimestamp: asNumber(root['qpcTimestamp']) ?? 0,
     qpcFrequency: asNumber(root['qpcFrequency']) ?? 0,
     gpus: asArray(root['gpus']).map(toGpuReading),
+    network: asArray(root['network']).map(toNetworkProbe),
     errors: asArray(root['errors'])
       .map((entry) => asString(entry))
       .filter((entry): entry is string => entry !== null),
+  };
+}
+
+function toNetworkProbe(raw: unknown): NetworkProbe {
+  const record = asRecord(raw) ?? {};
+  return {
+    target: asString(record['target']) ?? 'unknown',
+    label: asString(record['label']) ?? 'unknown',
+    roundTripMs: asNumber(record['roundTripMs']),
+    success: record['success'] === true,
+    status: asString(record['status']),
   };
 }
 

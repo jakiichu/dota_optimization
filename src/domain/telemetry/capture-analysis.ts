@@ -1,5 +1,6 @@
 import { computeFrameStatistics, type FrameStatistics } from './frame-metrics.ts';
 import type { FrameCapture } from './frame-sample.ts';
+import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
 import type { SensorSample } from './sensor-sample.ts';
 import type { SessionSummary } from './session-comparison.ts';
 import { correlateStutters, type CorrelationReport } from './stutter-correlation.ts';
@@ -23,12 +24,21 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 1 — первый набор: перцентили, статтеры, узкое место.
  * 2 — добавлены инпут-лаг и ритм кадров.
  * 3 — ровность ритма попала в сводку и участвует в сравнении.
+ * 4 — добавлено качество сети.
  */
-export const METRICS_VERSION = 3;
+export const METRICS_VERSION = 4;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
   readonly correlation: CorrelationReport;
+  /**
+   * Качество сети за то же время.
+   *
+   * Отдельно от статистики кадров намеренно: сеть не удлиняет кадр, но рывок
+   * на экране даёт такой же. Смешав их, мы бы предложили чинить графику там,
+   * где виноват канал.
+   */
+  readonly network: NetworkQuality;
 }
 
 export function analyzeCapture(
@@ -39,6 +49,7 @@ export function analyzeCapture(
   return {
     statistics,
     correlation: correlateStutters(capture.frames, statistics.stutters, sensors),
+    network: analyzeNetworkQuality(sensors),
   };
 }
 

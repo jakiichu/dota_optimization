@@ -31,10 +31,27 @@ export interface GpuReading {
  * на одну ось с кадрами PresentMon: настенное время для этого не годится, оно
  * прыгает при синхронизации.
  */
+/**
+ * Замер задержки до узла сети.
+ *
+ * `roundTripMs` равен `null`, когда ответа не было: потерянный пакет — не
+ * нулевая задержка.
+ */
+export interface NetworkProbe {
+  readonly target: string;
+  /** Человеческое имя: «шлюз Wi-Fi», «интернет». */
+  readonly label: string;
+  readonly roundTripMs: Maybe<number>;
+  readonly success: boolean;
+  readonly status: Maybe<string>;
+}
+
 export interface SensorSample {
   readonly capturedAt: string;
   readonly qpcTimestamp: number;
   readonly qpcFrequency: number;
   readonly gpus: readonly GpuReading[];
+  /** Замеры сети в тот же момент. Пусто — сеть не измерялась. */
+  readonly network: readonly NetworkProbe[];
   readonly errors: readonly string[];
 }

@@ -1,15 +1,11 @@
-import { analyzeCapture } from '../../domain/telemetry/capture-analysis.ts';
-import type { FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
+import { analyzeCapture, type CaptureAnalysis } from '../../domain/telemetry/capture-analysis.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
-import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 import type { FrameCaptureRequest, FrameCaptureSource } from '../ports/frame-capture.port.ts';
 import type { SensorStream } from '../ports/sensor-stream.port.ts';
 
-export interface FrameSessionResult {
+export interface FrameSessionResult extends CaptureAnalysis {
   readonly capture: FrameCapture;
-  readonly statistics: FrameStatistics;
-  readonly correlation: CorrelationReport;
   /** Сырые замеры: их сохраняет хранилище, чтобы разбор можно было повторить. */
   readonly sensorSamples: readonly SensorSample[];
   readonly sensorSampleCount: number;

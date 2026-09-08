@@ -43,5 +43,14 @@ public sealed record SensorSample
 
     public required IReadOnlyList<GpuSensorReading> Gpus { get; init; }
 
+    /// <summary>
+    /// Замеры сети в тот же момент.
+    /// </summary>
+    /// <remarks>
+    /// Здесь же, а не отдельным потоком: сопоставить рывок с сетью можно только
+    /// по общей оси времени, а она у замера одна.
+    /// </remarks>
+    public IReadOnlyList<Frameloss.Sidecar.Network.NetworkProbeReading> Network { get; init; } = [];
+
     public IReadOnlyList<string> Errors { get; init; } = [];
 }

@@ -15,6 +15,15 @@ const SIDECAR_PATH = RESOURCES.sidecar();
 const DEFAULT_INTERVAL_MS = 250;
 
 /**
+ * Узел, по которому судим о задержке до интернета.
+ *
+ * Публичный резолвер, никаких данных пользователя в запросе нет — это обычный
+ * эхо-запрос. Адрес вынесен в константу, чтобы его было видно и можно было
+ * заменить.
+ */
+const INTERNET_ANCHOR = '1.1.1.1';
+
+/**
  * Поток замеров из долгоживущего процесса сайдкара.
  *
  * Процесс один на всех подписчиков и живёт ровно пока есть хотя бы один: так
@@ -50,7 +59,7 @@ export class SidecarSensorStream implements SensorStream {
 
     const child = spawn(
       SIDECAR_PATH,
-      ['stream', '--interval-ms', String(this.#intervalMs)],
+      ['stream', '--interval-ms', String(this.#intervalMs), '--ping', INTERNET_ANCHOR],
       { windowsHide: true },
     );
     this.#process = child;

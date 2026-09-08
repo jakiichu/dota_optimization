@@ -52,6 +52,7 @@ export function createSessionAnalyzeRoute(store: SessionStore): JsonRoute {
           capture: analyzed.capture,
           statistics: analyzed.statistics,
           correlation: analyzed.correlation,
+          network: analyzed.network,
           sensorSampleCount: analyzed.sensorSampleCount,
         }),
         sessionId: analyzed.id,

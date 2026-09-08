@@ -5,6 +5,7 @@ import type {
   Stutter,
 } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture, FrameSample } from '../../domain/telemetry/frame-sample.ts';
+import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
 /** Сколько худших статтеров показываем списком; остальные видны на графике. */
@@ -35,6 +36,7 @@ export interface CaptureView {
   readonly series: CaptureSeries;
   readonly availableColumns: readonly string[];
   readonly correlation: CorrelationReport;
+  readonly network: NetworkQuality;
   readonly sensorSampleCount: number;
 }
 
@@ -49,6 +51,7 @@ export interface CaptureViewInput {
   readonly capture: FrameCapture;
   readonly statistics: FrameStatistics;
   readonly correlation: CorrelationReport;
+  readonly network: NetworkQuality;
   readonly sensorSampleCount: number;
 }
 
@@ -69,6 +72,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     series: toSeries(capture.frames, statistics.stutters),
     availableColumns: capture.availableColumns,
     correlation: input.correlation,
+    network: input.network,
     sensorSampleCount: input.sensorSampleCount,
   };
 }

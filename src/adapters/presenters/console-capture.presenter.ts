@@ -1,5 +1,6 @@
 import type { Bottleneck, FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
+import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
 const RESET = '\u001b[0m';
@@ -25,6 +26,7 @@ export function renderCaptureReport(
   capture: FrameCapture,
   statistics: FrameStatistics,
   correlation: CorrelationReport,
+  network: NetworkQuality,
   options: ConsoleCaptureOptions,
 ): string {
   const paint = (text: string, code: string): string =>
@@ -107,6 +109,26 @@ export function renderCaptureReport(
   // вещи, и путать их нельзя.
   for (const limitation of correlation.limitations) {
     lines.push(paint(`  · ${limitation}`, DIM));
+  }
+
+  // Сеть отдельным разделом, а не среди улик по кадрам: она не удлиняет кадр,
+  // но даёт на экране такой же рывок. Смешав их, мы бы предложили чинить
+  // графику там, где виноват канал.
+  if (network.measured) {
+    lines.push('');
+    lines.push(paint('Сеть', BOLD));
+    lines.push(`  ${network.summary}`);
+    for (const target of network.targets) {
+      const median = target.medianMs === null ? '—' : `${target.medianMs.toFixed(0)} мс`;
+      const jitter = target.jitterMs === null ? '—' : `${target.jitterMs.toFixed(1)} мс`;
+      lines.push(
+        paint(
+          `  ${target.label} (${target.target}): ${median}, дрожание ${jitter}, ` +
+            `потери ${(target.lossShare * 100).toFixed(1)}%`,
+          DIM,
+        ),
+      );
+    }
   }
 
   return lines.join('\n');

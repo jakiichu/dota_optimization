@@ -39,6 +39,9 @@ public static class Program
           probe --output <путь>        один замер, JSON в файл
           stream [--interval-ms 250]   поток замеров, по одному JSON на строку в stdout
 
+        Дополнительно:
+          --ping [адрес]               мерить задержку до шлюза и до указанного узла
+
         Строка stdout всегда UTF-8 вне зависимости от кодовой страницы консоли.
         """;
 
@@ -68,9 +71,10 @@ public static class Program
         }
 
         using SensorProbe probe = SensorProbe.CreateDefault();
+        ConfigureNetwork(probe, args);
         await Task.Delay(PrimingDelayMs);
 
-        string json = JsonSerializer.Serialize(probe.Sample(), JsonOptions);
+        string json = JsonSerializer.Serialize(await probe.SampleAsync(), JsonOptions);
         await File.WriteAllTextAsync(outputPath, json, new UTF8Encoding(false));
         return ExitOk;
     }
@@ -80,6 +84,7 @@ public static class Program
         int intervalMs = ParseInterval(ValueAfter(args, "--interval-ms"));
 
         using SensorProbe probe = SensorProbe.CreateDefault();
+        ConfigureNetwork(probe, args);
         using var cancellation = new CancellationTokenSource();
         Console.CancelKeyPress += (_, eventArgs) =>
         {
@@ -87,13 +92,23 @@ public static class Program
             cancellation.Cancel();
         };
 
+        // Родитель ушёл — уходим следом. Иначе процесс переживает приложение и
+        // остаётся висеть: замечено, когда сервер убили извне, а сайдкар
+        // продолжил работать и держать файлы.
+        _ = Task.Run(async () =>
+        {
+            await Console.In.ReadToEndAsync();
+            await cancellation.CancelAsync();
+        });
+
         await Task.Delay(PrimingDelayMs, CancellationToken.None);
 
         try
         {
             while (!cancellation.IsCancellationRequested)
             {
-                Console.Out.WriteLine(JsonSerializer.Serialize(probe.Sample(), JsonOptions));
+                SensorSample sample = await probe.SampleAsync();
+                Console.Out.WriteLine(JsonSerializer.Serialize(sample, JsonOptions));
                 await Console.Out.FlushAsync(cancellation.Token);
                 await Task.Delay(intervalMs, cancellation.Token);
             }
@@ -104,6 +119,24 @@ public static class Program
         }
 
         return ExitOk;
+    }
+
+    /// <summary>
+    /// Включает замеры сети, если попросили.
+    /// </summary>
+    /// <remarks>
+    /// По умолчанию выключены: ICMP наружу — это трафик, о котором пользователь
+    /// должен знать, а не побочный эффект запуска диагностики.
+    /// </remarks>
+    private static void ConfigureNetwork(SensorProbe probe, string[] args)
+    {
+        int index = Array.IndexOf(args, "--ping");
+        if (index < 0) return;
+
+        string? anchor = index + 1 < args.Length && !args[index + 1].StartsWith('-')
+            ? args[index + 1]
+            : null;
+        probe.EnableNetwork(anchor);
     }
 
     private static int ParseInterval(string? raw)
