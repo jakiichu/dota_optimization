@@ -87,3 +87,55 @@ export function subscribeToSensors(
 
   return () => source.close();
 }
+
+export type BottleneckKind = 'gpu' | 'cpu' | 'mixed' | 'limited' | 'unknown';
+
+export interface Bottleneck {
+  kind: BottleneckKind;
+  gpuBusyShare: number | null;
+  cpuBusyShare: number | null;
+  explanation: string;
+}
+
+export interface Stutter {
+  atSeconds: number;
+  frameTimeMs: number;
+  baselineMs: number;
+  ratio: number;
+}
+
+export interface CaptureSeries {
+  time: number[];
+  frameTimeMs: number[];
+  stutterMs: (number | null)[];
+  cpuBusyMs: (number | null)[] | null;
+  gpuBusyMs: (number | null)[] | null;
+}
+
+export interface CaptureView {
+  application: string;
+  frameCount: number;
+  durationSeconds: number;
+  averageFps: number;
+  frameTime: { p50: number; p95: number; p99: number; p999: number };
+  stutterCount: number;
+  stuttersPerMinute: number;
+  bottleneck: Bottleneck;
+  worstStutters: Stutter[];
+  series: CaptureSeries;
+  availableColumns: string[];
+}
+
+export async function runCapture(
+  processName: string,
+  seconds: number,
+  signal: AbortSignal,
+): Promise<CaptureView> {
+  const query = new URLSearchParams({ process: processName, seconds: String(seconds) });
+  const response = await fetch(`/api/capture?${query.toString()}`, { signal });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new Error(errorMessageOf(body) ?? `Сервер ответил ${response.status}.`);
+  }
+  return (await response.json()) as CaptureView;
+}

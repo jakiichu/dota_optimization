@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
 import type { MachineView } from './api.ts';
 import { AuditView } from './views/AuditView.tsx';
+import { CaptureView } from './views/CaptureView.tsx';
 import { SensorsView } from './views/SensorsView.tsx';
 
-type Tab = 'audit' | 'sensors';
+type Tab = 'audit' | 'capture' | 'sensors';
 
 const TABS: readonly { id: Tab; label: string }[] = [
   { id: 'audit', label: 'Аудит' },
+  { id: 'capture', label: 'Запись кадров' },
   { id: 'sensors', label: 'Сенсоры' },
 ];
 
@@ -43,9 +45,11 @@ export function App(): React.JSX.Element {
         ))}
       </nav>
 
-      {/* Вкладка сенсоров размонтируется вместе с подпиской: пока на неё не
-          смотрят, процесс сайдкара не нужен. */}
-      {tab === 'audit' ? <AuditView onMachine={handleMachine} /> : <SensorsView />}
+      {/* Каждая вкладка размонтируется вместе со своими подписками: пока на
+          сенсоры не смотрят, процесс сайдкара не нужен. */}
+      {tab === 'audit' && <AuditView onMachine={handleMachine} />}
+      {tab === 'capture' && <CaptureView />}
+      {tab === 'sensors' && <SensorsView />}
     </div>
   );
 }

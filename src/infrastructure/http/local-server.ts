@@ -21,7 +21,7 @@ const CONTENT_TYPES: Record<string, string> = {
 /** Обработчик, отдающий один JSON-ответ. */
 export interface JsonRoute {
   readonly path: string;
-  handle(): Promise<unknown>;
+  handle(query: URLSearchParams): Promise<unknown>;
 }
 
 /**
@@ -97,7 +97,7 @@ async function handle(
 
   const json = options.jsonRoutes.find((route) => route.path === path);
   if (json !== undefined) {
-    return sendJson(response, json);
+    return sendJson(response, json, url.searchParams);
   }
 
   return sendStatic(response, path, options.staticRoot);
@@ -110,9 +110,13 @@ function isHostAllowed(request: IncomingMessage): boolean {
   return ALLOWED_HOSTS.has(withoutPort);
 }
 
-async function sendJson(response: ServerResponse, route: JsonRoute): Promise<void> {
+async function sendJson(
+  response: ServerResponse,
+  route: JsonRoute,
+  query: URLSearchParams,
+): Promise<void> {
   try {
-    const payload = await route.handle();
+    const payload = await route.handle(query);
     send(response, 200, 'application/json; charset=utf-8', JSON.stringify(payload));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
