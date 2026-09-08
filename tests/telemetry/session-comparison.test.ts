@@ -15,6 +15,7 @@ interface SessionOptions {
   readonly application?: string;
   readonly bottleneck?: SessionSummary['bottleneck'];
   readonly inputP99?: number;
+  readonly pacingTimeShare?: number;
 }
 
 function session(id: string, options: SessionOptions = {}): SessionSummary {
@@ -38,6 +39,7 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
         ? null
         : { p50: options.inputP99 * 0.6, p95: options.inputP99 * 0.9, p99: options.inputP99, p999: options.inputP99 * 1.2 },
     stutterCount: options.stutterCount ?? 10,
+    pacingTimeShare: options.pacingTimeShare ?? 0.05,
     stuttersPerMinute: options.stuttersPerMinute ?? 10,
     bottleneck: options.bottleneck ?? 'gpu',
   };
@@ -67,6 +69,43 @@ describe('compareSessions', () => {
 
     expect(comparison.verdict).toBe('worse');
     expect(comparison.summary).toContain('Стало хуже');
+  });
+
+  it('называет в итоге то, что вердикт и решило', () => {
+    // Раньше фраза «стало лучше» шла рядом с выросшим p99, который на решение
+    // не влиял: он остался в пределах разброса.
+    const comparison = compareSessions(
+      session('до', { p99: 35.7, stuttersPerMinute: 5, stutterCount: 5 }),
+      session('после', { p99: 36.1, stuttersPerMinute: 2, stutterCount: 2 }),
+    );
+
+    expect(comparison.verdict).toBe('better');
+    expect(comparison.summary).toContain('статтеров в минуту 5.0 → 2.0');
+    expect(comparison.summary).not.toContain('35.7 → 36.1');
+    expect(comparison.summary).toContain('Без изменений');
+  });
+
+  it('сравнивает ровность ритма — её ограничитель кадров и меняет', () => {
+    const comparison = compareSessions(
+      session('до', { pacingTimeShare: 0.2 }),
+      session('после', { pacingTimeShare: 0.11 }),
+    );
+
+    const pacing = metric(comparison, 'Времени в рваном ритме');
+
+    expect(pacing?.verdict).toBe('better');
+    expect(pacing?.before).toBeCloseTo(20, 0);
+  });
+
+  it('не даёт упавшему FPS перевесить выровнявшийся ритм', () => {
+    // Ограничитель кадров опускает FPS и одновременно выравнивает ритм —
+    // по среднему FPS такая правка выглядела бы провалом.
+    const comparison = compareSessions(
+      session('до', { fps: 65, pacingTimeShare: 0.2, stuttersPerMinute: 5, stutterCount: 5 }),
+      session('после', { fps: 59, pacingTimeShare: 0.08, stuttersPerMinute: 2, stutterCount: 2 }),
+    );
+
+    expect(comparison.verdict).toBe('better');
   });
 
   it('не выдаёт разброс за улучшение', () => {

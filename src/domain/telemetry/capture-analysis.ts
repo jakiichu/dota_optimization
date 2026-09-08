@@ -22,8 +22,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  *
  * 1 — первый набор: перцентили, статтеры, узкое место.
  * 2 — добавлены инпут-лаг и ритм кадров.
+ * 3 — ровность ритма попала в сводку и участвует в сравнении.
  */
-export const METRICS_VERSION = 2;
+export const METRICS_VERSION = 3;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -66,6 +67,7 @@ export function summarize(
     inputLatency: statistics.inputLatency,
     stutterCount: statistics.stutters.length,
     stuttersPerMinute: statistics.stuttersPerMinute,
+    pacingTimeShare: statistics.pacing.timeShareInLongFrames,
     bottleneck: statistics.bottleneck.kind,
   };
 }

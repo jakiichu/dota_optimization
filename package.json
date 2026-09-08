@@ -15,6 +15,7 @@
     "capture": "node src/main/cli.ts capture",
     "sessions": "node src/main/cli.ts sessions",
     "analyze": "node src/main/cli.ts analyze",
+    "compare": "node src/main/cli.ts compare",
     "serve": "node src/main/server.ts",
     "dev": "node scripts/dev.mjs",
     "ui": "vite --config web/vite.config.ts",

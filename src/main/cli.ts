@@ -2,9 +2,11 @@ import { writeFile } from 'node:fs/promises';
 import { argv, exit, stderr, stdout } from 'node:process';
 import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
 import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
+import { CompareSessions } from '../application/use-cases/compare-sessions.ts';
 import { ReadSensors } from '../application/use-cases/read-sensors.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { renderCaptureReport } from '../adapters/presenters/console-capture.presenter.ts';
+import { renderComparison } from '../adapters/presenters/console-comparison.presenter.ts';
 import { renderConsoleReport } from '../adapters/presenters/console-report.presenter.ts';
 import { renderSensorSample } from '../adapters/presenters/console-sensors.presenter.ts';
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
@@ -28,6 +30,7 @@ const EXIT_ERROR = 2;
 
 const DEFAULT_CAPTURE_SECONDS = 60;
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
+const NEWLINE = String.fromCharCode(10);
 
 interface Options {
   readonly verbose: boolean;
@@ -48,6 +51,7 @@ const USAGE = `frameloss — диагностика потерь кадров н
   node src/main/cli.ts capture [опции]   запись кадров и метрики по ней
   node src/main/cli.ts sessions          список сохранённых записей
   node src/main/cli.ts analyze <id>      пересчитать запись текущими метриками
+  node src/main/cli.ts compare <до> <после>  сравнить две записи
 
 Опции capture:
   --process <exe>         что записывать (по умолчанию dota2.exe)
@@ -215,6 +219,26 @@ async function runAnalyze(id: string | undefined, options: Options): Promise<num
   return EXIT_OK;
 }
 
+async function runCompare(
+  beforeId: string | undefined,
+  afterId: string | undefined,
+  options: Options,
+): Promise<number> {
+  if (beforeId === undefined || afterId === undefined) {
+    stderr.write('Нужны две записи. Список: npm run sessions' + NEWLINE);
+    return EXIT_ERROR;
+  }
+
+  const comparison = await new CompareSessions(sessionStore).execute(beforeId, afterId);
+
+  if (options.json) {
+    stdout.write(JSON.stringify(comparison, null, 2) + NEWLINE);
+  } else {
+    stdout.write(renderComparison(comparison, { color: options.color }) + NEWLINE);
+  }
+  return EXIT_OK;
+}
+
 async function main(): Promise<number> {
   const args = argv.slice(2);
   const command = args[0];
@@ -231,6 +255,7 @@ async function main(): Promise<number> {
   if (command === 'capture') return runCapture(options);
   if (command === 'sessions') return runSessions(options);
   if (command === 'analyze') return runAnalyze(args[1], options);
+  if (command === 'compare') return runCompare(args[1], args[2], options);
 
   stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
   return EXIT_ERROR;

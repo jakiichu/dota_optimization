@@ -42,6 +42,8 @@ export interface SessionSummary {
   readonly inputLatency: Percentiles | null;
   readonly stutterCount: number;
   readonly stuttersPerMinute: number;
+  /** Доля времени в кадрах, кратно длиннее базового интервала. */
+  readonly pacingTimeShare: number;
   readonly bottleneck: BottleneckKind;
 }
 
@@ -115,6 +117,13 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.frameTime.p999,
   },
   {
+    label: 'Времени в рваном ритме',
+    unit: '%',
+    lowerIsBetter: true,
+    noise: 1,
+    of: (session) => session.pacingTimeShare * 100,
+  },
+  {
     label: 'Статтеров в минуту',
     unit: '',
     lowerIsBetter: true,
@@ -130,8 +139,17 @@ const METRICS: readonly MetricSpec[] = [
   },
 ];
 
-/** Метрики, по которым выносится общий вердикт: их человек и ощущает. */
-const DECIDING_METRICS = new Set(['p99 кадра', 'Статтеров в минуту']);
+/**
+ * Метрики, по которым выносится общий вердикт: их человек и ощущает.
+ *
+ * Средний FPS сюда не входит намеренно: ограничитель кадров опускает его и
+ * одновременно выравнивает ритм, и по FPS такая правка выглядела бы провалом.
+ */
+const DECIDING_METRICS = new Set([
+  'p99 кадра',
+  'Статтеров в минуту',
+  'Времени в рваном ритме',
+]);
 
 export function compareSessions(
   before: SessionSummary,
@@ -149,7 +167,7 @@ export function compareSessions(
     metrics,
     bottleneckChanged: before.bottleneck !== after.bottleneck,
     verdict,
-    summary: describe(verdict, before, after),
+    summary: describe(verdict, metrics),
     caveats: collectCaveats(before, after),
   };
 }
@@ -197,15 +215,37 @@ function overallVerdict(metrics: readonly MetricDelta[]): Verdict {
   return 'same';
 }
 
-function describe(verdict: Verdict, before: SessionSummary, after: SessionSummary): string {
-  const p99 = `p99 ${before.frameTime.p99.toFixed(1)} → ${after.frameTime.p99.toFixed(1)} мс`;
-  const stutters =
-    `статтеров ${before.stuttersPerMinute.toFixed(1)} → ` +
-    `${after.stuttersPerMinute.toFixed(1)} в минуту`;
+/**
+ * Итог одной фразой, составленный из того, что вердикт и решило.
+ *
+ * Фиксированный набор чисел приводил к самоопровержению: вердикт «стало лучше»
+ * шёл рядом с выросшим p99, который на решение не повлиял, потому что остался
+ * в пределах разброса.
+ */
+function describe(verdict: Verdict, metrics: readonly MetricDelta[]): string {
+  const deciding = metrics.filter((metric) => DECIDING_METRICS.has(metric.label));
+  const moved = deciding.filter((metric) => metric.verdict !== 'same');
 
-  if (verdict === 'better') return `Стало лучше: ${p99}, ${stutters}.`;
-  if (verdict === 'worse') return `Стало хуже: ${p99}, ${stutters}.`;
-  return `Разницы нет: ${p99}, ${stutters} — в пределах разброса.`;
+  if (moved.length === 0) {
+    const listed = deciding.map(quote).join(', ');
+    return `Разницы нет: ${listed} — в пределах разброса.`;
+  }
+
+  const listed = moved.map(quote).join(', ');
+  const unchanged = deciding
+    .filter((metric) => metric.verdict === 'same')
+    .map((metric) => metric.label.toLowerCase());
+  const tail = unchanged.length === 0 ? '' : ` Без изменений: ${unchanged.join(', ')}.`;
+
+  return `${verdict === 'better' ? 'Стало лучше' : 'Стало хуже'}: ${listed}.${tail}`;
+}
+
+function quote(metric: MetricDelta): string {
+  const unit = metric.unit === '' ? '' : ` ${metric.unit}`;
+  return (
+    `${metric.label.toLowerCase()} ${metric.before.toFixed(1)} → ` +
+    `${metric.after.toFixed(1)}${unit}`
+  );
 }
 
 /**
