@@ -9,3 +9,5 @@ sidecar/**/obj/
 sidecar/**/bin/
 web/dist/
 tools/presentmon/*.exe
+build/
+release/

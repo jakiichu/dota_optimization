@@ -3,8 +3,8 @@ import { constants } from 'node:fs';
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { RESOURCES } from '../paths/resources.ts';
 import type {
   FrameCaptureRequest,
   FrameCaptureSource,
@@ -14,9 +14,7 @@ import { parsePresentMonCsv } from './presentmon-csv.parser.ts';
 
 const execFileAsync = promisify(execFile);
 
-const PRESENTMON_PATH = fileURLToPath(
-  new URL('../../../tools/presentmon/PresentMon.exe', import.meta.url),
-);
+const PRESENTMON_PATH = RESOURCES.presentMon();
 
 /** PresentMon отвечает этим кодом, когда ему не хватает прав на ETW-сессию. */
 const EXIT_NEEDS_ELEVATION = 6;

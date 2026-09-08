@@ -8,6 +8,8 @@
     "node": ">=22.6.0"
   },
   "scripts": {
+    "start": "node scripts/start.mjs",
+    "release": "node scripts/build-release.mjs",
     "audit": "node src/main/cli.ts audit",
     "sensors": "node src/main/cli.ts sensors",
     "capture": "node src/main/cli.ts capture",
@@ -30,6 +32,8 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^5.2.0",
     "dependency-cruiser": "^16.10.0",
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6",
     "typescript": "^5.9.0",
     "vite": "^7.3.6",
     "vitest": "^3.2.0"

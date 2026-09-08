@@ -2,17 +2,15 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createInterface, type Interface } from 'node:readline';
-import { fileURLToPath } from 'node:url';
 import type {
   SampleListener,
   SensorStream,
   Unsubscribe,
 } from '../../application/ports/sensor-stream.port.ts';
+import { RESOURCES } from '../paths/resources.ts';
 import { toSensorSample } from './sidecar-sensor.sampler.ts';
 
-const SIDECAR_PATH = fileURLToPath(
-  new URL('../../../sidecar/bin/frameloss-sidecar.exe', import.meta.url),
-);
+const SIDECAR_PATH = RESOURCES.sidecar();
 
 const DEFAULT_INTERVAL_MS = 250;
 

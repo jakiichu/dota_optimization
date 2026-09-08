@@ -1,7 +1,7 @@
+import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
@@ -16,6 +16,7 @@ import {
   ensureSidecarBuilt,
   SidecarSensorStream,
 } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
+import { RESOURCES } from '../infrastructure/paths/resources.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -26,7 +27,7 @@ import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snap
  */
 
 const DEFAULT_PORT = 7331;
-const UI_ROOT = fileURLToPath(new URL('../../web/dist', import.meta.url));
+const UI_ROOT = RESOURCES.webRoot();
 
 const auditRoute: JsonRoute = {
   path: '/api/audit',
@@ -56,6 +57,15 @@ const sensorsRoute: StreamRoute = {
   },
 };
 
+async function sidecarStatus(): Promise<string | null> {
+  try {
+    await ensureSidecarBuilt();
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
 async function directoryExists(path: string): Promise<boolean> {
   try {
     await access(path, constants.R_OK);
@@ -66,8 +76,14 @@ async function directoryExists(path: string): Promise<boolean> {
 }
 
 async function main(): Promise<void> {
-  // Проверяем до старта: иначе неподнятый сайдкар выглядел бы как пустой график.
-  await ensureSidecarBuilt();
+  // Не останавливаемся: без сайдкара нет только показаний видеоадаптеров, а
+  // аудит и запись кадров работают. Но сказать об этом надо сразу, иначе
+  // пустой график выглядит как поломка.
+  const sidecar = await sidecarStatus();
+  if (sidecar !== null) {
+    process.stdout.write(`${sidecar}
+`);
+  }
 
   const port = Number.parseInt(process.env['FRAMELOSS_PORT'] ?? '', 10) || DEFAULT_PORT;
   const staticRoot = (await directoryExists(UI_ROOT)) ? UI_ROOT : null;
@@ -84,11 +100,26 @@ async function main(): Promise<void> {
     process.stdout.write('Интерфейс не собран: npm run ui:build (или npm run dev)\n');
   }
 
+  if (process.argv.includes('--open')) {
+    openInBrowser(server.url);
+  }
+
   const shutdown = (): void => {
     void server.close().then(() => process.exit(0));
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+}
+
+/**
+ * Открывает страницу в браузере по умолчанию.
+ *
+ * Через `cmd /c start`, а не напрямую: у Windows нет отдельной программы для
+ * «открыть по умолчанию», это встроенная команда оболочки. Пустые кавычки —
+ * обязательный аргумент-заголовок, без них URL уедет в заголовок окна.
+ */
+function openInBrowser(url: string): void {
+  spawn('cmd', ['/c', 'start', '""', url], { detached: true, stdio: 'ignore' }).unref();
 }
 
 main().catch((error: unknown) => {

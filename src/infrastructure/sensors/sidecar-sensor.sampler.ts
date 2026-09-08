@@ -1,14 +1,12 @@
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { SensorSampler } from '../../application/ports/sensor-sampler.port.ts';
 import type { GpuVendor, Maybe } from '../../domain/snapshot/system-snapshot.ts';
 import type { GpuReading, SensorSample } from '../../domain/telemetry/sensor-sample.ts';
+import { RESOURCES } from '../paths/resources.ts';
 import { runJsonProducingProcess } from '../process/json-process.runner.ts';
 
-const SIDECAR_PATH = fileURLToPath(
-  new URL('../../../sidecar/bin/frameloss-sidecar.exe', import.meta.url),
-);
+const SIDECAR_PATH = RESOURCES.sidecar();
 
 const BUILD_HINT = 'Соберите его: npm run sidecar:build';
 

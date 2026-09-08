@@ -1,11 +1,11 @@
-import { fileURLToPath } from 'node:url';
 import type { SnapshotCollector } from '../../application/ports/snapshot-collector.port.ts';
 import type { SystemSnapshot } from '../../domain/snapshot/system-snapshot.ts';
+import { RESOURCES } from '../paths/resources.ts';
 import { probeSteamLibraries } from '../steam/steam-library.probe.ts';
 import { runJsonScript } from './powershell.runner.ts';
 import { toSystemSnapshot } from './snapshot.mapper.ts';
 
-const SCRIPT_PATH = fileURLToPath(new URL('./collect-snapshot.ps1', import.meta.url));
+const SCRIPT_PATH = RESOURCES.collectSnapshotScript();
 
 /**
  * Собирает снимок живой машины из двух источников.
