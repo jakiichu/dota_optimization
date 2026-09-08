@@ -6,7 +6,11 @@ import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { createCaptureRoute } from './capture-route.ts';
-import { createSessionCompareRoute, createSessionListRoute } from './session-routes.ts';
+import {
+  createSessionAnalyzeRoute,
+  createSessionCompareRoute,
+  createSessionListRoute,
+} from './session-routes.ts';
 import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import {
@@ -164,6 +168,7 @@ async function startServer(
       createCaptureRoute(sensorStream, sessionStore),
       createSessionListRoute(sessionStore),
       createSessionCompareRoute(sessionStore),
+      createSessionAnalyzeRoute(sessionStore),
     ],
     streamRoutes: [sensorsRoute],
     staticRoot,

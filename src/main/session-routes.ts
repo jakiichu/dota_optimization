@@ -1,5 +1,7 @@
 import type { SessionStore } from '../application/ports/session-store.port.ts';
+import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
 import { CompareSessions } from '../application/use-cases/compare-sessions.ts';
+import { toCaptureView } from '../adapters/http/capture.view.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 
 /** Список сохранённых записей — только сводки, полные записи весят мегабайты. */
@@ -24,6 +26,36 @@ export function createSessionCompareRoute(store: SessionStore): JsonRoute {
         throw new Error('Нужны обе записи: before и after.');
       }
       return comparison.execute(before, after);
+    },
+  };
+}
+
+/**
+ * Разбор сохранённой записи текущими метриками.
+ *
+ * Игру запускать не нужно: кадры уже есть, а метрики — чистые функции от них.
+ * Так новый детектор доходит до вчерашних записей.
+ */
+export function createSessionAnalyzeRoute(store: SessionStore): JsonRoute {
+  const analyze = new AnalyzeSession(store);
+
+  return {
+    path: '/api/sessions/analyze',
+    async handle(query) {
+      const id = query.get('id');
+      if (id === null) {
+        throw new Error('Нужен идентификатор записи: id.');
+      }
+      const analyzed = await analyze.execute(id);
+      return {
+        ...toCaptureView({
+          capture: analyzed.capture,
+          statistics: analyzed.statistics,
+          correlation: analyzed.correlation,
+          sensorSampleCount: analyzed.sensorSampleCount,
+        }),
+        sessionId: analyzed.id,
+      };
     },
   };
 }

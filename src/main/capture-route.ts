@@ -35,7 +35,11 @@ export function createCaptureRoute(sensors: SensorStream, store: SessionStore): 
       // Сохраняем всё, что записали: сравнение «до и после» разделено
       // перезагрузкой, и запись, оставшаяся только в памяти, для него бесполезна.
       const running = session.execute(request).then(async (result) => {
-        const summary = await store.save(query.get('label') ?? '', result);
+        const summary = await store.save(
+          query.get('label') ?? '',
+          result.capture,
+          result.sensorSamples,
+        );
         return { ...toCaptureView(result), sessionId: summary.id };
       });
       inFlight = running;

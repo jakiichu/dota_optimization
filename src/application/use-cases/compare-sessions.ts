@@ -1,14 +1,17 @@
+import { analyzeCapture, summarize } from '../../domain/telemetry/capture-analysis.ts';
 import {
   compareSessions,
   type SessionComparison,
+  type SessionSummary,
 } from '../../domain/telemetry/session-comparison.ts';
-import type { SessionStore } from '../ports/session-store.port.ts';
+import type { SessionRecord, SessionStore } from '../ports/session-store.port.ts';
 
 /**
  * Сравнить две сохранённые записи.
  *
- * Читаем только сводки: полные записи весят мегабайты, а для сравнения нужны
- * шесть чисел.
+ * Сводки считаются заново, а не берутся из файла: записи могли быть сделаны
+ * разными версиями метрик, и сравнивать числа от разных детекторов — значит
+ * получить разницу там, где менялся только наш код.
  */
 export class CompareSessions {
   readonly #store: SessionStore;
@@ -22,6 +25,17 @@ export class CompareSessions {
       this.#store.load(beforeId),
       this.#store.load(afterId),
     ]);
-    return compareSessions(before.summary, after.summary);
+    return compareSessions(summaryOf(before), summaryOf(after));
   }
+}
+
+function summaryOf(record: SessionRecord): SessionSummary {
+  const { statistics } = analyzeCapture(record.capture, record.sensors);
+  return summarize(
+    record.id,
+    record.label,
+    record.capturedAt,
+    record.capture,
+    statistics,
+  );
 }

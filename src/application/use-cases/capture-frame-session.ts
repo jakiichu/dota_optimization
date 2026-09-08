@@ -1,13 +1,8 @@
-import {
-  computeFrameStatistics,
-  type FrameStatistics,
-} from '../../domain/telemetry/frame-metrics.ts';
+import { analyzeCapture } from '../../domain/telemetry/capture-analysis.ts';
+import type { FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
-import {
-  correlateStutters,
-  type CorrelationReport,
-} from '../../domain/telemetry/stutter-correlation.ts';
+import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 import type { FrameCaptureRequest, FrameCaptureSource } from '../ports/frame-capture.port.ts';
 import type { SensorStream } from '../ports/sensor-stream.port.ts';
 
@@ -15,6 +10,8 @@ export interface FrameSessionResult {
   readonly capture: FrameCapture;
   readonly statistics: FrameStatistics;
   readonly correlation: CorrelationReport;
+  /** Сырые замеры: их сохраняет хранилище, чтобы разбор можно было повторить. */
+  readonly sensorSamples: readonly SensorSample[];
   readonly sensorSampleCount: number;
 }
 
@@ -50,11 +47,10 @@ export class CaptureFrameSession {
       unsubscribe?.();
     }
 
-    const statistics = computeFrameStatistics(capture.frames);
     return {
       capture,
-      statistics,
-      correlation: correlateStutters(capture.frames, statistics.stutters, sensorSamples),
+      ...analyzeCapture(capture, sensorSamples),
+      sensorSamples,
       sensorSampleCount: sensorSamples.length,
     };
   }

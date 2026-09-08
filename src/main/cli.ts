@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { argv, exit, stderr, stdout } from 'node:process';
+import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
 import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
 import { ReadSensors } from '../application/use-cases/read-sensors.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
@@ -13,6 +14,8 @@ import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snap
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
 import { SidecarSensorSampler } from '../infrastructure/sensors/sidecar-sensor.sampler.ts';
 import { SidecarSensorStream } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
+import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
+import { RESOURCES } from '../infrastructure/paths/resources.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -35,6 +38,7 @@ interface Options {
   readonly processName: string;
   readonly seconds: number;
   readonly rawCsvPath: string | null;
+  readonly label: string | null;
 }
 
 const USAGE = `frameloss — диагностика потерь кадров на Windows
@@ -42,11 +46,14 @@ const USAGE = `frameloss — диагностика потерь кадров н
   node src/main/cli.ts audit [опции]     статический аудит конфигурации
   node src/main/cli.ts sensors [опции]   текущие показания видеоадаптеров
   node src/main/cli.ts capture [опции]   запись кадров и метрики по ней
+  node src/main/cli.ts sessions          список сохранённых записей
+  node src/main/cli.ts analyze <id>      пересчитать запись текущими метриками
 
 Опции capture:
   --process <exe>         что записывать (по умолчанию dota2.exe)
   --seconds <N>           длительность записи (по умолчанию 60)
   --save-csv <путь>       сохранить сырой CSV от PresentMon
+  --label <текст>         подпись записи, например «до отключения MPO»
 
 Опции audit:
   --verbose               показать и успешные проверки
@@ -74,6 +81,7 @@ function parseOptions(args: readonly string[]): Options {
     saveSnapshotTo: valueAfter('--save-snapshot'),
     processName: valueAfter('--process') ?? DEFAULT_PROCESS_NAME,
     rawCsvPath: valueAfter('--save-csv'),
+    label: valueAfter('--label'),
     seconds: Number.parseInt(valueAfter('--seconds') ?? '', 10) || DEFAULT_CAPTURE_SECONDS,
   };
 }
@@ -133,6 +141,12 @@ async function runCapture(options: Options): Promise<number> {
     seconds: options.seconds,
     ...(options.rawCsvPath === null ? {} : { rawCsvPath: options.rawCsvPath }),
   });
+  const summary = await sessionStore.save(
+    options.label ?? '',
+    session.capture,
+    session.sensorSamples,
+  );
+  stderr.write(`Запись сохранена: ${summary.id}\n`);
   const { capture, statistics } = session;
 
   if (options.json) {
@@ -146,6 +160,59 @@ async function runCapture(options: Options): Promise<number> {
   }
 
   return statistics.frameCount === 0 ? EXIT_ERROR : EXIT_OK;
+}
+
+const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
+
+async function runSessions(options: Options): Promise<number> {
+  const sessions = await sessionStore.list();
+
+  if (options.json) {
+    stdout.write(`${JSON.stringify(sessions, null, 2)}\n`);
+    return EXIT_OK;
+  }
+
+  if (sessions.length === 0) {
+    stdout.write('Записей нет. Сделайте первую: npm run capture\n');
+    return EXIT_OK;
+  }
+
+  for (const session of sessions) {
+    stdout.write(
+      `${session.id}\n` +
+        `  ${session.label} · ${session.durationSeconds.toFixed(0)} с · ` +
+        `p99 ${session.frameTime.p99.toFixed(1)} мс · ` +
+        `статтеров ${session.stutterCount}\n`,
+    );
+  }
+  return EXIT_OK;
+}
+
+/**
+ * Пересчёт сохранённой записи.
+ *
+ * Метрики — чистые функции от кадров, поэтому новый детектор применяется к
+ * старым записям без запуска игры.
+ */
+async function runAnalyze(id: string | undefined, options: Options): Promise<number> {
+  if (id === undefined) {
+    stderr.write('Нужен идентификатор записи. Список: npm run sessions\n');
+    return EXIT_ERROR;
+  }
+
+  const analyzed = await new AnalyzeSession(sessionStore).execute(id);
+
+  if (options.json) {
+    stdout.write(`${JSON.stringify(analyzed, null, 2)}\n`);
+  } else {
+    stdout.write(
+      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, {
+        color: options.color,
+      })}
+`,
+    );
+  }
+  return EXIT_OK;
 }
 
 async function main(): Promise<number> {
@@ -162,6 +229,8 @@ async function main(): Promise<number> {
   if (command === 'audit') return runAudit(options);
   if (command === 'sensors') return runSensors(options);
   if (command === 'capture') return runCapture(options);
+  if (command === 'sessions') return runSessions(options);
+  if (command === 'analyze') return runAnalyze(args[1], options);
 
   stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
   return EXIT_ERROR;

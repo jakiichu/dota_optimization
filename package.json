@@ -13,6 +13,8 @@
     "audit": "node src/main/cli.ts audit",
     "sensors": "node src/main/cli.ts sensors",
     "capture": "node src/main/cli.ts capture",
+    "sessions": "node src/main/cli.ts sessions",
+    "analyze": "node src/main/cli.ts analyze",
     "serve": "node src/main/server.ts",
     "dev": "node scripts/dev.mjs",
     "ui": "vite --config web/vite.config.ts",
