@@ -1,4 +1,5 @@
 import type { Maybe } from '../snapshot/system-snapshot.ts';
+import { analyzeFramePacing, type FramePacing } from './frame-pacing.ts';
 import type { FrameSample } from './frame-sample.ts';
 
 /**
@@ -67,6 +68,13 @@ export interface FrameStatistics {
   readonly durationSeconds: number;
   readonly averageFps: number;
   readonly frameTime: Percentiles;
+  /**
+   * Ровность ритма.
+   *
+   * Отдельно от статтеров: детектор выбросов не видит пачки удвоенных кадров,
+   * потому что они поднимают собственную локальную норму.
+   */
+  readonly pacing: FramePacing;
   readonly stutters: readonly Stutter[];
   readonly stuttersPerMinute: number;
   readonly bottleneck: Bottleneck;
@@ -80,6 +88,7 @@ const NO_DATA: FrameStatistics = {
   averageFps: 0,
   frameTime: EMPTY_PERCENTILES,
   inputLatency: null,
+  pacing: analyzeFramePacing([]),
   stutters: [],
   stuttersPerMinute: 0,
   bottleneck: {
@@ -106,6 +115,7 @@ export function computeFrameStatistics(frames: readonly FrameSample[]): FrameSta
     durationSeconds,
     averageFps: durationSeconds === 0 ? 0 : frames.length / durationSeconds,
     frameTime: percentiles,
+    pacing: analyzeFramePacing(frames),
     stutters,
     stuttersPerMinute:
       durationSeconds === 0

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { runCapture, type BottleneckKind, type CaptureView as CaptureData } from '../api.ts';
 import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
+import { PacingPanel } from '../components/PacingPanel.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
 const DURATIONS = [15, 30, 60, 120] as const;
@@ -159,6 +160,8 @@ function CaptureReport({ data }: { data: CaptureData }): React.JSX.Element {
         </div>
         <div className="finding-summary">{data.bottleneck.explanation}</div>
       </div>
+
+      <PacingPanel pacing={data.pacing} />
 
       {data.stutterCount > 0 && (
         <CorrelationPanel

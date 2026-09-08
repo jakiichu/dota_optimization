@@ -113,6 +113,26 @@ export interface CaptureSeries {
   gpuBusyMs: (number | null)[] | null;
 }
 
+export type PacingSeverity = 'ok' | 'noticeable' | 'bad';
+
+export interface PacingMultiple {
+  multiple: number;
+  frameCount: number;
+  share: number;
+  secondsSpent: number;
+}
+
+export interface FramePacing {
+  baseIntervalMs: number;
+  impliedHz: number;
+  nearestCommonHz: number | null;
+  multiples: PacingMultiple[];
+  timeShareInLongFrames: number;
+  oscillation: number;
+  severity: PacingSeverity;
+  summary: string;
+}
+
 export interface CaptureView {
   application: string;
   frameCount: number;
@@ -123,6 +143,7 @@ export interface CaptureView {
   stutterCount: number;
   stuttersPerMinute: number;
   bottleneck: Bottleneck;
+  pacing: FramePacing;
   worstStutters: Stutter[];
   series: CaptureSeries;
   availableColumns: string[];

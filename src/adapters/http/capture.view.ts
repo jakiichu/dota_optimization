@@ -30,6 +30,7 @@ export interface CaptureView {
   readonly stutterCount: number;
   readonly stuttersPerMinute: number;
   readonly bottleneck: Bottleneck;
+  readonly pacing: FrameStatistics['pacing'];
   readonly worstStutters: readonly Stutter[];
   readonly series: CaptureSeries;
   readonly availableColumns: readonly string[];
@@ -63,6 +64,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     stutterCount: statistics.stutters.length,
     stuttersPerMinute: statistics.stuttersPerMinute,
     bottleneck: statistics.bottleneck,
+    pacing: statistics.pacing,
     worstStutters: worstStutters(statistics.stutters),
     series: toSeries(capture.frames, statistics.stutters),
     availableColumns: capture.availableColumns,

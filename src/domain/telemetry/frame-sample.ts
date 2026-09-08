@@ -28,6 +28,14 @@ export interface FrameSample {
   readonly displayLatencyMs: Maybe<number>;
   readonly presentMode: Maybe<string>;
   /**
+   * Интервал синхронизации: 0 — вертикальная синхронизация выключена.
+   *
+   * Нужен, чтобы отличить промах мимо развёртки от честной просадки: при
+   * выключенной синхронизации удвоенных кадров быть не должно вовсе.
+   */
+  readonly syncInterval: Maybe<number>;
+  readonly allowsTearing: Maybe<boolean>;
+  /**
    * От нажатия до появления на экране, мс.
    *
    * Меряется только для кадров, на которые пришёлся ввод, — у остальных `null`.

@@ -6,31 +6,18 @@ import {
   percentile,
 } from '../../src/domain/telemetry/frame-metrics.ts';
 import type { FrameSample } from '../../src/domain/telemetry/frame-sample.ts';
+import { frameTrace } from '../support/frame-builder.ts';
 
 interface FrameOptions {
   readonly cpuBusyMs?: number;
   readonly gpuBusyMs?: number;
 }
 
-/** Строит запись из времён кадров, раскладывая их по общей оси времени. */
 function trace(frameTimes: readonly number[], options: FrameOptions = {}): FrameSample[] {
-  let elapsed = 0;
-  return frameTimes.map((frameTimeMs) => {
-    const frame: FrameSample = {
-      startSeconds: elapsed / 1000,
-      qpcMs: null,
-      frameTimeMs,
-      cpuBusyMs: options.cpuBusyMs ?? null,
-      gpuBusyMs: options.gpuBusyMs ?? null,
-      displayLatencyMs: null,
-      clickToPhotonMs: null,
-      allInputToPhotonMs: null,
-      presentMode: null,
-      dropped: null,
-    };
-    elapsed += frameTimeMs;
-    return frame;
-  });
+  return frameTrace(frameTimes, () => ({
+    cpuBusyMs: options.cpuBusyMs ?? null,
+    gpuBusyMs: options.gpuBusyMs ?? null,
+  }));
 }
 
 function steady(frameTimeMs: number, count: number): number[] {

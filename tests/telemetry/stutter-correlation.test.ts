@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { findStutters } from '../../src/domain/telemetry/frame-metrics.ts';
 import type { FrameSample } from '../../src/domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../src/domain/telemetry/sensor-sample.ts';
+import { frameTrace } from '../support/frame-builder.ts';
 import {
   correlateStutters,
   type EvidenceKind,
@@ -23,25 +24,18 @@ function buildFrames(
   frameTimes: readonly number[],
   options: FrameOptions = {},
 ): FrameSample[] {
-  let elapsedMs = 0;
-  return frameTimes.map((frameTimeMs) => {
-    const frame: FrameSample = {
-      startSeconds: elapsedMs / 1000,
-      qpcMs: options.withQpc === false ? null : ORIGIN_MS + elapsedMs,
-      frameTimeMs,
+  return frameTrace(
+    frameTimes,
+    (frameTimeMs) => ({
       cpuBusyMs:
         options.cpuBusyShare === undefined ? null : frameTimeMs * options.cpuBusyShare,
       gpuBusyMs:
         options.gpuBusyShare === undefined ? null : frameTimeMs * options.gpuBusyShare,
-      displayLatencyMs: null,
-      clickToPhotonMs: null,
-      allInputToPhotonMs: null,
       presentMode: options.presentMode ?? null,
       dropped: options.dropped ?? null,
-    };
-    elapsedMs += frameTimeMs;
-    return frame;
-  });
+    }),
+    options.withQpc === false ? null : ORIGIN_MS,
+  );
 }
 
 function steady(frameTimeMs: number, count: number): number[] {

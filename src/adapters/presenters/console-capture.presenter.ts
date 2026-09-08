@@ -59,6 +59,19 @@ export function renderCaptureReport(
   }
   lines.push('');
 
+  lines.push(paint('Ритм кадров', BOLD));
+  lines.push(`  ${statistics.pacing.summary}`);
+  for (const entry of statistics.pacing.multiples) {
+    lines.push(
+      paint(
+        `  ×${entry.multiple}: ${entry.frameCount} кадров, ` +
+          `${entry.secondsSpent.toFixed(1)} с`,
+        DIM,
+      ),
+    );
+  }
+  lines.push('');
+
   lines.push(paint('Статтеры', BOLD));
   lines.push(
     `  всего ${statistics.stutters.length} ` +

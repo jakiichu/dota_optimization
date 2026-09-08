@@ -3,6 +3,7 @@ import { toCaptureView } from '../../src/adapters/http/capture.view.ts';
 import { computeFrameStatistics } from '../../src/domain/telemetry/frame-metrics.ts';
 import { correlateStutters } from '../../src/domain/telemetry/stutter-correlation.ts';
 import type { FrameCapture, FrameSample } from '../../src/domain/telemetry/frame-sample.ts';
+import { frameTrace } from '../support/frame-builder.ts';
 
 interface FrameOptions {
   readonly cpuBusyMs?: number;
@@ -10,23 +11,10 @@ interface FrameOptions {
 }
 
 function capture(frameTimes: readonly number[], options: FrameOptions = {}): FrameCapture {
-  let elapsed = 0;
-  const frames: FrameSample[] = frameTimes.map((frameTimeMs) => {
-    const frame: FrameSample = {
-      startSeconds: elapsed / 1000,
-      qpcMs: null,
-      frameTimeMs,
-      cpuBusyMs: options.cpuBusyMs ?? null,
-      gpuBusyMs: options.gpuBusyMs ?? null,
-      displayLatencyMs: null,
-      clickToPhotonMs: null,
-      allInputToPhotonMs: null,
-      presentMode: null,
-      dropped: null,
-    };
-    elapsed += frameTimeMs;
-    return frame;
-  });
+  const frames: FrameSample[] = frameTrace(frameTimes, () => ({
+    cpuBusyMs: options.cpuBusyMs ?? null,
+    gpuBusyMs: options.gpuBusyMs ?? null,
+  }));
 
   return {
     applicationName: 'dota2.exe',
