@@ -362,6 +362,34 @@ try {
     Add-CollectionError 'AppCompatFlags\Layers' $_
 }
 
+# --- Steam ------------------------------------------------------------------
+# Дальше по пути установки Steam ищет уже TypeScript: разбирать VDF в PowerShell
+# дороже и хуже проверяется тестами, чем в коде приложения.
+
+$steamPath = Get-RegistryValue 'HKCU:\Software\Valve\Steam' 'SteamPath'
+
+# --- Предпочтение GPU для конкретных .exe -----------------------------------
+# На ноутбуках с двумя видеоядрами игра, привязанная к встроенному, теряет
+# кратно больше кадров, чем даёт любая настройка графики.
+
+$gpuPreferences = @()
+$GPU_PREF_PATH = 'HKCU:\SOFTWARE\Microsoft\DirectX\UserGpuPreferences'
+try {
+    if (Test-Path $GPU_PREF_PATH) {
+        $prefKey = Get-Item -Path $GPU_PREF_PATH -ErrorAction Stop
+        foreach ($valueName in $prefKey.GetValueNames()) {
+            if ([string]::IsNullOrEmpty($valueName)) { continue }
+            if ($valueName -eq 'DirectXUserGlobalSettings') { continue }
+            $gpuPreferences += [ordered]@{
+                executablePath = $valueName
+                preference     = [string]$prefKey.GetValue($valueName)
+            }
+        }
+    }
+} catch {
+    Add-CollectionError 'UserGpuPreferences' $_
+}
+
 # --- Сборка результата ------------------------------------------------------
 
 $snapshot = [ordered]@{
@@ -378,6 +406,8 @@ $snapshot = [ordered]@{
     security          = $security
     networkAdapters   = $networkAdapters
     appCompat         = $appCompat
+    gpuPreferences    = $gpuPreferences
+    steamPath         = $steamPath
     collectionErrors  = @($script:CollectionErrors)
 }
 

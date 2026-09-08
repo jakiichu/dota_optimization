@@ -31,6 +31,9 @@ const EMPTY: SystemSnapshot = {
   },
   networkAdapters: [],
   appCompat: [],
+  gpuPreferences: [],
+  steamPath: null,
+  games: [],
   collectionErrors: [],
 };
 

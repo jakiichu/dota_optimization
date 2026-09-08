@@ -1,14 +1,28 @@
 import { fileURLToPath } from 'node:url';
 import type { SnapshotCollector } from '../../application/ports/snapshot-collector.port.ts';
 import type { SystemSnapshot } from '../../domain/snapshot/system-snapshot.ts';
+import { probeSteamLibraries } from '../steam/steam-library.probe.ts';
 import { runJsonScript } from './powershell.runner.ts';
 import { toSystemSnapshot } from './snapshot.mapper.ts';
 
 const SCRIPT_PATH = fileURLToPath(new URL('./collect-snapshot.ps1', import.meta.url));
 
-/** Читает конфигурацию живой машины через PowerShell. */
+/**
+ * Собирает снимок живой машины из двух источников.
+ *
+ * Реестр, WMI и WinAPI отдаёт PowerShell. Библиотеку Steam разбираем уже здесь:
+ * VDF удобнее и надёжнее парсить в коде приложения, где это покрыто тестами,
+ * чем регулярками в скрипте.
+ */
 export class WindowsSnapshotCollector implements SnapshotCollector {
   async collect(): Promise<SystemSnapshot> {
-    return toSystemSnapshot(await runJsonScript(SCRIPT_PATH));
+    const systemFacts = toSystemSnapshot(await runJsonScript(SCRIPT_PATH));
+    const steam = await probeSteamLibraries(systemFacts.steamPath);
+
+    return {
+      ...systemFacts,
+      games: steam.games,
+      collectionErrors: [...systemFacts.collectionErrors, ...steam.errors],
+    };
   }
 }

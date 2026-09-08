@@ -3,6 +3,8 @@ import type {
   CpuInfo,
   DisplayInfo,
   GpuInfo,
+  GameProfile,
+  GpuPreferenceEntry,
   GpuVendor,
   GraphicsSettings,
   Maybe,
@@ -40,6 +42,9 @@ export function toSystemSnapshot(raw: unknown): SystemSnapshot {
     security: toSecurity(root['security']),
     networkAdapters: asArray(root['networkAdapters']).map(toNetworkAdapter),
     appCompat: asArray(root['appCompat']).map(toAppCompat),
+    gpuPreferences: asArray(root['gpuPreferences']).map(toGpuPreference),
+    steamPath: asString(root['steamPath']),
+    games: asArray(root['games']).map(toGame),
     collectionErrors: asArray(root['collectionErrors'])
       .map((entry) => asString(entry))
       .filter((entry): entry is string => entry !== null),
@@ -145,6 +150,25 @@ function toAppCompat(raw: unknown): AppCompatEntry {
   return {
     executablePath: asString(record['executablePath']) ?? '',
     layers: asString(record['layers']) ?? '',
+  };
+}
+
+function toGpuPreference(raw: unknown): GpuPreferenceEntry {
+  const record = asRecord(raw) ?? {};
+  return {
+    executablePath: asString(record['executablePath']) ?? '',
+    preference: asString(record['preference']) ?? '',
+  };
+}
+
+function toGame(raw: unknown): GameProfile {
+  const record = asRecord(raw) ?? {};
+  return {
+    appId: asString(record['appId']) ?? '',
+    name: asString(record['name']) ?? 'unknown',
+    installDir: asString(record['installDir']),
+    executablePath: asString(record['executablePath']),
+    launchOptions: asString(record['launchOptions']),
   };
 }
 

@@ -1,6 +1,10 @@
 import type { AuditRule } from './audit-rule.ts';
 import { displayRefreshRateRule } from './display-refresh-rate.rule.ts';
+import { driverFreshnessRule } from './driver-freshness.rule.ts';
+import { fullscreenOptimizationsRule } from './fullscreen-optimizations.rule.ts';
 import { gameDvrRule } from './game-dvr.rule.ts';
+import { gameGpuPreferenceRule } from './game-gpu-preference.rule.ts';
+import { gameLaunchOptionsRule } from './game-launch-options.rule.ts';
 import { hardwareAcceleratedGpuSchedulingRule } from './hardware-accelerated-gpu-scheduling.rule.ts';
 import { memoryIntegrityRule } from './memory-integrity.rule.ts';
 import { multiPlaneOverlayRule } from './multi-plane-overlay.rule.ts';
@@ -15,10 +19,14 @@ import { wirelessLinkRule } from './wireless-link.rule.ts';
  */
 export const allAuditRules: readonly AuditRule[] = [
   displayRefreshRateRule,
+  gameGpuPreferenceRule,
   coreParkingRule,
   gameDvrRule,
+  driverFreshnessRule,
   hardwareAcceleratedGpuSchedulingRule,
   multiPlaneOverlayRule,
   memoryIntegrityRule,
+  fullscreenOptimizationsRule,
+  gameLaunchOptionsRule,
   wirelessLinkRule,
 ];

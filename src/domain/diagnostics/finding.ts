@@ -35,7 +35,8 @@ export function ok(
     severity: 'ok',
     summary,
     observed,
-    expected: observed,
+    // Для успешной проверки «должно быть» повторяло бы «сейчас» — это шум.
+    expected: '',
     impact: '',
     remediation: [],
   };
