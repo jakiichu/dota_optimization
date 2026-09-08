@@ -25,6 +25,8 @@ const BOTTLENECK_COLOR: Record<BottleneckKind, string> = {
 export function CaptureView(): React.JSX.Element {
   const [processName, setProcessName] = useState(DEFAULT_PROCESS);
   const [seconds, setSeconds] = useState<number>(30);
+  // Подпись нужна, чтобы через полчаса отличить «до HAGS» от «после».
+  const [label, setLabel] = useState('');
   const [data, setData] = useState<CaptureData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -51,7 +53,7 @@ export function CaptureView(): React.JSX.Element {
     setData(null);
     setRemaining(seconds);
 
-    runCapture(processName, seconds, controller.signal)
+    runCapture(processName, seconds, label, controller.signal)
       .then(setData)
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
@@ -86,6 +88,16 @@ export function CaptureView(): React.JSX.Element {
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          <span className="metric-label">подпись</span>
+          <input
+            className="input"
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            placeholder="например, до отключения MPO"
+            disabled={running}
+          />
         </label>
         <button type="button" className="button" onClick={start} disabled={running}>
           {running ? `Записываю… ${Math.max(remaining, 0)} с` : 'Записать'}

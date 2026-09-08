@@ -6,6 +6,8 @@ import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { createCaptureRoute } from './capture-route.ts';
+import { createSessionCompareRoute, createSessionListRoute } from './session-routes.ts';
+import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import {
   startLocalServer,
@@ -43,6 +45,9 @@ const HEALTH_PATH = '/api/health';
 const APP_ID = 'frameloss';
 
 const UI_ROOT = RESOURCES.webRoot();
+
+/** Записи лежат рядом с приложением: их носят вместе с ним и прикладывают к письмам. */
+const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
 
 /**
  * Отметка «это мы».
@@ -153,7 +158,13 @@ async function startServer(
   staticRoot: string | null,
 ): Promise<Startup> {
   const options = {
-    jsonRoutes: [healthRoute, auditRoute, createCaptureRoute(sensorStream)],
+    jsonRoutes: [
+      healthRoute,
+      auditRoute,
+      createCaptureRoute(sensorStream, sessionStore),
+      createSessionListRoute(sessionStore),
+      createSessionCompareRoute(sessionStore),
+    ],
     streamRoutes: [sensorsRoute],
     staticRoot,
   };

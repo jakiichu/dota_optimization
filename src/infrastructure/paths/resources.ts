@@ -65,4 +65,6 @@ export const RESOURCES = {
       ? resourcePath('collect-snapshot.ps1')
       : resourcePath('src', 'infrastructure', 'windows', 'collect-snapshot.ps1'),
   webRoot: (): string => (PACKAGED ? resourcePath('web') : resourcePath('web', 'dist')),
+  /** Записи кладём рядом с приложением, а не в профиль: папку носят целиком. */
+  sessionsRoot: (): string => resourcePath('sessions'),
 } as const;

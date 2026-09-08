@@ -128,14 +128,20 @@ export interface CaptureView {
   availableColumns: string[];
   correlation: CorrelationReport;
   sensorSampleCount: number;
+  sessionId: string;
 }
 
 export async function runCapture(
   processName: string,
   seconds: number,
+  label: string,
   signal: AbortSignal,
 ): Promise<CaptureView> {
-  const query = new URLSearchParams({ process: processName, seconds: String(seconds) });
+  const query = new URLSearchParams({
+    process: processName,
+    seconds: String(seconds),
+    label,
+  });
   const response = await fetch(`/api/capture?${query.toString()}`, { signal });
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
@@ -175,4 +181,62 @@ export interface CorrelationReport {
   tally: CauseTally[];
   unexplained: number;
   limitations: string[];
+}
+
+export type SessionVerdict = 'better' | 'worse' | 'same';
+
+export interface SessionSummary {
+  id: string;
+  label: string;
+  application: string;
+  capturedAt: string;
+  durationSeconds: number;
+  frameCount: number;
+  averageFps: number;
+  frameTime: { p50: number; p95: number; p99: number; p999: number };
+  inputLatency: { p50: number; p95: number; p99: number; p999: number } | null;
+  stutterCount: number;
+  stuttersPerMinute: number;
+  bottleneck: BottleneckKind;
+}
+
+export interface MetricDelta {
+  label: string;
+  unit: string;
+  before: number;
+  after: number;
+  delta: number;
+  share: number;
+  verdict: SessionVerdict;
+  lowerIsBetter: boolean;
+}
+
+export interface SessionComparison {
+  before: SessionSummary;
+  after: SessionSummary;
+  metrics: MetricDelta[];
+  bottleneckChanged: boolean;
+  verdict: SessionVerdict;
+  summary: string;
+  caveats: string[];
+}
+
+export async function fetchSessions(signal: AbortSignal): Promise<SessionSummary[]> {
+  const response = await fetch('/api/sessions', { signal });
+  if (!response.ok) throw new Error(`Сервер ответил ${response.status}.`);
+  return ((await response.json()) as { sessions: SessionSummary[] }).sessions;
+}
+
+export async function fetchComparison(
+  beforeId: string,
+  afterId: string,
+  signal: AbortSignal,
+): Promise<SessionComparison> {
+  const query = new URLSearchParams({ before: beforeId, after: afterId });
+  const response = await fetch(`/api/sessions/compare?${query.toString()}`, { signal });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new Error(errorMessageOf(body) ?? `Сервер ответил ${response.status}.`);
+  }
+  return (await response.json()) as SessionComparison;
 }

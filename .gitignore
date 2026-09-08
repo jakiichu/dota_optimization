@@ -12,3 +12,4 @@ tools/presentmon/*.exe
 build/
 release/
 /*.csv
+sessions/

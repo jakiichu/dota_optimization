@@ -2,13 +2,15 @@ import { useCallback, useState } from 'react';
 import type { MachineView } from './api.ts';
 import { AuditView } from './views/AuditView.tsx';
 import { CaptureView } from './views/CaptureView.tsx';
+import { CompareView } from './views/CompareView.tsx';
 import { SensorsView } from './views/SensorsView.tsx';
 
-type Tab = 'audit' | 'capture' | 'sensors';
+type Tab = 'audit' | 'capture' | 'compare' | 'sensors';
 
 const TABS: readonly { id: Tab; label: string }[] = [
   { id: 'audit', label: 'Аудит' },
   { id: 'capture', label: 'Запись кадров' },
+  { id: 'compare', label: 'Сравнение' },
   { id: 'sensors', label: 'Сенсоры' },
 ];
 
@@ -49,6 +51,7 @@ export function App(): React.JSX.Element {
           сенсоры не смотрят, процесс сайдкара не нужен. */}
       {tab === 'audit' && <AuditView onMachine={handleMachine} />}
       {tab === 'capture' && <CaptureView />}
+      {tab === 'compare' && <CompareView />}
       {tab === 'sensors' && <SensorsView />}
     </div>
   );
