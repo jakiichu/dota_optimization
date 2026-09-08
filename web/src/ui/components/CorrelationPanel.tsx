@@ -1,21 +1,11 @@
 import { useState } from 'react';
-import type { CorrelationReport, EvidenceKind } from '../api.ts';
+import type { Correlation } from '../../domain/models.ts';
+import { EVIDENCE_COLOR } from '../../domain/presentation.ts';
 
 /**
  * Цвет причины несёт смысл: красное — работа устройства заняла кадр целиком,
  * жёлтое — кадр ждал чего-то снаружи, синее — обстоятельства вокруг.
  */
-const EVIDENCE_COLOR: Record<EvidenceKind, string> = {
-  'gpu-work': 'var(--ok)',
-  'cpu-work': 'var(--warning)',
-  waiting: 'var(--critical)',
-  'present-mode': 'var(--info)',
-  dropped: 'var(--info)',
-  'gpu-idle': 'var(--warning)',
-  'vram-growth': 'var(--unknown)',
-  throttling: 'var(--critical)',
-};
-
 /** Сколько разобранных статтеров показываем: остальные видны в сводке. */
 const DETAILED_STUTTERS = 8;
 
@@ -24,7 +14,7 @@ export function CorrelationPanel({
   stutterCount,
   sensorSampleCount,
 }: {
-  correlation: CorrelationReport;
+  correlation: Correlation;
   stutterCount: number;
   sensorSampleCount: number;
 }): React.JSX.Element {

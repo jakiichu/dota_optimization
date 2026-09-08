@@ -1,16 +1,5 @@
-import type { FramePacing, PacingSeverity } from '../api.ts';
-
-const SEVERITY_COLOR: Record<PacingSeverity, string> = {
-  ok: 'var(--ok)',
-  noticeable: 'var(--warning)',
-  bad: 'var(--critical)',
-};
-
-const SEVERITY_LABEL: Record<PacingSeverity, string> = {
-  ok: 'Ритм ровный',
-  noticeable: 'Ритм заметно рваный',
-  bad: 'Ритм рваный',
-};
+import type { FramePacing } from '../../domain/models.ts';
+import { PACING_COLOR, PACING_LABEL } from '../../domain/presentation.ts';
 
 /**
  * Ровность ритма отдельной карточкой.
@@ -30,8 +19,8 @@ export function PacingPanel({ pacing }: { pacing: FramePacing }): React.JSX.Elem
         </span>
       </div>
 
-      <div className="bottleneck" style={{ color: SEVERITY_COLOR[pacing.severity] }}>
-        {SEVERITY_LABEL[pacing.severity]}
+      <div className="bottleneck" style={{ color: PACING_COLOR[pacing.severity] }}>
+        {PACING_LABEL[pacing.severity]}
       </div>
       <div className="finding-summary">{pacing.summary}</div>
 

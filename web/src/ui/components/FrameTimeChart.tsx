@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import uPlot from 'uplot';
-import type { CaptureSeries } from '../api.ts';
+import type { CaptureSeries } from '../../domain/models.ts';
 
 /**
  * График времени кадра за записанную сессию.
@@ -43,10 +43,18 @@ export function FrameTimeChart({ series }: { series: CaptureSeries }): React.JSX
   return <div className="frame-chart" ref={container} />;
 }
 
+/**
+ * Модель приложения неизменяемая, а uPlot принимает изменяемые массивы —
+ * копируем на границе, а не ослабляем типы модели ради библиотеки.
+ */
 function buildData(series: CaptureSeries): uPlot.AlignedData {
-  const data: (number | null)[][] = [series.time, series.frameTimeMs, series.stutterMs];
-  if (series.gpuBusyMs !== null) data.push(series.gpuBusyMs);
-  if (series.cpuBusyMs !== null) data.push(series.cpuBusyMs);
+  const data: (number | null)[][] = [
+    [...series.time],
+    [...series.frameTimeMs],
+    [...series.stutterMs],
+  ];
+  if (series.gpuBusyMs !== null) data.push([...series.gpuBusyMs]);
+  if (series.cpuBusyMs !== null) data.push([...series.cpuBusyMs]);
   return data as uPlot.AlignedData;
 }
 

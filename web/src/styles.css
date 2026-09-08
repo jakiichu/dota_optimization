@@ -12,6 +12,8 @@
   --info: #4aa8ff;
   --ok: #3fca7a;
 
+  --sidebar-width: 232px;
+
   color-scheme: dark;
 }
 
@@ -31,94 +33,245 @@ code {
   font-size: 12.5px;
 }
 
+/* --- каркас --- */
+
 .app {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 28px 24px 64px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
 }
 
-/* --- шапка --- */
+.content {
+  padding: 28px 32px 64px;
+  max-width: 1000px;
+  min-width: 0;
+}
 
-.header {
+/* Полоса загрузки поверх всего: её видно из любого раздела. */
+.loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.loading-bar-track {
+  height: 100%;
+  width: 40%;
+  background: var(--info);
+  animation: loading-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes loading-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* --- сайдбар --- */
+
+.sidebar {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  padding: 20px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-brand {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 0 10px 16px;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 2px;
+}
+
+.sidebar-item {
+  appearance: none;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 1px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.sidebar-item:hover {
+  background: var(--panel-raised);
+  color: var(--text);
+}
+
+.sidebar-item[aria-current='true'] {
+  background: var(--panel-raised);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--info);
+}
+
+.sidebar-item-label {
+  align-items: center;
+  display: flex;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.sidebar-item-hint {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.sidebar-badge {
+  background: var(--warning);
+  border-radius: 999px;
+  color: #1a1200;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  padding: 1px 6px;
+  text-align: center;
+}
+
+.sidebar-machine {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+  margin-top: auto;
+  padding: 14px 10px 0;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-machine-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sidebar-machine-warning {
+  color: var(--warning);
+  margin-top: 6px;
+}
+
+/* --- заголовок раздела --- */
+
+.section-header {
+  align-items: flex-start;
+  display: flex;
   gap: 16px;
-  flex-wrap: wrap;
+  justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.header h1 {
+.section-title {
+  align-items: baseline;
+  display: flex;
   font-size: 20px;
-  margin: 0;
+  gap: 10px;
   letter-spacing: -0.01em;
+  margin: 0;
 }
 
-.machine {
+.section-stale {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.section-subtitle {
   color: var(--muted);
   font-size: 12.5px;
 }
 
-.tabs {
+.section-actions {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 20px;
+  gap: 8px;
 }
 
-.tab {
-  appearance: none;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+/* --- карточки --- */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.card-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.card-note {
   color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-  padding: 8px 14px;
-  margin-bottom: -1px;
+  font-size: 12px;
+  margin-left: auto;
 }
 
-.tab:hover {
-  color: var(--text);
+.muted {
+  color: var(--muted);
 }
 
-.tab[aria-selected='true'] {
-  color: var(--text);
-  border-bottom-color: var(--info);
+.verdict {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
-/* --- сводка --- */
+/* --- сводка важности --- */
 
 .summary {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
 .chip {
-  display: inline-flex;
   align-items: center;
-  gap: 7px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 13px 5px 10px;
-  font-size: 12.5px;
-  cursor: pointer;
   color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  gap: 7px;
+  padding: 5px 13px 5px 10px;
 }
 
 .chip[aria-pressed='true'] {
-  color: var(--text);
   border-color: var(--muted);
+  color: var(--text);
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
   border-radius: 50%;
   flex: none;
+  height: 8px;
+  width: 8px;
 }
 
 /* --- находки --- */
@@ -128,8 +281,8 @@ code {
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
   border-radius: 8px;
-  padding: 14px 16px;
   margin-bottom: 10px;
+  padding: 14px 16px;
 }
 
 .finding[data-severity='critical'] { border-left-color: var(--critical); }
@@ -139,10 +292,10 @@ code {
 .finding[data-severity='ok'] { border-left-color: var(--ok); }
 
 .finding-head {
-  display: flex;
   align-items: baseline;
-  gap: 10px;
   cursor: pointer;
+  display: flex;
+  gap: 10px;
 }
 
 .finding-title {
@@ -161,18 +314,18 @@ code {
 }
 
 .finding-body {
-  margin-top: 12px;
-  padding-top: 12px;
   border-top: 1px solid var(--line);
   display: grid;
   gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
 }
 
 .kv {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 10px;
   align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 96px 1fr;
 }
 
 .kv dt {
@@ -186,10 +339,10 @@ code {
 }
 
 .steps {
-  margin: 0;
-  padding-left: 18px;
   display: grid;
   gap: 6px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .steps li::marker {
@@ -197,17 +350,17 @@ code {
 }
 
 .step-command {
+  align-items: center;
   display: flex;
   gap: 8px;
-  align-items: center;
 }
 
 .step-command code {
   background: var(--panel-raised);
   border: 1px solid var(--line);
   border-radius: 5px;
-  padding: 3px 7px;
   overflow-wrap: anywhere;
+  padding: 3px 7px;
 }
 
 .copy {
@@ -227,55 +380,19 @@ code {
   color: var(--text);
 }
 
-/* --- сенсоры --- */
-
-.gpu-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.gpu-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px;
-  /* Без этого длинное имя адаптера растягивает карточку шире экрана. */
-  min-width: 0;
-  overflow: hidden;
-}
-
-.gpu-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.gpu-head .gpu-source {
-  margin-left: auto;
-}
-
-.gpu-name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.gpu-source {
-  color: var(--muted);
-  font-size: 12px;
-}
+/* --- метрики и таблицы --- */
 
 .metrics {
   display: flex;
-  gap: 24px;
   flex-wrap: wrap;
+  gap: 24px;
   margin-bottom: 12px;
 }
 
 .metric-label {
   color: var(--muted);
-  font-size: 12px;
   display: block;
+  font-size: 12px;
 }
 
 .metric-value {
@@ -287,32 +404,125 @@ code {
   color: var(--muted);
 }
 
+.table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  padding: 4px 12px 8px 0;
+  text-align: left;
+}
+
+.table td {
+  border-top: 1px solid var(--line);
+  padding: 6px 12px 6px 0;
+  vertical-align: top;
+}
+
 .throttle {
   color: var(--warning);
   font-size: 12.5px;
   margin-bottom: 12px;
 }
 
+/* --- корреляция --- */
+
+.tally {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tally-row {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+}
+
+.tally-count {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 76px;
+}
+
+.tally-row span:last-child {
+  color: var(--muted);
+}
+
+.evidence {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.evidence .dot {
+  position: relative;
+  top: -2px;
+}
+
+/* --- запись --- */
+
+.capture-form {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.capture-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.input {
+  appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  min-width: 160px;
+  padding: 6px 10px;
+}
+
+.input:disabled {
+  color: var(--muted);
+}
+
+/* Высоту не фиксируем: uPlot дорисовывает легенду под холстом. */
+.frame-chart,
 .chart {
-  width: 100%;
-  height: 120px;
   min-width: 0;
+  width: 100%;
 }
 
-/* uPlot ставит собственную ширину курсору; без этого он ловит клики мимо. */
-.chart .u-wrap {
-  max-width: 100%;
+.chart {
+  height: 120px;
 }
 
-/* --- общее --- */
+.frame-chart .u-legend,
+.chart .u-legend {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+/* --- состояния --- */
 
 .notice {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--muted);
-  padding: 14px 16px;
   margin-bottom: 16px;
+  padding: 14px 16px;
 }
 
 .notice.error {
@@ -320,10 +530,25 @@ code {
   color: var(--text);
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-row {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  height: 62px;
+}
+
+.skeleton-row:nth-child(2) { animation-delay: 0.15s; }
+.skeleton-row:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
 }
 
 .button {
@@ -347,9 +572,9 @@ code {
 }
 
 .errors {
-  margin-top: 20px;
   color: var(--muted);
   font-size: 12.5px;
+  margin-top: 20px;
 }
 
 .errors ul {
@@ -357,106 +582,29 @@ code {
   padding-left: 18px;
 }
 
-/* --- запись кадров --- */
+/* --- узкие окна --- */
 
-.capture-form {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
 
-.capture-form label {
-  display: grid;
-  gap: 4px;
-}
+  .sidebar {
+    height: auto;
+    position: static;
+  }
 
-.input {
-  appearance: none;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--text);
-  font: inherit;
-  padding: 6px 10px;
-  min-width: 160px;
-}
+  .sidebar-nav {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
 
-.input:disabled {
-  color: var(--muted);
-}
+  .sidebar-item-hint,
+  .sidebar-machine {
+    display: none;
+  }
 
-/* Высоту не фиксируем: uPlot дорисовывает легенду под холстом, и при жёсткой
-   высоте она обрезается карточкой с overflow: hidden. */
-.frame-chart {
-  width: 100%;
-  min-width: 0;
-}
-
-.frame-chart .u-legend {
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-.bottleneck {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-.stutters {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.stutters th {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-  text-align: left;
-  padding: 4px 12px 8px 0;
-}
-
-.stutters td {
-  border-top: 1px solid var(--line);
-  padding: 6px 12px 6px 0;
-}
-
-/* --- корреляция --- */
-
-.tally {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.tally-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.tally-count {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  min-width: 76px;
-}
-
-.tally-row span:last-child {
-  color: var(--muted);
-}
-
-.evidence {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 2px 0;
-}
-
-.evidence .dot {
-  position: relative;
-  top: -2px;
+  .content {
+    padding: 20px 16px 48px;
+  }
 }

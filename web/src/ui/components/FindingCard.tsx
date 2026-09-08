@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { FindingView } from '../api.ts';
-import { SEVERITY_COLOR, SEVERITY_LABEL } from '../severity.ts';
+import type { Finding } from '../../domain/models.ts';
+import { SEVERITY_COLOR, SEVERITY_LABEL } from '../../domain/presentation.ts';
 
 /** Шаг починки, который выглядит как команда, стоит уметь скопировать одной кнопкой. */
 function looksLikeCommand(step: string): boolean {
@@ -33,7 +33,7 @@ function CopyableStep({ step }: { step: string }): React.JSX.Element {
   );
 }
 
-export function FindingCard({ finding }: { finding: FindingView }): React.JSX.Element {
+export function FindingCard({ finding }: { finding: Finding }): React.JSX.Element {
   const [open, setOpen] = useState(finding.severity === 'critical');
 
   return (
