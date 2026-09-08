@@ -19,6 +19,8 @@ function laptopWith(preference: string | null): SystemSnapshot {
         installDir: 'dota 2 beta',
         executablePath: DOTA_EXE,
         launchOptions: null,
+        configPath: null,
+        config: null,
       },
     ],
     gpuPreferences:
@@ -52,6 +54,8 @@ describe('gameGpuPreferenceRule', () => {
           installDir: 'dota 2 beta',
           executablePath: DOTA_EXE,
           launchOptions: null,
+        configPath: null,
+        config: null,
         },
       ],
     });

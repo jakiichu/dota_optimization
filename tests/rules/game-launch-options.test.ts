@@ -11,6 +11,8 @@ function withOptions(launchOptions: string | null) {
         installDir: 'dota 2 beta',
         executablePath: 'C:\\dota2.exe',
         launchOptions,
+        configPath: null,
+        config: null,
       },
     ],
   });

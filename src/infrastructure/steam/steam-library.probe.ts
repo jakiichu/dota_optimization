@@ -9,8 +9,17 @@ import { parseVdf, vdfObject, vdfString, type VdfObject } from './vdf.parser.ts'
  * Игры, про которые инструмент что-то знает, и путь к исполняемому файлу
  * относительно папки установки.
  */
-const KNOWN_GAMES: readonly { appId: string; relativeExecutable: string }[] = [
-  { appId: '570', relativeExecutable: join('game', 'bin', 'win64', 'dota2.exe') },
+const KNOWN_GAMES: readonly {
+  appId: string;
+  relativeExecutable: string;
+  /** Где игра держит autoexec.cfg относительно папки установки. */
+  relativeConfig: string;
+}[] = [
+  {
+    appId: '570',
+    relativeExecutable: join('game', 'bin', 'win64', 'dota2.exe'),
+    relativeConfig: join('game', 'dota', 'cfg', 'autoexec.cfg'),
+  },
 ];
 
 export interface SteamProbeResult {
@@ -69,7 +78,7 @@ async function readLibraryPaths(
 
 async function findInstalledGame(
   libraries: readonly string[],
-  known: { appId: string; relativeExecutable: string },
+  known: { appId: string; relativeExecutable: string; relativeConfig: string },
   errors: string[],
 ): Promise<Omit<GameProfile, 'launchOptions'> | null> {
   for (const library of libraries) {
@@ -86,8 +95,21 @@ async function findInstalledGame(
     const name = vdfString(state, 'name') ?? `Steam app ${known.appId}`;
     if (installDir === null) {
       errors.push(`В ${manifestPath} нет installdir.`);
-      return { appId: known.appId, name, installDir: null, executablePath: null };
+      return {
+        appId: known.appId,
+        name,
+        installDir: null,
+        executablePath: null,
+        configPath: null,
+        config: null,
+      };
     }
+
+    const installRoot = join(library, 'steamapps', 'common', installDir);
+    // Конфиг читаем целиком: снимок должен быть самодостаточным, чтобы разобрать
+    // чужую машину по присланному файлу.
+    const configPath = join(installRoot, known.relativeConfig);
+    const config = await readTextIfExists(configPath);
 
     const executablePath = join(
       library,
@@ -106,6 +128,8 @@ async function findInstalledGame(
       name,
       installDir,
       executablePath: exists ? executablePath : null,
+      configPath: config === null ? null : configPath,
+      config,
     };
   }
   return null;
@@ -175,6 +199,15 @@ async function readVdf(
     if (options.quiet !== true) {
       errors.push(`Не прочитан ${path}: ${describe(error)}`);
     }
+    return null;
+  }
+}
+
+async function readTextIfExists(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch {
+    // Файла нет — это норма: autoexec создаёт сам игрок.
     return null;
   }
 }

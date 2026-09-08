@@ -169,6 +169,8 @@ function toGame(raw: unknown): GameProfile {
     installDir: asString(record['installDir']),
     executablePath: asString(record['executablePath']),
     launchOptions: asString(record['launchOptions']),
+    configPath: asString(record['configPath']),
+    config: asString(record['config']),
   };
 }
 

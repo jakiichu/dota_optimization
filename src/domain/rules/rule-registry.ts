@@ -2,6 +2,7 @@ import type { AuditRule } from './audit-rule.ts';
 import { displayRefreshRateRule } from './display-refresh-rate.rule.ts';
 import { driverFreshnessRule } from './driver-freshness.rule.ts';
 import { fullscreenOptimizationsRule } from './fullscreen-optimizations.rule.ts';
+import { gameConfigRule } from './game-config.rule.ts';
 import { gameDvrRule } from './game-dvr.rule.ts';
 import { gameGpuPreferenceRule } from './game-gpu-preference.rule.ts';
 import { gameLaunchOptionsRule } from './game-launch-options.rule.ts';
@@ -28,5 +29,6 @@ export const allAuditRules: readonly AuditRule[] = [
   memoryIntegrityRule,
   fullscreenOptimizationsRule,
   gameLaunchOptionsRule,
+  gameConfigRule,
   wirelessLinkRule,
 ];

@@ -107,6 +107,15 @@ export interface GameProfile {
   readonly executablePath: Maybe<string>;
   /** Параметры запуска из настроек Steam. Пустая строка — их нет. */
   readonly launchOptions: Maybe<string>;
+  /** Путь к autoexec.cfg, если он есть. */
+  readonly configPath: Maybe<string>;
+  /**
+   * Содержимое autoexec.cfg.
+   *
+   * Храним целиком: снимок должен быть самодостаточным, иначе разобрать чужую
+   * машину по присланному файлу не выйдет.
+   */
+  readonly config: Maybe<string>;
 }
 
 export interface SystemSnapshot {
