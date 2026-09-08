@@ -1,0 +1,25 @@
+{
+  "name": "frameloss",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Диагностика потерь кадров и статтеров на Windows: статический аудит конфигурации + телеметрия кадров.",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "audit": "node src/main/cli.ts audit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "arch": "depcruise src --config .dependency-cruiser.cjs",
+    "arch:graph": "depcruise src --config .dependency-cruiser.cjs --output-type dot",
+    "check": "npm run typecheck && npm run arch && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "dependency-cruiser": "^16.10.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
