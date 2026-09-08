@@ -27,6 +27,16 @@ export interface FrameSample {
   /** Задержка от готовности кадра до появления на экране. */
   readonly displayLatencyMs: Maybe<number>;
   readonly presentMode: Maybe<string>;
+  /**
+   * От нажатия до появления на экране, мс.
+   *
+   * Меряется только для кадров, на которые пришёлся ввод, — у остальных `null`.
+   * Именно эту величину человек называет «отзывчивостью», и с числом кадров она
+   * связана лишь отчасти.
+   */
+  readonly clickToPhotonMs: Maybe<number>;
+  /** То же, но по любому вводу, а не только по клику. */
+  readonly allInputToPhotonMs: Maybe<number>;
   /** Кадр не дошёл до экрана. */
   readonly dropped: Maybe<boolean>;
 }

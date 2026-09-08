@@ -53,6 +53,10 @@ export function renderCaptureReport(
   // посчитанные по времени кадра, а не по мгновенному FPS.
   lines.push(`  p99:          ${ms(statistics.frameTime.p99)}`);
   lines.push(`  p99.9:        ${ms(statistics.frameTime.p999)}`);
+  if (statistics.inputLatency !== null) {
+    lines.push(`  инпут-лаг p50: ${ms(statistics.inputLatency.p50)}`);
+    lines.push(`  инпут-лаг p99: ${ms(statistics.inputLatency.p99)}`);
+  }
   lines.push('');
 
   lines.push(paint('Статтеры', BOLD));

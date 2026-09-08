@@ -25,6 +25,8 @@ export interface CaptureView {
   readonly durationSeconds: number;
   readonly averageFps: number;
   readonly frameTime: FrameStatistics['frameTime'];
+  /** `null`, если за запись не было ввода: это не нулевая задержка. */
+  readonly inputLatency: FrameStatistics['inputLatency'];
   readonly stutterCount: number;
   readonly stuttersPerMinute: number;
   readonly bottleneck: Bottleneck;
@@ -57,6 +59,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     durationSeconds: statistics.durationSeconds,
     averageFps: statistics.averageFps,
     frameTime: statistics.frameTime,
+    inputLatency: statistics.inputLatency,
     stutterCount: statistics.stutters.length,
     stuttersPerMinute: statistics.stuttersPerMinute,
     bottleneck: statistics.bottleneck,

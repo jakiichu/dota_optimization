@@ -19,6 +19,8 @@ function capture(frameTimes: readonly number[], options: FrameOptions = {}): Fra
       cpuBusyMs: options.cpuBusyMs ?? null,
       gpuBusyMs: options.gpuBusyMs ?? null,
       displayLatencyMs: null,
+      clickToPhotonMs: null,
+      allInputToPhotonMs: null,
       presentMode: null,
       dropped: null,
     };

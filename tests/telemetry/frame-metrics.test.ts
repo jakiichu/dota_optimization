@@ -23,6 +23,8 @@ function trace(frameTimes: readonly number[], options: FrameOptions = {}): Frame
       cpuBusyMs: options.cpuBusyMs ?? null,
       gpuBusyMs: options.gpuBusyMs ?? null,
       displayLatencyMs: null,
+      clickToPhotonMs: null,
+      allInputToPhotonMs: null,
       presentMode: null,
       dropped: null,
     };

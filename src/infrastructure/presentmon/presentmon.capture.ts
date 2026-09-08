@@ -47,7 +47,10 @@ export class PresentMonCapture implements FrameCaptureSource {
     await ensureInstalled();
 
     const workDir = await mkdtemp(join(tmpdir(), 'frameloss-capture-'));
-    const csvPath = join(workDir, 'frames.csv');
+    // Когда путь задан снаружи, PresentMon пишет сразу туда: копировать файл
+    // из-под повышения прав было бы лишним шагом с лишними правами.
+    const keepRaw = request.rawCsvPath !== undefined;
+    const csvPath = request.rawCsvPath ?? join(workDir, 'frames.csv');
     const args = buildArgs(request, csvPath);
     const timeoutMs = request.seconds * MS_IN_SECOND + TIMEOUT_MARGIN_MS;
 
@@ -57,7 +60,9 @@ export class PresentMonCapture implements FrameCaptureSource {
         timeColumnIsQpcMs: true,
       });
     } finally {
-      await rm(workDir, { recursive: true, force: true });
+      if (!keepRaw) {
+        await rm(workDir, { recursive: true, force: true });
+      }
     }
   }
 }

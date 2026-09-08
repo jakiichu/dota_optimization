@@ -34,6 +34,7 @@ interface Options {
   readonly saveSnapshotTo: string | null;
   readonly processName: string;
   readonly seconds: number;
+  readonly rawCsvPath: string | null;
 }
 
 const USAGE = `frameloss — диагностика потерь кадров на Windows
@@ -45,6 +46,7 @@ const USAGE = `frameloss — диагностика потерь кадров н
 Опции capture:
   --process <exe>         что записывать (по умолчанию dota2.exe)
   --seconds <N>           длительность записи (по умолчанию 60)
+  --save-csv <путь>       сохранить сырой CSV от PresentMon
 
 Опции audit:
   --verbose               показать и успешные проверки
@@ -71,6 +73,7 @@ function parseOptions(args: readonly string[]): Options {
     fromFile: valueAfter('--from-file'),
     saveSnapshotTo: valueAfter('--save-snapshot'),
     processName: valueAfter('--process') ?? DEFAULT_PROCESS_NAME,
+    rawCsvPath: valueAfter('--save-csv'),
     seconds: Number.parseInt(valueAfter('--seconds') ?? '', 10) || DEFAULT_CAPTURE_SECONDS,
   };
 }
@@ -125,7 +128,11 @@ async function runCapture(options: Options): Promise<number> {
   const session = await new CaptureFrameSession(
     new PresentMonCapture(),
     new SidecarSensorStream(),
-  ).execute({ processName: options.processName, seconds: options.seconds });
+  ).execute({
+    processName: options.processName,
+    seconds: options.seconds,
+    ...(options.rawCsvPath === null ? {} : { rawCsvPath: options.rawCsvPath }),
+  });
   const { capture, statistics } = session;
 
   if (options.json) {

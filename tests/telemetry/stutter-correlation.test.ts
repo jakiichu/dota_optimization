@@ -34,6 +34,8 @@ function buildFrames(
       gpuBusyMs:
         options.gpuBusyShare === undefined ? null : frameTimeMs * options.gpuBusyShare,
       displayLatencyMs: null,
+      clickToPhotonMs: null,
+      allInputToPhotonMs: null,
       presentMode: options.presentMode ?? null,
       dropped: options.dropped ?? null,
     };

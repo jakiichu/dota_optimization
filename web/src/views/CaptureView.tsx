@@ -134,6 +134,9 @@ function CaptureReport({ data }: { data: CaptureData }): React.JSX.Element {
           <Metric label="p95" value={ms(data.frameTime.p95)} />
           <Metric label="p99" value={ms(data.frameTime.p99)} />
           <Metric label="p99.9" value={ms(data.frameTime.p999)} />
+          {data.inputLatency !== null && (
+            <Metric label="инпут-лаг p99" value={ms(data.inputLatency.p99)} />
+          )}
           <Metric
             label="статтеры"
             value={`${data.stutterCount} (${data.stuttersPerMinute.toFixed(1)}/мин)`}

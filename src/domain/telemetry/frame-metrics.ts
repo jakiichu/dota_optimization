@@ -56,6 +56,14 @@ export interface Bottleneck {
 
 export interface FrameStatistics {
   readonly frameCount: number;
+  /**
+   * Задержка от ввода до кадра на экране.
+   *
+   * `null`, если за запись не было ни одного ввода: PresentMon меряет её только
+   * по кадрам, на которые пришлось нажатие. Отсутствие ввода — не нулевая
+   * задержка, и подменять одно другим нельзя.
+   */
+  readonly inputLatency: Percentiles | null;
   readonly durationSeconds: number;
   readonly averageFps: number;
   readonly frameTime: Percentiles;
@@ -71,6 +79,7 @@ const NO_DATA: FrameStatistics = {
   durationSeconds: 0,
   averageFps: 0,
   frameTime: EMPTY_PERCENTILES,
+  inputLatency: null,
   stutters: [],
   stuttersPerMinute: 0,
   bottleneck: {
@@ -93,6 +102,7 @@ export function computeFrameStatistics(frames: readonly FrameSample[]): FrameSta
 
   return {
     frameCount: frames.length,
+    inputLatency: computeInputLatency(frames),
     durationSeconds,
     averageFps: durationSeconds === 0 ? 0 : frames.length / durationSeconds,
     frameTime: percentiles,
@@ -118,6 +128,13 @@ export function percentile(sortedAscending: readonly number[], fraction: number)
   const rank = Math.ceil(fraction * sortedAscending.length);
   const index = Math.min(Math.max(rank - 1, 0), sortedAscending.length - 1);
   return sortedAscending[index] ?? 0;
+}
+
+function computeInputLatency(frames: readonly FrameSample[]): Percentiles | null {
+  const measured = frames
+    .map((frame) => frame.clickToPhotonMs ?? frame.allInputToPhotonMs)
+    .filter((value): value is number => value !== null);
+  return measured.length === 0 ? null : computePercentiles(measured);
 }
 
 function computePercentiles(frameTimes: readonly number[]): Percentiles {

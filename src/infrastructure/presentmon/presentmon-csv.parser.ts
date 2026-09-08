@@ -15,11 +15,15 @@ const COLUMN_ALIASES = {
   application: ['Application'],
   processId: ['ProcessID'],
   frameTime: ['FrameTime', 'msBetweenPresents'],
-  startTime: ['CPUStartTime', 'TimeInSeconds'],
+  // Имя колонки времени зависит от флага: без него CPUStartTime, с --qpc_time
+  // CPUStartQPC, с --qpc_time_ms CPUStartQPCTime. Проверено на PresentMon 2.5.1.
+  startTime: ['CPUStartQPCTime', 'CPUStartQPC', 'CPUStartTime', 'TimeInSeconds'],
   cpuBusy: ['CPUBusy'],
   gpuBusy: ['GPUBusy', 'GPUTime'],
   displayLatency: ['DisplayLatency', 'msUntilDisplayed'],
   presentMode: ['PresentMode'],
+  clickToPhoton: ['ClickToPhotonLatency'],
+  allInputToPhoton: ['AllInputToPhotonLatency'],
   dropped: ['Dropped'],
 } as const;
 
@@ -100,6 +104,8 @@ export function parsePresentMonCsv(
       gpuBusyMs: readNumber(cells, columns.gpuBusy),
       displayLatencyMs: readNumber(cells, columns.displayLatency),
       presentMode: readText(cells, columns.presentMode),
+      clickToPhotonMs: readNumber(cells, columns.clickToPhoton),
+      allInputToPhotonMs: readNumber(cells, columns.allInputToPhoton),
       dropped: readBoolean(cells, columns.dropped),
     });
 
@@ -120,8 +126,15 @@ export function parsePresentMonCsv(
 
 type ColumnIndex = Partial<Record<ColumnKey, number>>;
 
+/** PresentMon пишет CSV с меткой порядка байтов, и она приклеивается к первой колонке. */
+const BYTE_ORDER_MARK = '﻿';
+
 function mapColumns(header: readonly string[]): ColumnIndex {
-  const normalized = header.map((name) => name.trim().toLowerCase());
+  // Метку срезаем явно: `trim` убирает её и сам, потому что U+FEFF считается
+  // пробелом, но полагаться на такое совпадение не стоит.
+  const normalized = header.map((name) =>
+    name.replace(BYTE_ORDER_MARK, '').trim().toLowerCase(),
+  );
   const columns: ColumnIndex = {};
 
   for (const key of Object.keys(COLUMN_ALIASES) as ColumnKey[]) {

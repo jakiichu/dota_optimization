@@ -119,6 +119,7 @@ export interface CaptureView {
   durationSeconds: number;
   averageFps: number;
   frameTime: { p50: number; p95: number; p99: number; p999: number };
+  inputLatency: { p50: number; p95: number; p99: number; p999: number } | null;
   stutterCount: number;
   stuttersPerMinute: number;
   bottleneck: Bottleneck;

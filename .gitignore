@@ -11,3 +11,4 @@ web/dist/
 tools/presentmon/*.exe
 build/
 release/
+/*.csv
