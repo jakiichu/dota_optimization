@@ -10,18 +10,32 @@
   "scripts": {
     "audit": "node src/main/cli.ts audit",
     "sensors": "node src/main/cli.ts sensors",
+    "serve": "node src/main/server.ts",
+    "dev": "node scripts/dev.mjs",
+    "ui": "vite --config web/vite.config.ts",
+    "ui:build": "vite build --config web/vite.config.ts",
     "sidecar:build": "dotnet publish sidecar/Frameloss.Sidecar/Frameloss.Sidecar.csproj -c Release -o sidecar/bin --nologo",
     "typecheck": "tsc --noEmit",
+    "typecheck:ui": "tsc --noEmit -p web/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "arch": "depcruise src --config .dependency-cruiser.cjs",
     "arch:graph": "depcruise src --config .dependency-cruiser.cjs --output-type dot",
-    "check": "npm run typecheck && npm run arch && npm run test"
+    "check": "npm run typecheck && npm run typecheck:ui && npm run arch && npm run test"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^5.2.0",
     "dependency-cruiser": "^16.10.0",
     "typescript": "^5.9.0",
+    "vite": "^7.3.6",
     "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "uplot": "^1.6.32"
   }
 }

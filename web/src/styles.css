@@ -1,0 +1,358 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-raised: #1e222b;
+  --line: #262b36;
+  --text: #e6e8ee;
+  --muted: #8b93a7;
+
+  --critical: #ff5f56;
+  --warning: #ffb340;
+  --unknown: #a78bfa;
+  --info: #4aa8ff;
+  --ok: #3fca7a;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 'Segoe UI', system-ui, sans-serif;
+}
+
+code {
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 12.5px;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+/* --- шапка --- */
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 20px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.machine {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 14px;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--info);
+}
+
+/* --- сводка --- */
+
+.summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 13px 5px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.chip[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* --- находки --- */
+
+.finding {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.finding[data-severity='critical'] { border-left-color: var(--critical); }
+.finding[data-severity='warning'] { border-left-color: var(--warning); }
+.finding[data-severity='unknown'] { border-left-color: var(--unknown); }
+.finding[data-severity='info'] { border-left-color: var(--info); }
+.finding[data-severity='ok'] { border-left-color: var(--ok); }
+
+.finding-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.finding-title {
+  font-weight: 600;
+}
+
+.finding-id {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.finding-summary {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.finding-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.kv dt {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.steps li::marker {
+  color: var(--muted);
+}
+
+.step-command {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.step-command code {
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 7px;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  appearance: none;
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 9px;
+}
+
+.copy:hover {
+  color: var(--text);
+}
+
+/* --- сенсоры --- */
+
+.gpu-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.gpu-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  /* Без этого длинное имя адаптера растягивает карточку шире экрана. */
+  min-width: 0;
+  overflow: hidden;
+}
+
+.gpu-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gpu-head .gpu-source {
+  margin-left: auto;
+}
+
+.gpu-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gpu-source {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metrics {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.metric-label {
+  color: var(--muted);
+  font-size: 12px;
+  display: block;
+}
+
+.metric-value {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-value.unknown {
+  color: var(--muted);
+}
+
+.throttle {
+  color: var(--warning);
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+.chart {
+  width: 100%;
+  height: 120px;
+  min-width: 0;
+}
+
+/* uPlot ставит собственную ширину курсору; без этого он ловит клики мимо. */
+.chart .u-wrap {
+  max-width: 100%;
+}
+
+/* --- общее --- */
+
+.notice {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.notice.error {
+  border-color: var(--critical);
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.button {
+  appearance: none;
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 6px 14px;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.errors {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.errors ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
