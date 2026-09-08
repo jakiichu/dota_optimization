@@ -36,6 +36,8 @@ export interface Percentiles {
 }
 
 export interface Stutter {
+  /** Позиция кадра в записи: по ней корреляция достаёт сам кадр. */
+  readonly frameIndex: number;
   readonly atSeconds: number;
   readonly frameTimeMs: number;
   /** Локальная норма, относительно которой кадр признан выбросом. */
@@ -152,6 +154,7 @@ export function findStutters(frames: readonly FrameSample[]): Stutter[] {
     if (delta < STUTTER_MIN_DELTA_MS) continue;
 
     stutters.push({
+      frameIndex: index,
       atSeconds: frame.startSeconds,
       frameTimeMs: frame.frameTimeMs,
       baselineMs: baseline,

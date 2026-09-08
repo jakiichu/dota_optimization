@@ -18,6 +18,7 @@ function trace(frameTimes: readonly number[], options: FrameOptions = {}): Frame
   return frameTimes.map((frameTimeMs) => {
     const frame: FrameSample = {
       startSeconds: elapsed / 1000,
+      qpcMs: null,
       frameTimeMs,
       cpuBusyMs: options.cpuBusyMs ?? null,
       gpuBusyMs: options.gpuBusyMs ?? null,

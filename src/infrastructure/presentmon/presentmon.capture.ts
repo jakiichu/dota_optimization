@@ -55,7 +55,9 @@ export class PresentMonCapture implements FrameCaptureSource {
 
     try {
       await runCapture(args, timeoutMs);
-      return parsePresentMonCsv(await readFile(csvPath, 'utf8'));
+      return parsePresentMonCsv(await readFile(csvPath, 'utf8'), {
+        timeColumnIsQpcMs: true,
+      });
     } finally {
       await rm(workDir, { recursive: true, force: true });
     }
@@ -87,6 +89,9 @@ function buildArgs(request: FrameCaptureRequest, csvPath: string): string[] {
     '--v2_metrics',
     // Оставшаяся от прошлого падения сессия иначе не даст стартовать новой.
     '--stop_existing_session',
+    // Абсолютное время по счётчику производительности: без него кадры не
+    // положить на одну ось с показаниями сенсоров.
+    '--qpc_time_ms',
   ];
 }
 

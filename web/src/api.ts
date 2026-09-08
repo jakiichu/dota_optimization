@@ -98,6 +98,7 @@ export interface Bottleneck {
 }
 
 export interface Stutter {
+  frameIndex: number;
   atSeconds: number;
   frameTimeMs: number;
   baselineMs: number;
@@ -124,6 +125,8 @@ export interface CaptureView {
   worstStutters: Stutter[];
   series: CaptureSeries;
   availableColumns: string[];
+  correlation: CorrelationReport;
+  sensorSampleCount: number;
 }
 
 export async function runCapture(
@@ -138,4 +141,37 @@ export async function runCapture(
     throw new Error(errorMessageOf(body) ?? `Сервер ответил ${response.status}.`);
   }
   return (await response.json()) as CaptureView;
+}
+
+export type EvidenceKind =
+  | 'gpu-work'
+  | 'cpu-work'
+  | 'waiting'
+  | 'present-mode'
+  | 'dropped'
+  | 'gpu-idle'
+  | 'vram-growth'
+  | 'throttling';
+
+export interface Evidence {
+  kind: EvidenceKind;
+  detail: string;
+}
+
+export interface CorrelatedStutter {
+  stutter: Stutter;
+  evidence: Evidence[];
+}
+
+export interface CauseTally {
+  kind: EvidenceKind;
+  label: string;
+  count: number;
+}
+
+export interface CorrelationReport {
+  stutters: CorrelatedStutter[];
+  tally: CauseTally[];
+  unexplained: number;
+  limitations: string[];
 }

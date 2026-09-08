@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { runCapture, type BottleneckKind, type CaptureView as CaptureData } from '../api.ts';
+import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
@@ -143,6 +144,14 @@ function CaptureReport({ data }: { data: CaptureData }): React.JSX.Element {
         </div>
         <div className="finding-summary">{data.bottleneck.explanation}</div>
       </div>
+
+      {data.stutterCount > 0 && (
+        <CorrelationPanel
+          correlation={data.correlation}
+          stutterCount={data.stutterCount}
+          sensorSampleCount={data.sensorSampleCount}
+        />
+      )}
 
       {data.worstStutters.length > 0 && (
         <div className="gpu-card">

@@ -12,6 +12,7 @@ import type { SnapshotCollector } from '../application/ports/snapshot-collector.
 import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snapshot.collector.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
 import { SidecarSensorSampler } from '../infrastructure/sensors/sidecar-sensor.sampler.ts';
+import { SidecarSensorStream } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -121,14 +122,20 @@ async function runCapture(options: Options): Promise<number> {
       'PresentMon требует прав администратора — подтвердите запрос UAC.\n',
   );
 
-  const { capture, statistics } = await new CaptureFrameSession(
+  const session = await new CaptureFrameSession(
     new PresentMonCapture(),
+    new SidecarSensorStream(),
   ).execute({ processName: options.processName, seconds: options.seconds });
+  const { capture, statistics } = session;
 
   if (options.json) {
-    stdout.write(`${JSON.stringify({ capture, statistics }, null, 2)}\n`);
+    stdout.write(`${JSON.stringify(session, null, 2)}\n`);
   } else {
-    stdout.write(`${renderCaptureReport(capture, statistics, { color: options.color })}\n`);
+    stdout.write(
+      `${renderCaptureReport(capture, statistics, session.correlation, {
+        color: options.color,
+      })}\n`,
+    );
   }
 
   return statistics.frameCount === 0 ? EXIT_ERROR : EXIT_OK;

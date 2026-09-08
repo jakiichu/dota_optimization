@@ -2,6 +2,7 @@ import { toCaptureView } from '../adapters/http/capture.view.ts';
 import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
+import type { SensorStream } from '../application/ports/sensor-stream.port.ts';
 
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
 const DEFAULT_SECONDS = 60;
@@ -14,8 +15,8 @@ const MAX_SECONDS = 600;
  * Одновременно идёт только одна: PresentMon держит именованную ETW-сессию, и
  * вторая запись оборвала бы первую на середине.
  */
-export function createCaptureRoute(): JsonRoute {
-  const session = new CaptureFrameSession(new PresentMonCapture());
+export function createCaptureRoute(sensors: SensorStream): JsonRoute {
+  const session = new CaptureFrameSession(new PresentMonCapture(), sensors);
   let inFlight: Promise<unknown> | null = null;
 
   return {
@@ -30,9 +31,7 @@ export function createCaptureRoute(): JsonRoute {
         seconds: clampSeconds(query.get('seconds')),
       };
 
-      const running = session
-        .execute(request)
-        .then(({ capture, statistics }) => toCaptureView(capture, statistics));
+      const running = session.execute(request).then(toCaptureView);
       inFlight = running;
 
       try {

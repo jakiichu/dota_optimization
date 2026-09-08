@@ -15,6 +15,7 @@ const COLUMN_ALIASES = {
   application: ['Application'],
   processId: ['ProcessID'],
   frameTime: ['FrameTime', 'msBetweenPresents'],
+  startTime: ['CPUStartTime', 'TimeInSeconds'],
   cpuBusy: ['CPUBusy'],
   gpuBusy: ['GPUBusy', 'GPUTime'],
   displayLatency: ['DisplayLatency', 'msUntilDisplayed'],
@@ -36,7 +37,22 @@ export class PresentMonCsvError extends Error {
   }
 }
 
-export function parsePresentMonCsv(text: string): FrameCapture {
+export interface PresentMonCsvOptions {
+  /**
+   * Колонка времени содержит счётчик производительности в миллисекундах,
+   * то есть PresentMon запускали с `--qpc_time_ms`.
+   *
+   * Разбирать эту колонку вслепую нельзя: без флага там то секунды от начала
+   * записи, то дата с наносекундами. Поэтому формат сообщает тот, кто задавал
+   * флаги, а не угадывает парсер.
+   */
+  readonly timeColumnIsQpcMs?: boolean;
+}
+
+export function parsePresentMonCsv(
+  text: string,
+  options: PresentMonCsvOptions = {},
+): FrameCapture {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
   const headerLine = lines[0];
   if (headerLine === undefined) {
@@ -55,6 +71,7 @@ export function parsePresentMonCsv(text: string): FrameCapture {
   let applicationName = 'unknown';
   let processId: Maybe<number> = null;
   let elapsedMs = 0;
+  let originQpcMs: Maybe<number> = null;
 
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line);
@@ -65,8 +82,19 @@ export function parsePresentMonCsv(text: string): FrameCapture {
     applicationName = readText(cells, columns.application) ?? applicationName;
     processId ??= readNumber(cells, columns.processId);
 
+    const qpcMs = options.timeColumnIsQpcMs === true
+      ? readNumber(cells, columns.startTime)
+      : null;
+    // Ось графика ведём от первого кадра: абсолютный QPC отсчитывается от
+    // загрузки системы, и на графике такие числа бесполезны.
+    originQpcMs ??= qpcMs;
+
     frames.push({
-      startSeconds: elapsedMs / MS_IN_SECOND,
+      startSeconds:
+        qpcMs !== null && originQpcMs !== null
+          ? (qpcMs - originQpcMs) / MS_IN_SECOND
+          : elapsedMs / MS_IN_SECOND,
+      qpcMs,
       frameTimeMs,
       cpuBusyMs: readNumber(cells, columns.cpuBusy),
       gpuBusyMs: readNumber(cells, columns.gpuBusy),
@@ -75,9 +103,8 @@ export function parsePresentMonCsv(text: string): FrameCapture {
       dropped: readBoolean(cells, columns.dropped),
     });
 
-    // Ось времени набираем из самих кадров, а не из колонки времени: она в
-    // разных версиях и при разных флагах — то секунды, то тики QPC, то дата.
-    // Время между презентами от формата не зависит.
+    // Запасная ось на случай, если абсолютного времени нет: время между
+    // презентами есть всегда и от формата колонки не зависит.
     elapsedMs += frameTimeMs;
   }
 

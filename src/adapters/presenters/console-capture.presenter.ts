@@ -1,5 +1,6 @@
 import type { Bottleneck, FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
+import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
 const RESET = '\u001b[0m';
 const DIM = '\u001b[2m';
@@ -23,6 +24,7 @@ export interface ConsoleCaptureOptions {
 export function renderCaptureReport(
   capture: FrameCapture,
   statistics: FrameStatistics,
+  correlation: CorrelationReport,
   options: ConsoleCaptureOptions,
 ): string {
   const paint = (text: string, code: string): string =>
@@ -72,6 +74,23 @@ export function renderCaptureReport(
   lines.push(paint('Во что упёрлись', BOLD));
   lines.push(`  ${BOTTLENECK_LABEL[statistics.bottleneck.kind]}`);
   lines.push(paint(`  ${statistics.bottleneck.explanation}`, DIM));
+  lines.push('');
+
+  lines.push(paint('С чем совпали статтеры', BOLD));
+  if (correlation.tally.length === 0) {
+    lines.push('  Ни одной улики не нашлось.');
+  }
+  for (const cause of correlation.tally) {
+    lines.push(`  ${cause.count} из ${statistics.stutters.length}: ${cause.label}`);
+  }
+  if (correlation.unexplained > 0) {
+    lines.push(paint(`  без объяснения: ${correlation.unexplained}`, DIM));
+  }
+  // Отсутствие улик из-за нехватки данных и отсутствие улик как факт — разные
+  // вещи, и путать их нельзя.
+  for (const limitation of correlation.limitations) {
+    lines.push(paint(`  · ${limitation}`, DIM));
+  }
 
   return lines.join('\n');
 }

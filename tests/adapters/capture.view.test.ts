@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toCaptureView } from '../../src/adapters/http/capture.view.ts';
 import { computeFrameStatistics } from '../../src/domain/telemetry/frame-metrics.ts';
+import { correlateStutters } from '../../src/domain/telemetry/stutter-correlation.ts';
 import type { FrameCapture, FrameSample } from '../../src/domain/telemetry/frame-sample.ts';
 
 interface FrameOptions {
@@ -13,6 +14,7 @@ function capture(frameTimes: readonly number[], options: FrameOptions = {}): Fra
   const frames: FrameSample[] = frameTimes.map((frameTimeMs) => {
     const frame: FrameSample = {
       startSeconds: elapsed / 1000,
+      qpcMs: null,
       frameTimeMs,
       cpuBusyMs: options.cpuBusyMs ?? null,
       gpuBusyMs: options.gpuBusyMs ?? null,
@@ -37,7 +39,13 @@ function steady(frameTimeMs: number, count: number): number[] {
 }
 
 function toView(frames: FrameCapture) {
-  return toCaptureView(frames, computeFrameStatistics(frames.frames));
+  const statistics = computeFrameStatistics(frames.frames);
+  return toCaptureView({
+    capture: frames,
+    statistics,
+    correlation: correlateStutters(frames.frames, statistics.stutters, []),
+    sensorSampleCount: 0,
+  });
 }
 
 describe('toCaptureView', () => {

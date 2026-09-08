@@ -5,6 +5,7 @@ import type {
   Stutter,
 } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture, FrameSample } from '../../domain/telemetry/frame-sample.ts';
+import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
 /** Сколько худших статтеров показываем списком; остальные видны на графике. */
 const WORST_STUTTERS_SHOWN = 12;
@@ -30,6 +31,8 @@ export interface CaptureView {
   readonly worstStutters: readonly Stutter[];
   readonly series: CaptureSeries;
   readonly availableColumns: readonly string[];
+  readonly correlation: CorrelationReport;
+  readonly sensorSampleCount: number;
 }
 
 /**
@@ -39,10 +42,15 @@ export interface CaptureView {
  * именно то, ради чего запись и делалась: одиночный кадр на 200 мс — это одна
  * точка из двенадцати тысяч, и первый же алгоритм усреднения её сотрёт.
  */
-export function toCaptureView(
-  capture: FrameCapture,
-  statistics: FrameStatistics,
-): CaptureView {
+export interface CaptureViewInput {
+  readonly capture: FrameCapture;
+  readonly statistics: FrameStatistics;
+  readonly correlation: CorrelationReport;
+  readonly sensorSampleCount: number;
+}
+
+export function toCaptureView(input: CaptureViewInput): CaptureView {
+  const { capture, statistics } = input;
   return {
     application: capture.applicationName,
     frameCount: statistics.frameCount,
@@ -55,6 +63,8 @@ export function toCaptureView(
     worstStutters: worstStutters(statistics.stutters),
     series: toSeries(capture.frames, statistics.stutters),
     availableColumns: capture.availableColumns,
+    correlation: input.correlation,
+    sensorSampleCount: input.sensorSampleCount,
   };
 }
 

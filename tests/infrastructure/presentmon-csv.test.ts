@@ -78,7 +78,31 @@ describe('parsePresentMonCsv', () => {
     expect(capture.frames[0]?.frameTimeMs).toBe(16.6);
   });
 
-  it('строит ось времени из самих кадров', () => {
+  it('читает абсолютное время, когда PresentMon запущен с --qpc_time_ms', () => {
+    // Колонка CPUStartTime содержит счётчик производительности в миллисекундах.
+    const csv = [
+      V2_HEADER,
+      'dota2.exe,1,0x1,DXGI,0,0,1,Flip,5000000.0,16.6,4.2,1,2,8,15.9,0.5,12.3,16.6',
+      'dota2.exe,1,0x1,DXGI,0,0,1,Flip,5000016.6,16.7,4.3,1,2,8,16.0,0.5,12.3,16.6',
+    ].join('\n');
+
+    const capture = parsePresentMonCsv(csv, { timeColumnIsQpcMs: true });
+
+    expect(capture.frames[0]?.qpcMs).toBe(5_000_000);
+    expect(capture.frames[1]?.qpcMs).toBe(5_000_016.6);
+    // Ось графика при этом ведётся от первого кадра, а не от загрузки системы.
+    expect(capture.frames[0]?.startSeconds).toBe(0);
+    expect(capture.frames[1]?.startSeconds).toBeCloseTo(0.0166, 4);
+  });
+
+  it('не трогает колонку времени, пока формат не подтверждён флагом', () => {
+    // Без --qpc_time_ms там бывают то секунды, то дата с наносекундами.
+    const csv = [V2_HEADER, v2Row(16.6, '4', '15')].join('\n');
+
+    expect(parsePresentMonCsv(csv).frames[0]?.qpcMs).toBeNull();
+  });
+
+  it('строит запасную ось из самих кадров, когда абсолютного времени нет', () => {
     // Колонка времени в разных версиях то секунды, то тики QPC, то дата;
     // время между презентами от формата не зависит.
     const csv = [V2_HEADER, v2Row(10, '5', '9'), v2Row(20, '5', '9'), v2Row(30, '5', '9')].join(

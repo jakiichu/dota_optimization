@@ -74,7 +74,7 @@ async function main(): Promise<void> {
 
   const server = await startLocalServer({
     port,
-    jsonRoutes: [auditRoute, createCaptureRoute()],
+    jsonRoutes: [auditRoute, createCaptureRoute(sensorStream)],
     streamRoutes: [sensorsRoute],
     staticRoot,
   });

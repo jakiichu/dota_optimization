@@ -424,3 +424,39 @@ code {
   border-top: 1px solid var(--line);
   padding: 6px 12px 6px 0;
 }
+
+/* --- корреляция --- */
+
+.tally {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tally-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tally-count {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 76px;
+}
+
+.tally-row span:last-child {
+  color: var(--muted);
+}
+
+.evidence {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.evidence .dot {
+  position: relative;
+  top: -2px;
+}

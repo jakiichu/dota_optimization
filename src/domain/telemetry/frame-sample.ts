@@ -9,8 +9,16 @@ import type { Maybe } from '../snapshot/system-snapshot.ts';
  * 55 мс дают одинаковые 100 FPS и совершенно разные ощущения.
  */
 export interface FrameSample {
-  /** Секунды от начала записи. */
+  /** Секунды от начала записи — ось для графика. */
   readonly startSeconds: number;
+  /**
+   * Абсолютное время по счётчику производительности, мс.
+   *
+   * Единственное, что позволяет положить кадры и показания сенсоров на одну
+   * ось: настенное время для этого не годится, оно прыгает при синхронизации.
+   * `null` — если PresentMon запускали без `--qpc_time_ms`.
+   */
+  readonly qpcMs: Maybe<number>;
   readonly frameTimeMs: number;
   /** Сколько кадр занял CPU. Недоступно в метриках PresentMon 1.x. */
   readonly cpuBusyMs: Maybe<number>;
