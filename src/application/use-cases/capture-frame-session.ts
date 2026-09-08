@@ -1,4 +1,11 @@
-import { analyzeCapture, type CaptureAnalysis } from '../../domain/telemetry/capture-analysis.ts';
+import {
+  analyzeCapture,
+  type CaptureAnalysis,
+} from '../../domain/telemetry/capture-analysis.ts';
+import {
+  UNKNOWN_MACHINE,
+  type MachineContext,
+} from '../../domain/gameconfig/machine-context.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
 import type { FrameCaptureRequest, FrameCaptureSource } from '../ports/frame-capture.port.ts';
@@ -25,9 +32,20 @@ export class CaptureFrameSession {
   readonly #frames: FrameCaptureSource;
   readonly #sensors: SensorStream | null;
 
-  constructor(frames: FrameCaptureSource, sensors: SensorStream | null = null) {
+  readonly #machine: () => Promise<MachineContext>;
+
+  constructor(
+    frames: FrameCaptureSource,
+    sensors: SensorStream | null = null,
+    /**
+     * Конфиг игры читается на момент записи: рекомендации не должны предлагать
+     * то, что уже сделано.
+     */
+    machine: () => Promise<MachineContext> = async () => UNKNOWN_MACHINE,
+  ) {
     this.#frames = frames;
     this.#sensors = sensors;
+    this.#machine = machine;
   }
 
   async execute(request: FrameCaptureRequest): Promise<FrameSessionResult> {
@@ -45,7 +63,7 @@ export class CaptureFrameSession {
 
     return {
       capture,
-      ...analyzeCapture(capture, sensorSamples),
+      ...analyzeCapture(capture, sensorSamples, await this.#machine()),
       sensorSamples,
       sensorSampleCount: sensorSamples.length,
     };

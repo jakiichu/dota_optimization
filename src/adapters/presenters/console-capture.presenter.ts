@@ -1,5 +1,6 @@
 import type { Bottleneck, FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
+import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
@@ -27,6 +28,7 @@ export function renderCaptureReport(
   statistics: FrameStatistics,
   correlation: CorrelationReport,
   network: NetworkQuality,
+  recommendations: readonly Recommendation[],
   options: ConsoleCaptureOptions,
 ): string {
   const paint = (text: string, code: string): string =>
@@ -128,6 +130,25 @@ export function renderCaptureReport(
           DIM,
         ),
       );
+    }
+  }
+
+  // Рекомендации в конце: сначала числа, потом выводы из них. Обратный порядок
+  // читается как советы, к которым для солидности приложили графики.
+  if (recommendations.length > 0) {
+    lines.push('');
+    lines.push(paint('Что попробовать', BOLD));
+    for (const item of recommendations) {
+      lines.push(`  ${item.title}`);
+      lines.push(paint(`    повод:   ${item.evidence}`, DIM));
+      for (const change of item.changes) {
+        lines.push(`    ${change.cvar} ${change.value} — ${change.why}`);
+      }
+      lines.push(paint(`    ожидаем: ${item.expect}`, DIM));
+      if (item.risk !== '') {
+        lines.push(paint(`    цена:    ${item.risk}`, DIM));
+      }
+      lines.push('');
     }
   }
 

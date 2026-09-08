@@ -2,6 +2,10 @@ import {
   analyzeCapture,
   type CaptureAnalysis,
 } from '../../domain/telemetry/capture-analysis.ts';
+import {
+  UNKNOWN_MACHINE,
+  type MachineContext,
+} from '../../domain/gameconfig/machine-context.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SessionStore } from '../ports/session-store.port.ts';
 
@@ -21,9 +25,14 @@ export interface AnalyzedSession extends CaptureAnalysis {
  */
 export class AnalyzeSession {
   readonly #store: SessionStore;
+  readonly #machine: () => Promise<MachineContext>;
 
-  constructor(store: SessionStore) {
+  constructor(
+    store: SessionStore,
+    machine: () => Promise<MachineContext> = async () => UNKNOWN_MACHINE,
+  ) {
     this.#store = store;
+    this.#machine = machine;
   }
 
   async execute(id: string): Promise<AnalyzedSession> {
@@ -33,7 +42,7 @@ export class AnalyzeSession {
       label: record.label,
       capture: record.capture,
       sensorSampleCount: record.sensors.length,
-      ...analyzeCapture(record.capture, record.sensors),
+      ...analyzeCapture(record.capture, record.sensors, await this.#machine()),
     };
   }
 }

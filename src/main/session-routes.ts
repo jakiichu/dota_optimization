@@ -1,5 +1,6 @@
 import type { SessionStore } from '../application/ports/session-store.port.ts';
 import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
+import { createMachineContextSource } from './game-config-source.ts';
 import { CompareSessions } from '../application/use-cases/compare-sessions.ts';
 import { toCaptureView } from '../adapters/http/capture.view.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
@@ -37,7 +38,7 @@ export function createSessionCompareRoute(store: SessionStore): JsonRoute {
  * Так новый детектор доходит до вчерашних записей.
  */
 export function createSessionAnalyzeRoute(store: SessionStore): JsonRoute {
-  const analyze = new AnalyzeSession(store);
+  const analyze = new AnalyzeSession(store, createMachineContextSource());
 
   return {
     path: '/api/sessions/analyze',
@@ -53,6 +54,7 @@ export function createSessionAnalyzeRoute(store: SessionStore): JsonRoute {
           statistics: analyzed.statistics,
           correlation: analyzed.correlation,
           network: analyzed.network,
+          recommendations: analyzed.recommendations,
           sensorSampleCount: analyzed.sensorSampleCount,
         }),
         sessionId: analyzed.id,

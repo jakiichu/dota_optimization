@@ -1,6 +1,9 @@
 import { computeFrameStatistics, type FrameStatistics } from './frame-metrics.ts';
 import { UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { FrameCapture } from './frame-sample.ts';
+import { parseGameConfig, type GameConfig } from '../gameconfig/game-config.ts';
+import { UNKNOWN_MACHINE, type MachineContext } from '../gameconfig/machine-context.ts';
+import { recommend, type Recommendation } from '../gameconfig/recommendations.ts';
 import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
 import type { SensorSample } from './sensor-sample.ts';
 import type { SessionSummary } from './session-comparison.ts';
@@ -27,8 +30,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 3 — ровность ритма попала в сводку и участвует в сравнении.
  * 4 — добавлено качество сети.
  * 5 — записи помечаются сценой; без неё сравнение считается невозможным.
+ * 6 — по записи считаются рекомендации.
  */
-export const METRICS_VERSION = 5;
+export const METRICS_VERSION = 6;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -41,18 +45,42 @@ export interface CaptureAnalysis {
    * где виноват канал.
    */
   readonly network: NetworkQuality;
+  /**
+   * Что попробовать поменять — исходя из этой записи.
+   *
+   * Считается здесь же, а не отдельным экраном: рекомендация без записи, из
+   * которой она выведена, — обычный совет из интернета.
+   */
+  readonly recommendations: readonly Recommendation[];
 }
 
 export function analyzeCapture(
   capture: FrameCapture,
   sensors: readonly SensorSample[],
+  /**
+   * Что известно о машине: конфиг игры и частота монитора.
+   *
+   * Без конфига рекомендации повторяли бы уже сделанное, а без частоты
+   * считали бы потолок кадров от текущего ритма игры — то есть от того самого
+   * числа, которое и промахивается мимо развёртки.
+   */
+  machine: MachineContext = UNKNOWN_MACHINE,
 ): CaptureAnalysis {
   const statistics = computeFrameStatistics(capture.frames);
+  const correlation = correlateStutters(capture.frames, statistics.stutters, sensors);
+  const network = analyzeNetworkQuality(sensors);
+
   return {
     statistics,
-    correlation: correlateStutters(capture.frames, statistics.stutters, sensors),
-    network: analyzeNetworkQuality(sensors),
+    correlation,
+    network,
+    recommendations: recommend({ statistics, correlation, network, ...machine }),
   };
+}
+
+/** Разбирает конфиг, если он есть; иначе рекомендации обходятся без него. */
+export function configFrom(path: string | null, text: string | null): GameConfig | null {
+  return path === null || text === null ? null : parseGameConfig(path, text);
 }
 
 /**

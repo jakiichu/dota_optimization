@@ -36,6 +36,7 @@ function toView(frames: FrameCapture) {
     statistics,
     correlation: correlateStutters(frames.frames, statistics.stutters, []),
     network: analyzeNetworkQuality([]),
+    recommendations: [],
     sensorSampleCount: 0,
   });
 }

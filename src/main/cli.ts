@@ -11,6 +11,7 @@ import { renderConsoleReport } from '../adapters/presenters/console-report.prese
 import { renderSensorSample } from '../adapters/presenters/console-sensors.presenter.ts';
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
+import { createMachineContextSource } from './game-config-source.ts';
 import {
   isUsableReplay,
   planReplayBenchmark,
@@ -169,6 +170,7 @@ async function runCapture(options: Options): Promise<number> {
   const session = await new CaptureFrameSession(
     new PresentMonCapture(),
     new SidecarSensorStream(),
+    machineContext,
   ).execute({
     processName: options.processName,
     seconds: options.seconds,
@@ -187,7 +189,7 @@ async function runCapture(options: Options): Promise<number> {
     stdout.write(`${JSON.stringify(session, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(capture, statistics, session.correlation, session.network, {
+      `${renderCaptureReport(capture, statistics, session.correlation, session.network, session.recommendations, {
         color: options.color,
       })}\n`,
     );
@@ -197,6 +199,7 @@ async function runCapture(options: Options): Promise<number> {
 }
 
 const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
+const machineContext = createMachineContextSource();
 
 async function runSessions(options: Options): Promise<number> {
   const sessions = await sessionStore.list();
@@ -234,13 +237,13 @@ async function runAnalyze(id: string | undefined, options: Options): Promise<num
     return EXIT_ERROR;
   }
 
-  const analyzed = await new AnalyzeSession(sessionStore).execute(id);
+  const analyzed = await new AnalyzeSession(sessionStore, machineContext).execute(id);
 
   if (options.json) {
     stdout.write(`${JSON.stringify(analyzed, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, analyzed.network, {
+      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, analyzed.network, analyzed.recommendations, {
         color: options.color,
       })}
 `,
