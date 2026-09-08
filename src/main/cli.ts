@@ -1,13 +1,16 @@
 import { writeFile } from 'node:fs/promises';
 import { argv, exit, stderr, stdout } from 'node:process';
+import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
 import { ReadSensors } from '../application/use-cases/read-sensors.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
+import { renderCaptureReport } from '../adapters/presenters/console-capture.presenter.ts';
 import { renderConsoleReport } from '../adapters/presenters/console-report.presenter.ts';
 import { renderSensorSample } from '../adapters/presenters/console-sensors.presenter.ts';
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import type { SnapshotCollector } from '../application/ports/snapshot-collector.port.ts';
 import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snapshot.collector.ts';
+import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
 import { SidecarSensorSampler } from '../infrastructure/sensors/sidecar-sensor.sampler.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
@@ -19,18 +22,28 @@ const EXIT_OK = 0;
 const EXIT_FINDINGS = 1;
 const EXIT_ERROR = 2;
 
+const DEFAULT_CAPTURE_SECONDS = 60;
+const DEFAULT_PROCESS_NAME = 'dota2.exe';
+
 interface Options {
   readonly verbose: boolean;
   readonly color: boolean;
   readonly json: boolean;
   readonly fromFile: string | null;
   readonly saveSnapshotTo: string | null;
+  readonly processName: string;
+  readonly seconds: number;
 }
 
 const USAGE = `frameloss — диагностика потерь кадров на Windows
 
   node src/main/cli.ts audit [опции]     статический аудит конфигурации
   node src/main/cli.ts sensors [опции]   текущие показания видеоадаптеров
+  node src/main/cli.ts capture [опции]   запись кадров и метрики по ней
+
+Опции capture:
+  --process <exe>         что записывать (по умолчанию dota2.exe)
+  --seconds <N>           длительность записи (по умолчанию 60)
 
 Опции audit:
   --verbose               показать и успешные проверки
@@ -56,6 +69,8 @@ function parseOptions(args: readonly string[]): Options {
     json: args.includes('--json'),
     fromFile: valueAfter('--from-file'),
     saveSnapshotTo: valueAfter('--save-snapshot'),
+    processName: valueAfter('--process') ?? DEFAULT_PROCESS_NAME,
+    seconds: Number.parseInt(valueAfter('--seconds') ?? '', 10) || DEFAULT_CAPTURE_SECONDS,
   };
 }
 
@@ -100,6 +115,25 @@ async function runSensors(options: Options): Promise<number> {
   return EXIT_OK;
 }
 
+async function runCapture(options: Options): Promise<number> {
+  stderr.write(
+    `Записываю ${options.processName} ${options.seconds} с. ` +
+      'PresentMon требует прав администратора — подтвердите запрос UAC.\n',
+  );
+
+  const { capture, statistics } = await new CaptureFrameSession(
+    new PresentMonCapture(),
+  ).execute({ processName: options.processName, seconds: options.seconds });
+
+  if (options.json) {
+    stdout.write(`${JSON.stringify({ capture, statistics }, null, 2)}\n`);
+  } else {
+    stdout.write(`${renderCaptureReport(capture, statistics, { color: options.color })}\n`);
+  }
+
+  return statistics.frameCount === 0 ? EXIT_ERROR : EXIT_OK;
+}
+
 async function main(): Promise<number> {
   const args = argv.slice(2);
   const command = args[0];
@@ -113,6 +147,7 @@ async function main(): Promise<number> {
 
   if (command === 'audit') return runAudit(options);
   if (command === 'sensors') return runSensors(options);
+  if (command === 'capture') return runCapture(options);
 
   stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
   return EXIT_ERROR;
