@@ -1,11 +1,14 @@
 import { writeFile } from 'node:fs/promises';
 import { argv, exit, stderr, stdout } from 'node:process';
+import { ReadSensors } from '../application/use-cases/read-sensors.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { renderConsoleReport } from '../adapters/presenters/console-report.presenter.ts';
+import { renderSensorSample } from '../adapters/presenters/console-sensors.presenter.ts';
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import type { SnapshotCollector } from '../application/ports/snapshot-collector.port.ts';
 import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snapshot.collector.ts';
+import { SidecarSensorSampler } from '../infrastructure/sensors/sidecar-sensor.sampler.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -24,15 +27,19 @@ interface Options {
   readonly saveSnapshotTo: string | null;
 }
 
-const USAGE = `frameloss audit — статический аудит игровой конфигурации Windows
+const USAGE = `frameloss — диагностика потерь кадров на Windows
 
-  node src/main/cli.ts audit [опции]
+  node src/main/cli.ts audit [опции]     статический аудит конфигурации
+  node src/main/cli.ts sensors [опции]   текущие показания видеоадаптеров
 
-  --verbose             показать и успешные проверки
-  --json                выдать отчёт машинным JSON вместо текста
-  --no-color            без ANSI-раскраски
-  --from-file <путь>    разобрать сохранённый снимок вместо живой машины
-  --save-snapshot <путь> сохранить собранный снимок (для отправки или сравнения)
+Опции audit:
+  --verbose               показать и успешные проверки
+  --from-file <путь>      разобрать сохранённый снимок вместо живой машины
+  --save-snapshot <путь>  сохранить собранный снимок
+
+Общие опции:
+  --json                  выдать машинный JSON вместо текста
+  --no-color              без ANSI-раскраски
 
 Код возврата: 0 — чисто, 1 — есть находки уровня «внимание» или выше, 2 — ошибка.`;
 
@@ -52,20 +59,7 @@ function parseOptions(args: readonly string[]): Options {
   };
 }
 
-async function main(): Promise<number> {
-  const args = argv.slice(2);
-  const command = args[0];
-
-  if (command === undefined || command === '--help' || command === '-h') {
-    stdout.write(`${USAGE}\n`);
-    return EXIT_OK;
-  }
-  if (command !== 'audit') {
-    stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
-    return EXIT_ERROR;
-  }
-
-  const options = parseOptions(args);
+async function runAudit(options: Options): Promise<number> {
   const collector: SnapshotCollector =
     options.fromFile === null
       ? new WindowsSnapshotCollector()
@@ -92,6 +86,36 @@ async function main(): Promise<number> {
   }
 
   return actionableFindings(report).length > 0 ? EXIT_FINDINGS : EXIT_OK;
+}
+
+async function runSensors(options: Options): Promise<number> {
+  const sample = await new ReadSensors(new SidecarSensorSampler()).execute();
+
+  if (options.json) {
+    stdout.write(`${JSON.stringify(sample, null, 2)}\n`);
+  } else {
+    stdout.write(`${renderSensorSample(sample, { color: options.color })}\n`);
+  }
+
+  return EXIT_OK;
+}
+
+async function main(): Promise<number> {
+  const args = argv.slice(2);
+  const command = args[0];
+
+  if (command === undefined || command === '--help' || command === '-h') {
+    stdout.write(`${USAGE}\n`);
+    return EXIT_OK;
+  }
+
+  const options = parseOptions(args);
+
+  if (command === 'audit') return runAudit(options);
+  if (command === 'sensors') return runSensors(options);
+
+  stderr.write(`Неизвестная команда: ${command}\n\n${USAGE}\n`);
+  return EXIT_ERROR;
 }
 
 main().then(

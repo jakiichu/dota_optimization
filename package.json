@@ -9,6 +9,8 @@
   },
   "scripts": {
     "audit": "node src/main/cli.ts audit",
+    "sensors": "node src/main/cli.ts sensors",
+    "sidecar:build": "dotnet publish sidecar/Frameloss.Sidecar/Frameloss.Sidecar.csproj -c Release -o sidecar/bin --nologo",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

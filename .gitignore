@@ -4,3 +4,6 @@ dist/
 captures/
 .idea/
 snapshot-*.json
+sidecar/bin/
+sidecar/**/obj/
+sidecar/**/bin/
