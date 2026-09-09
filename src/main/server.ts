@@ -6,6 +6,8 @@ import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { createCaptureRoute } from './capture-route.ts';
+import { createConfigRoutes } from './config-routes.ts';
+import { createMachineContextSource } from './game-config-source.ts';
 import {
   createSessionAnalyzeRoute,
   createSessionCompareRoute,
@@ -52,6 +54,15 @@ const UI_ROOT = RESOURCES.webRoot();
 
 /** Записи лежат рядом с приложением: их носят вместе с ним и прикладывают к письмам. */
 const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
+
+/**
+ * Что известно о машине: конфиг игры и частота экрана.
+ *
+ * Один источник на всё приложение — и запись кадров, и разбор сохранённой
+ * записи, и редактор конфига смотрят на одну и ту же машину. Редактор её же и
+ * сбрасывает, поправив файл.
+ */
+const machineContext = createMachineContextSource();
 
 /**
  * Отметка «это мы».
@@ -165,10 +176,11 @@ async function startServer(
     jsonRoutes: [
       healthRoute,
       auditRoute,
-      createCaptureRoute(sensorStream, sessionStore),
+      createCaptureRoute(sensorStream, sessionStore, machineContext),
       createSessionListRoute(sessionStore),
       createSessionCompareRoute(sessionStore),
-      createSessionAnalyzeRoute(sessionStore),
+      createSessionAnalyzeRoute(sessionStore, machineContext),
+      ...createConfigRoutes(sessionStore, () => machineContext.forget()),
     ],
     streamRoutes: [sensorsRoute],
     staticRoot,

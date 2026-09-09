@@ -1,7 +1,10 @@
 import type {
   BottleneckKind,
+  Confidence,
+  CvarImpact,
   EvidenceKind,
   NetworkSeverity,
+  NoteSeverity,
   PacingSeverity,
   Severity,
   Verdict,
@@ -112,4 +115,67 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
   better: 'лучше',
   worse: 'хуже',
   same: 'без изменений',
+};
+
+// --- конфиг игры ------------------------------------------------------------
+
+export type ImpactGroup = CvarImpact | 'unknown';
+
+/**
+ * Порядок групп в редакторе конфига.
+ *
+ * Сначала то, что может стоить кадров, потом то, что меняет игру, и в самом
+ * конце незнакомое. Незнакомое внизу не потому, что оно неважно, а потому что
+ * сказать о нём нечего: человеку не с чем работать, кроме имени переменной.
+ */
+export const IMPACT_GROUP_ORDER: readonly ImpactGroup[] = [
+  'cpu',
+  'both',
+  'gpu',
+  'gameplay',
+  'cosmetic',
+  'none',
+  'unknown',
+];
+
+export const IMPACT_GROUP_TITLE: Record<ImpactGroup, string> = {
+  cpu: 'Процессор',
+  both: 'Процессор и видеокарта',
+  gpu: 'Видеокарта',
+  gameplay: 'Сама игра',
+  cosmetic: 'Внешний вид',
+  none: 'Ни на что не влияет',
+  unknown: 'Незнакомые настройки',
+};
+
+/** Чего касается группа — одной фразой, всё с той же оговоркой «возможно». */
+export const IMPACT_GROUP_HINT: Record<ImpactGroup, string> = {
+  cpu: 'возможно, разгружают процессор — насколько, покажет только запись',
+  both: 'возможно, разгружают и процессор, и видеокарту',
+  gpu: 'возможно, разгружают видеокарту — насколько, покажет только запись',
+  gameplay: 'меняют саму игру, а не её скорость',
+  cosmetic: 'только внешний вид',
+  none: 'на скорость не влияют',
+  unknown: 'мы про них ничего не знаем и придумывать не станем',
+};
+
+export const IMPACT_COLOR: Record<ImpactGroup, string> = {
+  cpu: 'var(--warning)',
+  both: 'var(--info)',
+  gpu: 'var(--ok)',
+  gameplay: 'var(--info)',
+  cosmetic: 'var(--muted)',
+  none: 'var(--muted)',
+  unknown: 'var(--unknown)',
+};
+
+export const NOTE_COLOR: Record<NoteSeverity, string> = {
+  critical: 'var(--critical)',
+  warning: 'var(--warning)',
+  info: 'var(--info)',
+};
+
+export const CONFIDENCE_LABEL: Record<Confidence, string> = {
+  measured: 'видно в записи',
+  likely: 'следует из записи с оговоркой',
 };

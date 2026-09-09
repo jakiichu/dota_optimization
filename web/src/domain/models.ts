@@ -160,8 +160,99 @@ export interface Capture {
   readonly availableColumns: readonly string[];
   readonly correlation: Correlation;
   readonly network: NetworkQuality;
+  readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
   readonly sessionId: string;
+}
+
+// --- рекомендации -----------------------------------------------------------
+
+export type RecommendationKind =
+  | 'frame-cap'
+  | 'cpu-relief'
+  | 'gpu-relief'
+  | 'present-mode'
+  | 'not-config';
+
+export type Confidence = 'measured' | 'likely';
+
+export interface ConfigChange {
+  readonly cvar: string;
+  readonly value: string;
+  readonly why: string;
+}
+
+/**
+ * Проверяемая гипотеза, а не совет.
+ *
+ * `evidence` — числа из записи, `expect` — что должно сдвинуться, если
+ * гипотеза верна. Без последнего рекомендацию нельзя опровергнуть, и она ничем
+ * не отличается от списка из интернета.
+ */
+export interface Recommendation {
+  readonly kind: RecommendationKind;
+  readonly title: string;
+  readonly evidence: string;
+  readonly changes: readonly ConfigChange[];
+  readonly expect: string;
+  readonly risk: string;
+  readonly confidence: Confidence;
+}
+
+// --- конфиг игры ------------------------------------------------------------
+
+export type CvarImpact = 'gpu' | 'cpu' | 'both' | 'gameplay' | 'cosmetic' | 'none';
+
+/** Чем править значение: переключателем, числом, цветом или полем. */
+export type CvarValueKind = 'toggle' | 'color' | 'number' | 'text';
+
+export interface ConfigSetting {
+  readonly name: string;
+  readonly value: string;
+  readonly line: number;
+  readonly kind: CvarValueKind;
+  /** Что настройка делает. `null` — про эту мы не знаем. */
+  readonly what: string | null;
+  readonly cost: string | null;
+  readonly impact: CvarImpact | 'unknown';
+  /** Осторожная формулировка: «возможно, разгружает процессор». */
+  readonly impactLabel: string;
+  readonly known: boolean;
+}
+
+export type NoteSeverity = 'critical' | 'warning' | 'info';
+
+export interface ConfigNote {
+  readonly severity: NoteSeverity;
+  readonly title: string;
+  readonly detail: string;
+  readonly remediation: readonly string[];
+}
+
+export interface ConfigTally {
+  readonly impact: CvarImpact | 'unknown';
+  readonly label: string;
+  readonly count: number;
+}
+
+export interface GameConfig {
+  /** Куда игра смотрит за конфигом. `null` — игру найти не удалось. */
+  readonly path: string | null;
+  readonly exists: boolean;
+  readonly text: string;
+  readonly settingCount: number;
+  readonly settings: readonly ConfigSetting[];
+  readonly unparsed: readonly string[];
+  readonly notes: readonly ConfigNote[];
+  readonly tally: readonly ConfigTally[];
+  /** Куда уехала прежняя версия при последней правке. */
+  readonly backupPath: string | null;
+}
+
+/** Правка одной настройки. `value: null` — убрать её из файла. */
+export interface ConfigEdit {
+  readonly name: string;
+  readonly value: string | null;
 }
 
 // --- записи и сравнение -----------------------------------------------------

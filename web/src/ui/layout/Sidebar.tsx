@@ -1,6 +1,6 @@
 import type { Machine } from '../../domain/models.ts';
 
-export type SectionId = 'audit' | 'capture' | 'compare' | 'sensors';
+export type SectionId = 'audit' | 'capture' | 'config' | 'compare' | 'sensors';
 
 interface Section {
   readonly id: SectionId;
@@ -11,6 +11,7 @@ interface Section {
 const SECTIONS: readonly Section[] = [
   { id: 'audit', label: 'Аудит', hint: 'настройки, которые стоят кадров' },
   { id: 'capture', label: 'Запись кадров', hint: 'frametime, статтеры, ритм' },
+  { id: 'config', label: 'Конфиг', hint: 'что включено и чем это стоит' },
   { id: 'compare', label: 'Сравнение', hint: 'до и после правки' },
   { id: 'sensors', label: 'Сенсоры', hint: 'живые показания' },
 ];

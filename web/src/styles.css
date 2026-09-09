@@ -582,6 +582,430 @@ code {
   padding-left: 18px;
 }
 
+/* --- конфиг игры --- */
+
+.button.primary {
+  border-color: var(--info);
+  color: var(--text);
+}
+
+.button.danger {
+  border-color: var(--critical);
+}
+
+.group-hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: -6px 0 12px;
+}
+
+.settings {
+  display: grid;
+  gap: 2px;
+}
+
+.setting {
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+  padding: 8px 10px;
+}
+
+.setting:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.016);
+}
+
+.setting[data-changed='true'] {
+  background: rgba(74, 168, 255, 0.08);
+  border-left-color: var(--info);
+}
+
+/* Строка, ради которой пришли из рекомендации: иначе её пришлось бы искать
+   глазами среди семидесяти таких же. */
+.setting[data-highlighted='true'] {
+  border-left-color: var(--warning);
+}
+
+.setting-main {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.setting-name {
+  align-items: baseline;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.setting-flag {
+  color: var(--info);
+  flex: none;
+  font-size: 11.5px;
+}
+
+.setting-input {
+  flex: none;
+  min-width: 0;
+  padding: 4px 8px;
+  text-align: right;
+  width: 132px;
+}
+
+.setting-remove {
+  appearance: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.setting-remove:hover {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+
+.setting-explain {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  gap: 4px 12px;
+  margin-top: 3px;
+}
+
+.setting-what {
+  color: var(--text);
+}
+
+.setting-cost::before {
+  content: '· ';
+}
+
+.setting-line {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+/* --- переключатель --- */
+
+.toggle {
+  align-items: center;
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  flex: none;
+  font: inherit;
+  gap: 9px;
+  padding: 0;
+  width: 132px;
+}
+
+.toggle-track {
+  background: var(--line);
+  border-radius: 999px;
+  flex: none;
+  height: 16px;
+  position: relative;
+  transition: background 0.15s;
+  width: 30px;
+}
+
+.toggle-track::after {
+  background: var(--muted);
+  border-radius: 50%;
+  content: '';
+  height: 10px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform 0.15s, background 0.15s;
+  width: 10px;
+}
+
+.toggle[aria-checked='true'] .toggle-track {
+  background: var(--info);
+}
+
+.toggle[aria-checked='true'] .toggle-track::after {
+  background: #0f1115;
+  transform: translateX(14px);
+}
+
+.toggle-text {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* --- выбор цвета --- */
+
+.color-field {
+  flex: none;
+  position: relative;
+  width: 132px;
+}
+
+.color-swatch {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  text-align: center;
+  width: 100%;
+}
+
+.color-panel {
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 268px;
+  z-index: 5;
+}
+
+.color-presets {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.color-preset {
+  appearance: none;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  height: 26px;
+  padding: 0;
+}
+
+.color-preset[aria-current='true'] {
+  border-color: var(--text);
+}
+
+.color-sliders {
+  display: grid;
+  gap: 6px;
+}
+
+.color-slider {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 14px 1fr 30px;
+}
+
+.color-slider input {
+  accent-color: var(--info);
+  width: 100%;
+}
+
+.color-slider-label,
+.color-slider-value {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.color-slider-value {
+  text-align: right;
+}
+
+.color-row {
+  display: flex;
+  gap: 8px;
+}
+
+.color-native {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+  height: 30px;
+  padding: 2px;
+  width: 42px;
+}
+
+.color-hex {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+}
+
+/* Цвет союзников выбирают не на белом фоне, а на карте — там и показываем. */
+.color-preview {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.color-preview-dot {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  flex: none;
+  height: 12px;
+  width: 12px;
+}
+
+.color-preview-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.color-value {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* --- черновик правок --- */
+
+.draft-bar {
+  background: var(--panel-raised);
+  border: 1px solid var(--info);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+}
+
+.draft-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.draft-item {
+  font-size: 12.5px;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.draft-note {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.config-text {
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 12.5px;
+  margin-top: 12px;
+  min-height: 132px;
+  resize: vertical;
+  width: 100%;
+}
+
+.config-text[data-dragging='true'] {
+  border-color: var(--info);
+}
+
+.config-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* --- рекомендации --- */
+
+.recommendation {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding: 14px 0 4px;
+}
+
+.recommendation:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.recommendation-head {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+}
+
+.recommendation-title {
+  font-weight: 600;
+}
+
+.recommendation-confidence {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.recommendation-evidence {
+  color: var(--muted);
+}
+
+.recommendation-changes {
+  display: grid;
+  gap: 6px;
+}
+
+.recommendation-change {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recommendation-change code {
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 7px;
+}
+
+/* Предсказание и цена — рядом и одинаково заметные: без первого рекомендацию
+   нельзя опровергнуть, без второго её нельзя честно принять. */
+.recommendation-expect,
+.recommendation-risk {
+  display: flex;
+  gap: 10px;
+}
+
+.recommendation-mark {
+  color: var(--muted);
+  flex: none;
+  font-size: 12px;
+  padding-top: 2px;
+  width: 62px;
+}
+
+.recommendation button {
+  justify-self: start;
+}
+
 /* --- узкие окна --- */
 
 @media (max-width: 720px) {

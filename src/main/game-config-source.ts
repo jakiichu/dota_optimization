@@ -8,16 +8,30 @@ import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snap
  * Читается через тот же сбор снимка, что и аудит: искать autoexec.cfg по
  * второму разу значило бы держать две реализации поиска Steam-библиотек.
  *
- * Сбор занимает пару секунд, поэтому результат кешируется на время запуска —
- * между записями конфиг меняется редко, а вот платить за него при каждом
- * открытии записи незачем.
+ * Сбор занимает пару секунд, поэтому результат кешируется — между записями
+ * конфиг меняется редко, а платить за него при каждом открытии записи незачем.
+ * Источник один на всё приложение: два независимых кеша означали бы два
+ * запуска PowerShell и два расходящихся представления об одной машине.
  */
-export function createMachineContextSource(): () => Promise<MachineContext> {
+export interface MachineContextSource {
+  get(): Promise<MachineContext>;
+  /**
+   * Забыть прочитанное.
+   *
+   * Нужно ровно после правки конфига: иначе рекомендации будут отговариваться
+   * тем, что настройка «уже стоит», глядя на файл, которого больше нет.
+   */
+  forget(): void;
+}
+
+export function createMachineContextSource(): MachineContextSource {
   let cached: Promise<MachineContext> | null = null;
 
-  return () => {
-    cached ??= read();
-    return cached;
+  return {
+    get: () => (cached ??= read()),
+    forget: () => {
+      cached = null;
+    },
   };
 }
 

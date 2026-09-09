@@ -2,6 +2,8 @@ import type {
   Audit,
   Capture,
   Comparison,
+  ConfigEdit,
+  GameConfig,
   SensorSample,
   SessionSummary,
 } from '../../domain/models.ts';
@@ -29,6 +31,15 @@ export interface FramelossApi {
   ): Promise<Comparison>;
   analyzeSession(id: string, signal: AbortSignal): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
+
+  fetchConfig(signal: AbortSignal): Promise<GameConfig>;
+  /** Точечные правки поверх текущего файла — так комментарии остаются на месте. */
+  applyConfigEdits(edits: readonly ConfigEdit[]): Promise<GameConfig>;
+  /** Замена файла целиком: конфиг принесли с другой машины или вставили текстом. */
+  replaceConfig(text: string): Promise<GameConfig>;
+  removeConfig(): Promise<GameConfig>;
+  /** Кладёт копию на рабочий стол и возвращает путь к ней. */
+  exportConfig(): Promise<string>;
 
   /**
    * Поток живых замеров.

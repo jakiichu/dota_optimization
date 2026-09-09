@@ -2,7 +2,7 @@ import { toCaptureView } from '../adapters/http/capture.view.ts';
 import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
-import { createMachineContextSource } from './game-config-source.ts';
+import type { MachineContextSource } from './game-config-source.ts';
 import type { SensorStream } from '../application/ports/sensor-stream.port.ts';
 import type { SessionStore } from '../application/ports/session-store.port.ts';
 import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
@@ -18,12 +18,12 @@ const MAX_SECONDS = 600;
  * Одновременно идёт только одна: PresentMon держит именованную ETW-сессию, и
  * вторая запись оборвала бы первую на середине.
  */
-export function createCaptureRoute(sensors: SensorStream, store: SessionStore): JsonRoute {
-  const session = new CaptureFrameSession(
-    new PresentMonCapture(),
-    sensors,
-    createMachineContextSource(),
-  );
+export function createCaptureRoute(
+  sensors: SensorStream,
+  store: SessionStore,
+  machine: MachineContextSource,
+): JsonRoute {
+  const session = new CaptureFrameSession(new PresentMonCapture(), sensors, () => machine.get());
   let inFlight: Promise<unknown> | null = null;
 
   return {

@@ -107,7 +107,7 @@ export interface GameProfile {
   readonly executablePath: Maybe<string>;
   /** Параметры запуска из настроек Steam. Пустая строка — их нет. */
   readonly launchOptions: Maybe<string>;
-  /** Путь к autoexec.cfg, если он есть. */
+  /** Куда игра смотрит за autoexec.cfg — даже если файла там пока нет. */
   readonly configPath: Maybe<string>;
   /**
    * Содержимое autoexec.cfg.

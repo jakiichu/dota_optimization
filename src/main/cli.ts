@@ -170,7 +170,7 @@ async function runCapture(options: Options): Promise<number> {
   const session = await new CaptureFrameSession(
     new PresentMonCapture(),
     new SidecarSensorStream(),
-    machineContext,
+    () => machineContext.get(),
   ).execute({
     processName: options.processName,
     seconds: options.seconds,
@@ -237,7 +237,7 @@ async function runAnalyze(id: string | undefined, options: Options): Promise<num
     return EXIT_ERROR;
   }
 
-  const analyzed = await new AnalyzeSession(sessionStore, machineContext).execute(id);
+  const analyzed = await new AnalyzeSession(sessionStore, () => machineContext.get()).execute(id);
 
   if (options.json) {
     stdout.write(`${JSON.stringify(analyzed, null, 2)}\n`);

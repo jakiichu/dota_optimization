@@ -1,7 +1,7 @@
 import { ok, type Finding } from '../diagnostics/finding.ts';
 import type { Severity } from '../diagnostics/severity.ts';
 import { analyzeGameConfig, type NoteSeverity } from '../gameconfig/config-analysis.ts';
-import { IMPACT_LABEL } from '../gameconfig/cvar-knowledge.ts';
+import { IMPACT_SHORT } from '../gameconfig/cvar-knowledge.ts';
 import { parseGameConfig } from '../gameconfig/game-config.ts';
 import type { SystemSnapshot } from '../snapshot/system-snapshot.ts';
 import type { AuditRule } from './audit-rule.ts';
@@ -45,7 +45,7 @@ export const gameConfigRule: AuditRule = {
       .map((entry) =>
         entry.impact === 'unknown'
           ? `не знаем: ${entry.count}`
-          : `${IMPACT_LABEL[entry.impact]}: ${entry.count}`,
+          : `${IMPACT_SHORT[entry.impact]}: ${entry.count}`,
       )
       .join(', ');
     const observed = `${analysis.settingCount} настроек в ${analysis.path}. ${composition}.`;

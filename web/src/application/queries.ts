@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { Audit, Capture, Comparison, SessionSummary } from '../domain/models.ts';
+import type {
+  Audit,
+  Capture,
+  Comparison,
+  ConfigEdit,
+  GameConfig,
+  SessionSummary,
+} from '../domain/models.ts';
 import { useApi } from './api-context.ts';
 import type { CaptureRequest } from './ports/frameloss-api.port.ts';
 
@@ -19,6 +26,7 @@ export const queryKeys = {
   comparison: (beforeId: string, afterId: string) =>
     ['sessions', 'comparison', beforeId, afterId] as const,
   session: (id: string) => ['sessions', 'analysis', id] as const,
+  config: ['config'] as const,
 };
 
 /**
@@ -73,6 +81,63 @@ export function useSessionAnalysis(id: string | null): UseQueryResult<Capture> {
     enabled: id !== null && id !== '',
     staleTime: ANALYSIS_STALE_MS,
   });
+}
+
+/**
+ * Конфиг игры.
+ *
+ * Кешируется коротко: файл лежит на диске и его правят снаружи — через
+ * консоль игры, блокнот или другую машину. Показать вчерашнее содержимое
+ * файла, который человек только что поменял руками, хуже, чем подождать.
+ */
+const CONFIG_STALE_MS = 15 * 1000;
+
+export function useGameConfig(): UseQueryResult<GameConfig> {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.config,
+    queryFn: ({ signal }) => api.fetchConfig(signal),
+    staleTime: CONFIG_STALE_MS,
+  });
+}
+
+/**
+ * Правки конфига.
+ *
+ * Все четыре действия меняют файл на диске, поэтому после каждого сбрасывается
+ * и аудит: правило про конфиг — часть аудита, и оставить его с прежним
+ * вердиктом значило бы показывать человеку разбор файла, которого больше нет.
+ */
+export function useConfigMutations(): {
+  readonly apply: UseMutationResult<GameConfig, Error, readonly ConfigEdit[]>;
+  readonly replace: UseMutationResult<GameConfig, Error, string>;
+  readonly remove: UseMutationResult<GameConfig, Error, void>;
+  readonly exportToDesktop: UseMutationResult<string, Error, void>;
+} {
+  const api = useApi();
+  const client = useQueryClient();
+
+  const settle = (config: GameConfig): void => {
+    client.setQueryData(queryKeys.config, config);
+    void client.invalidateQueries({ queryKey: queryKeys.audit });
+  };
+
+  const apply = useMutation({
+    mutationFn: (edits: readonly ConfigEdit[]) => api.applyConfigEdits(edits),
+    onSuccess: settle,
+  });
+  const replace = useMutation({
+    mutationFn: (text: string) => api.replaceConfig(text),
+    onSuccess: settle,
+  });
+  const remove = useMutation({
+    mutationFn: () => api.removeConfig(),
+    onSuccess: settle,
+  });
+  // Копия на рабочий стол ничего не меняет — сбрасывать после неё нечего.
+  const exportToDesktop = useMutation({ mutationFn: () => api.exportConfig() });
+
+  return { apply, replace, remove, exportToDesktop };
 }
 
 /**

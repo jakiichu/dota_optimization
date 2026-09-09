@@ -6,6 +6,8 @@ import type {
   Audit,
   Capture,
   Comparison,
+  ConfigEdit,
+  GameConfig,
   SensorSample,
   SessionSummary,
 } from '../domain/models.ts';
@@ -49,6 +51,27 @@ export class HttpFramelossApi implements FramelossApi {
     return getJson<Capture>(`/api/capture?${query.toString()}`, signal);
   }
 
+  async fetchConfig(signal: AbortSignal): Promise<GameConfig> {
+    return getJson<GameConfig>('/api/config', signal);
+  }
+
+  async applyConfigEdits(edits: readonly ConfigEdit[]): Promise<GameConfig> {
+    return postJson<GameConfig>('/api/config/apply', { changes: edits });
+  }
+
+  async replaceConfig(text: string): Promise<GameConfig> {
+    return postJson<GameConfig>('/api/config/replace', { text });
+  }
+
+  async removeConfig(): Promise<GameConfig> {
+    return postJson<GameConfig>('/api/config/remove', {});
+  }
+
+  async exportConfig(): Promise<string> {
+    const body = await postJson<{ path: string }>('/api/config/export', {});
+    return body.path;
+  }
+
   /**
    * Поток замеров через SSE.
    *
@@ -72,6 +95,30 @@ export class HttpFramelossApi implements FramelossApi {
 
     return () => source.close();
   }
+}
+
+/**
+ * Изменяющий запрос.
+ *
+ * Без сигнала отмены намеренно: правку конфига нельзя бросить на полпути
+ * только потому, что человек ушёл с экрана. Файл уже записан, и интерфейс
+ * обязан узнать, чем всё кончилось.
+ *
+ * Тип application/json здесь не формальность: сервер по нему и отличает наш
+ * запрос от подделанной чужой страницей формы, которая такой заголовок
+ * выставить не может.
+ */
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const failure: unknown = await response.json().catch(() => null);
+    throw new Error(errorMessageOf(failure) ?? `Сервер ответил ${response.status}.`);
+  }
+  return (await response.json()) as T;
 }
 
 async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAudit, useSessions } from '../application/queries.ts';
 import { LoadingBar } from './layout/LoadingBar.tsx';
 import { Sidebar, type SectionId } from './layout/Sidebar.tsx';
+import type { ConfigChange } from '../domain/models.ts';
 import { AuditSection } from './views/AuditSection.tsx';
 import { CaptureSection } from './views/CaptureSection.tsx';
+import { ConfigSection } from './views/ConfigSection.tsx';
 import { CompareSection } from './views/CompareSection.tsx';
 import { SensorsSection } from './views/SensorsSection.tsx';
 
@@ -17,6 +19,22 @@ import { SensorsSection } from './views/SensorsSection.tsx';
  */
 export function AppShell(): React.JSX.Element {
   const [section, setSection] = useState<SectionId>('audit');
+
+  /**
+   * Изменение, с которым пришли из рекомендации.
+   *
+   * Живёт здесь, а не в разделе записи: раздел с рекомендацией размонтируется
+   * ровно в тот момент, когда человек по ней и переходит. Оболочка переживает
+   * переключение и потому годится в посредники.
+   */
+  const [proposed, setProposed] = useState<readonly ConfigChange[]>([]);
+
+  const openInConfig = useCallback((changes: readonly ConfigChange[]): void => {
+    setProposed(changes);
+    setSection('config');
+  }, []);
+
+  const forgetProposal = useCallback(() => setProposed([]), []);
 
   // Оба запроса читаются из кеша: здесь они нужны только ради значков в меню и
   // сведений о машине, и своего сетевого обращения не добавляют.
@@ -44,7 +62,10 @@ export function AppShell(): React.JSX.Element {
 
       <main className="content">
         {section === 'audit' && <AuditSection />}
-        {section === 'capture' && <CaptureSection />}
+        {section === 'capture' && <CaptureSection onOpenInConfig={openInConfig} />}
+        {section === 'config' && (
+          <ConfigSection proposed={proposed} onProposalTaken={forgetProposal} />
+        )}
         {section === 'compare' && <CompareSection />}
         {section === 'sensors' && <SensorsSection />}
       </main>

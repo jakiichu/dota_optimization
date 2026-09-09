@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useRunCapture } from '../../application/queries.ts';
-import type { Capture } from '../../domain/models.ts';
+import type { Capture, ConfigChange } from '../../domain/models.ts';
 import { BOTTLENECK_COLOR, BOTTLENECK_LABEL } from '../../domain/presentation.ts';
 import { ms, seconds } from '../../domain/formatting.ts';
 import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
 import { PacingPanel } from '../components/PacingPanel.tsx';
+import { RecommendationPanel } from '../components/RecommendationPanel.tsx';
 import { EmptyState, ErrorState, SectionHeader } from '../components/States.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
 const DURATIONS = [15, 30, 60, 120] as const;
 
-export function CaptureSection(): React.JSX.Element {
+export function CaptureSection({
+  onOpenInConfig,
+}: {
+  /** Уйти в редактор конфига с подставленным изменением из рекомендации. */
+  onOpenInConfig: (changes: readonly ConfigChange[]) => void;
+}): React.JSX.Element {
   const [processName, setProcessName] = useState(DEFAULT_PROCESS);
   const [durationSeconds, setDurationSeconds] = useState<number>(30);
   // Подпись нужна, чтобы через полчаса отличить «до HAGS» от «после».
@@ -79,7 +85,9 @@ export function CaptureSection(): React.JSX.Element {
       )}
 
       {capture.isError && <ErrorState message={capture.error.message} />}
-      {capture.data !== undefined && <CaptureReport capture={capture.data} />}
+      {capture.data !== undefined && (
+        <CaptureReport capture={capture.data} onOpenInConfig={onOpenInConfig} />
+      )}
     </>
   );
 }
@@ -108,7 +116,13 @@ function useCountdown(totalSeconds: number | null): number | null {
   return remaining;
 }
 
-function CaptureReport({ capture }: { capture: Capture }): React.JSX.Element {
+function CaptureReport({
+  capture,
+  onOpenInConfig,
+}: {
+  capture: Capture;
+  onOpenInConfig: (changes: readonly ConfigChange[]) => void;
+}): React.JSX.Element {
   if (capture.frameCount === 0) {
     return (
       <EmptyState>
@@ -164,6 +178,13 @@ function CaptureReport({ capture }: { capture: Capture }): React.JSX.Element {
       )}
 
       {capture.network.measured && <NetworkPanel capture={capture} />}
+
+      {/* Рекомендации последними: сначала числа, потом выводы из них. Обратный
+          порядок читается как советы, к которым для солидности приложили графики. */}
+      <RecommendationPanel
+        recommendations={capture.recommendations}
+        onOpenInConfig={onOpenInConfig}
+      />
     </>
   );
 }

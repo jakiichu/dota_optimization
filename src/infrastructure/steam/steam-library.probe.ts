@@ -119,6 +119,9 @@ async function findInstalledGame(
     // чужую машину по присланному файлу.
     const configPath = join(installRoot, known.relativeConfig);
     const config = await readTextIfExists(configPath);
+    // Путь отдаём и тогда, когда файла нет: это место, куда игра смотрит, а
+    // значит и то место, где конфиг можно создать. Без него редактор конфига
+    // не знал бы, куда писать, и отсутствие файла превращалось бы в тупик.
     const replays = await listReplays(join(installRoot, known.relativeReplays));
 
     const executablePath = join(
@@ -138,7 +141,7 @@ async function findInstalledGame(
       name,
       installDir,
       executablePath: exists ? executablePath : null,
-      configPath: config === null ? null : configPath,
+      configPath,
       config,
       replays,
     };

@@ -1,6 +1,6 @@
 import type { SessionStore } from '../application/ports/session-store.port.ts';
 import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
-import { createMachineContextSource } from './game-config-source.ts';
+import type { MachineContextSource } from './game-config-source.ts';
 import { CompareSessions } from '../application/use-cases/compare-sessions.ts';
 import { toCaptureView } from '../adapters/http/capture.view.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
@@ -37,8 +37,11 @@ export function createSessionCompareRoute(store: SessionStore): JsonRoute {
  * Игру запускать не нужно: кадры уже есть, а метрики — чистые функции от них.
  * Так новый детектор доходит до вчерашних записей.
  */
-export function createSessionAnalyzeRoute(store: SessionStore): JsonRoute {
-  const analyze = new AnalyzeSession(store, createMachineContextSource());
+export function createSessionAnalyzeRoute(
+  store: SessionStore,
+  machine: MachineContextSource,
+): JsonRoute {
+  const analyze = new AnalyzeSession(store, () => machine.get());
 
   return {
     path: '/api/sessions/analyze',

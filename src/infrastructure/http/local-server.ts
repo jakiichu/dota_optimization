@@ -5,6 +5,9 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 const LOOPBACK = '127.0.0.1';
 const SSE_KEEPALIVE_MS = 15_000;
 
+/** Потолок на тело POST: конфиг игры — это десятки килобайт, не мегабайты. */
+const MAX_BODY_BYTES = 1024 * 1024;
+
 /** Хосты, с которых принимаем запросы: защита от DNS rebinding. */
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -21,7 +24,10 @@ const CONTENT_TYPES: Record<string, string> = {
 /** Обработчик, отдающий один JSON-ответ. */
 export interface JsonRoute {
   readonly path: string;
-  handle(query: URLSearchParams): Promise<unknown>;
+  /** По умолчанию GET. POST — там, где обработчик что-то меняет. */
+  readonly method?: 'GET' | 'POST';
+  /** `body` — сырое тело запроса; у GET оно пустое. */
+  handle(query: URLSearchParams, body: string): Promise<unknown>;
 }
 
 /**
@@ -95,9 +101,25 @@ async function handle(
     return openStream(request, response, stream);
   }
 
-  const json = options.jsonRoutes.find((route) => route.path === path);
+  const method = request.method ?? 'GET';
+  const json = options.jsonRoutes.find(
+    (route) => route.path === path && (route.method ?? 'GET') === method,
+  );
   if (json !== undefined) {
-    return sendJson(response, json, url.searchParams);
+    if (method === 'POST' && !isWriteAllowed(request)) {
+      return send(response, 403, 'text/plain; charset=utf-8', 'Запрещено: чужой источник.');
+    }
+    let body = '';
+    try {
+      body = await readBody(request);
+    } catch {
+      return send(response, 413, 'text/plain; charset=utf-8', 'Тело запроса слишком велико.');
+    }
+    return sendJson(response, json, url.searchParams, body);
+  }
+  // Путь есть, но метод не тот — это ошибка вызова, а не отсутствие страницы.
+  if (options.jsonRoutes.some((route) => route.path === path)) {
+    return send(response, 405, 'text/plain; charset=utf-8', `Метод ${method} здесь не принимается.`);
   }
 
   return sendStatic(response, path, options.staticRoot);
@@ -110,13 +132,65 @@ function isHostAllowed(request: IncomingMessage): boolean {
   return ALLOWED_HOSTS.has(withoutPort);
 }
 
+/**
+ * Можно ли выполнять изменяющий запрос.
+ *
+ * До сих пор сервер только отдавал данные, и хватало проверки Host. Теперь он
+ * пишет в файлы игры — а на это чужая страница способна и без CORS: обычная
+ * форма уходит на любой адрес, и ответ ей читать не нужно, достаточно того,
+ * что действие произошло.
+ *
+ * Отсюда две проверки. Заголовок Origin форма подставляет свой, и он сразу
+ * выдаёт чужака. А тип application/json форма выставить не может вовсе — его
+ * ставит только fetch, которому наш ответ без CORS всё равно не достанется.
+ */
+function isWriteAllowed(request: IncomingMessage): boolean {
+  const origin = request.headers.origin;
+  if (origin !== undefined && !isLoopbackOrigin(origin)) return false;
+
+  const contentType = request.headers['content-type'] ?? '';
+  return contentType.startsWith('application/json');
+}
+
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    return ALLOWED_HOSTS.has(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Тело запроса целиком.
+ *
+ * Ограничение по размеру — не забота о памяти, а отказ принимать на веру
+ * длину: конфиг игры это десятки килобайт, и всё, что сильно больше, к нам
+ * пришло не от нашего интерфейса.
+ */
+async function readBody(request: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+
+  for await (const chunk of request) {
+    const piece = chunk as Buffer;
+    size += piece.length;
+    if (size > MAX_BODY_BYTES) {
+      throw new Error('Тело запроса слишком велико.');
+    }
+    chunks.push(piece);
+  }
+
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 async function sendJson(
   response: ServerResponse,
   route: JsonRoute,
   query: URLSearchParams,
+  body: string,
 ): Promise<void> {
   try {
-    const payload = await route.handle(query);
+    const payload = await route.handle(query, body);
     send(response, 200, 'application/json; charset=utf-8', JSON.stringify(payload));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
