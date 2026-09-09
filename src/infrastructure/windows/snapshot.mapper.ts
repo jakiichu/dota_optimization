@@ -159,6 +159,8 @@ function toReplay(raw: unknown): ReplayFile {
   return {
     name: asString(record['name']) ?? '',
     sizeBytes: asNumber(record['sizeBytes']) ?? 0,
+    ticks: asNumber(record['ticks']),
+    durationSeconds: asNumber(record['durationSeconds']),
   };
 }
 

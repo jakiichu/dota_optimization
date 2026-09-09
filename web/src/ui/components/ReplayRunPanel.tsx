@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useBenchmark, useLaunchReplayRun } from '../../application/queries.ts';
-import type { BenchmarkOptions } from '../../domain/models.ts';
+import type { BenchmarkOptions, ReplayFile } from '../../domain/models.ts';
+import {
+  clock,
+  replayLength,
+  secondsToTick,
+  tickToSeconds,
+  tickWithinReplay,
+} from '../../domain/replay-time.ts';
 
 /**
  * Эталонный прогон: запустить игру с нужным повтором.
@@ -13,6 +20,12 @@ import type { BenchmarkOptions } from '../../domain/models.ts';
  * Пока прогон идёт, форма записи не спрашивает сцену вовсе: приложение знает её
  * точно, потому что само положило файл повтора и тик в команды запуска игры.
  */
+
+/** Готовые отметки времени: попасть в замес наугад по тикам невозможно. */
+const PRESET_MINUTES = [10, 20, 30, 40];
+
+const SECONDS_IN_MINUTE = 60;
+
 export function ReplayRunPanel(): React.JSX.Element {
   const benchmark = useBenchmark();
   const launch = useLaunchReplayRun();
@@ -36,8 +49,10 @@ export function ReplayRunPanel(): React.JSX.Element {
   }
 
   const options = benchmark.data;
-  const chosen = replayFile === '' ? (options.replays[0]?.name ?? '') : replayFile;
+  const chosenName = replayFile === '' ? (options.replays[0]?.name ?? '') : replayFile;
+  const chosen = options.replays.find((replay) => replay.name === chosenName);
   const parsedTick = Number.parseInt(tick, 10);
+  const validTick = Number.isFinite(parsedTick) && parsedTick >= 0;
 
   return (
     <div className="card">
@@ -66,13 +81,13 @@ export function ReplayRunPanel(): React.JSX.Element {
                 <span className="metric-label">повтор</span>
                 <select
                   className="input"
-                  value={chosen}
+                  value={chosenName}
                   onChange={(event) => setReplayFile(event.target.value)}
                   disabled={launch.isPending}
                 >
                   {options.replays.map((replay) => (
                     <option key={replay.name} value={replay.name}>
-                      {replay.name} · {mib(replay.sizeBytes)}
+                      {describeReplay(replay)}
                     </option>
                   ))}
                 </select>
@@ -94,13 +109,37 @@ export function ReplayRunPanel(): React.JSX.Element {
                 disabled={launch.isPending || options.state.gameRunning}
                 onClick={() =>
                   launch.mutate({
-                    replayFile: chosen,
-                    startTick: Number.isFinite(parsedTick) ? parsedTick : null,
+                    replayFile: chosenName,
+                    startTick: validTick ? parsedTick : null,
                     label: '',
                   })
                 }
               >
                 {launch.isPending ? 'Запускаю…' : 'Запустить Dota с этим повтором'}
+              </button>
+            </div>
+
+            {/* Тик — это тридцатая доля секунды, и вслепую он не выбирается. */}
+            <TickHint replay={chosen} tick={validTick ? parsedTick : null} />
+
+            <div className="tick-presets">
+              <span className="muted">с минуты:</span>
+              {PRESET_MINUTES.filter((minutes) =>
+                withinReplay(chosen, minutes * SECONDS_IN_MINUTE),
+              ).map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  className="chip"
+                  onClick={() =>
+                    setTick(String(secondsToTick(chosen, minutes * SECONDS_IN_MINUTE)))
+                  }
+                >
+                  {minutes} мин
+                </button>
+              ))}
+              <button type="button" className="chip" onClick={() => setTick('')}>
+                с начала
               </button>
             </div>
 
@@ -112,17 +151,73 @@ export function ReplayRunPanel(): React.JSX.Element {
               </div>
             )}
             {launch.isError && <div className="notice error">{launch.error.message}</div>}
-
-            <div className="muted" style={{ marginTop: 8 }}>
-              Тик задаёт место в матче. Не знаете нужный — оставьте пустым, повтор
-              пойдёт с начала; главное, чтобы во всех сравниваемых записях он был
-              одинаковым.
-            </div>
           </>
         )
       )}
     </div>
   );
+}
+
+/**
+ * Что значит введённый тик.
+ *
+ * Главное здесь — предупреждение про начало повтора. Первые минуты это драфт и
+ * загрузка: там нет ни героев, ни заклинаний, и мерить нечего. Человек,
+ * поставивший маленький тик, будет смотреть на неподвижный экран и думать, что
+ * инструмент сломался.
+ */
+function TickHint({
+  replay,
+  tick,
+}: {
+  replay: ReplayFile | undefined;
+  tick: number | null;
+}): React.JSX.Element {
+  if (tick === null) {
+    return (
+      <div className="muted tick-hint">
+        Тик не задан — повтор пойдёт с начала, то есть со стадии выбора героев.
+      </div>
+    );
+  }
+
+  const seconds = tickToSeconds(replay, tick);
+  if (!tickWithinReplay(replay, tick)) {
+    return (
+      <div className="tick-hint warn">
+        Такого тика в повторе нет: он длится {replay?.ticks} тиков (
+        {replayLength(replay)}).
+      </div>
+    );
+  }
+
+  return (
+    <div className="tick-hint">
+      <span className="muted">
+        {tick} тиков — это <b>{clock(seconds)}</b> от начала записи повтора
+        {replayLength(replay) !== null && <> из {replayLength(replay)}</>}.
+      </span>
+      {seconds < EARLY_GAME_SECONDS && (
+        <span className="warn">
+          Это ещё выбор героев и раскладка: нагрузки там почти нет, мерить нечего.
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** До этой отметки в повторе идут драфт, загрузка и пустая карта до горна. */
+const EARLY_GAME_SECONDS = 8 * SECONDS_IN_MINUTE;
+
+function withinReplay(replay: ReplayFile | undefined, seconds: number): boolean {
+  return replay?.durationSeconds == null || seconds <= replay.durationSeconds;
+}
+
+function describeReplay(replay: ReplayFile): string {
+  const length = replayLength(replay);
+  return length === null
+    ? `${replay.name} · ${mib(replay.sizeBytes)}`
+    : `${replay.name} · ${length}`;
 }
 
 function Obstacles({ options }: { options: BenchmarkOptions }): React.JSX.Element | null {

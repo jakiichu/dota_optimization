@@ -14,7 +14,14 @@ class FakeLauncher implements GameLauncher {
       ready: true,
       configPath: 'C:/dota/cfg/frameloss-bench.cfg',
       obstacles: [],
-      replays: [{ name: '8865634649.dem', sizeBytes: 200_000_000 }],
+      replays: [
+        {
+          name: '8865634649.dem',
+          sizeBytes: 200_000_000,
+          ticks: 176_355,
+          durationSeconds: 5879,
+        },
+      ],
     });
   }
 

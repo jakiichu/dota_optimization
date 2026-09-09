@@ -93,10 +93,10 @@ describe('manualSeekCommand', () => {
 describe('usableReplays', () => {
   it('отбрасывает обрезки и заготовки', () => {
     const found = usableReplays([
-      { name: '8865634649.dem', sizeBytes: 279_373_310 },
-      { name: '8951116903.dem.partial', sizeBytes: 56_945_154 },
-      { name: 'placeholder.txt', sizeBytes: 0 },
-      { name: 'tiny.dem', sizeBytes: 1024 },
+      { name: '8865634649.dem', sizeBytes: 279_373_310, ticks: 176_355, durationSeconds: 5879 },
+      { name: '8951116903.dem.partial', sizeBytes: 56_945_154, ticks: null, durationSeconds: null },
+      { name: 'placeholder.txt', sizeBytes: 0, ticks: null, durationSeconds: null },
+      { name: 'tiny.dem', sizeBytes: 1024, ticks: null, durationSeconds: null },
     ]);
 
     expect(found.map((replay) => replay.name)).toEqual(['8865634649.dem']);

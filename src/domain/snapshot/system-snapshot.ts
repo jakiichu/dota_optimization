@@ -128,6 +128,13 @@ export interface GameProfile {
 export interface ReplayFile {
   readonly name: string;
   readonly sizeBytes: number;
+  /**
+   * Длина повтора в тиках. `null` — прочитать не вышло: файл недокачан или
+   * записан незнакомой версией игры.
+   */
+  readonly ticks: Maybe<number>;
+  /** Она же в секундах — из самого файла, а не из зашитой частоты тиков. */
+  readonly durationSeconds: Maybe<number>;
 }
 
 export interface SystemSnapshot {

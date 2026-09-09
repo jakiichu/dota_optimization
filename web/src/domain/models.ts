@@ -263,6 +263,10 @@ export interface GameConfig {
 export interface ReplayFile {
   readonly name: string;
   readonly sizeBytes: number;
+  /** Длина повтора в тиках. `null` — файл её не сообщил. */
+  readonly ticks: number | null;
+  /** Она же в секундах — из самого файла, а не из зашитой частоты тиков. */
+  readonly durationSeconds: number | null;
 }
 
 export interface ReplayRun {

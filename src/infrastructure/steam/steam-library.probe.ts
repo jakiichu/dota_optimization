@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join } from 'node:path';
 import type { GameProfile, Maybe, ReplayFile } from '../../domain/snapshot/system-snapshot.ts';
+import { readDemoLength } from './demo-file.reader.ts';
 import { parseVdf, vdfObject, vdfString, type VdfObject } from './vdf.parser.ts';
 
 /**
@@ -224,8 +225,17 @@ async function listReplays(directory: string): Promise<ReplayFile[]> {
     const replays: ReplayFile[] = [];
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.dem')) continue;
-      const info = await stat(join(directory, entry.name));
-      replays.push({ name: entry.name, sizeBytes: info.size });
+      const path = join(directory, entry.name);
+      const info = await stat(path);
+      // Длина читается из самого файла: без неё человеку нечем перевести тик
+      // во время и выбрать точку в матче можно только наугад.
+      const length = await readDemoLength(path);
+      replays.push({
+        name: entry.name,
+        sizeBytes: info.size,
+        ticks: length?.ticks ?? null,
+        durationSeconds: length?.seconds ?? null,
+      });
     }
     return replays.sort((left, right) => right.sizeBytes - left.sizeBytes);
   } catch {

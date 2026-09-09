@@ -12,10 +12,7 @@
  * те же юниты, ту же нагрузку.
  */
 
-export interface ReplayFile {
-  readonly name: string;
-  readonly sizeBytes: number;
-}
+export type { ReplayFile } from '../snapshot/system-snapshot.ts';
 
 export interface BenchmarkPlan {
   /** Команды, которые вводятся в консоль игры по порядку. */
@@ -72,6 +69,9 @@ export function planReplayBenchmark(
  */
 const MIN_USABLE_BYTES = 1024 * 1024;
 
-export function isUsableReplay(replay: ReplayFile): boolean {
+export function isUsableReplay(replay: {
+  readonly name: string;
+  readonly sizeBytes: number;
+}): boolean {
   return replay.name.toLowerCase().endsWith('.dem') && replay.sizeBytes >= MIN_USABLE_BYTES;
 }
