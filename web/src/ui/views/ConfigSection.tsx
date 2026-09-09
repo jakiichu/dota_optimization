@@ -64,7 +64,11 @@ export function ConfigSection({
     <>
       <SectionHeader
         title="Конфиг игры"
-        subtitle={data.path ?? 'Игра не найдена — редактировать нечего.'}
+        subtitle={
+          data.path === null
+            ? 'Игра не найдена — редактировать нечего.'
+            : `Команды, которые игра выполняет при каждом запуске: ${data.path}`
+        }
         stale={config.isFetching}
       >
         <button
@@ -90,6 +94,7 @@ export function ConfigSection({
               >
                 Точно удалить
               </button>
+              <span className="muted">копия файла останется рядом</span>
               <button type="button" className="button" onClick={() => setConfirmingRemove(false)}>
                 Отмена
               </button>
@@ -181,7 +186,8 @@ function Outcomes({
           возможен, до того как это ему понадобится. */}
       {backupPath !== null && (
         <div className="notice">
-          Прежняя версия сохранена: <code>{backupPath}</code>
+          Прежняя версия конфига сохранена рядом с ним: <code>{backupPath}</code>. Если
+          станет хуже — переименуйте её обратно в <code>autoexec.cfg</code>.
         </div>
       )}
     </>
@@ -192,12 +198,12 @@ function Composition({ config }: { config: GameConfig }): React.JSX.Element {
   return (
     <div className="summary">
       <span className="chip" aria-pressed="true">
-        {config.settingCount} настроек
+        всего строк: {config.settingCount}
       </span>
       {config.tally.map((entry) => (
         <span key={entry.impact} className="chip" aria-pressed="true">
           <span className="dot" style={{ background: IMPACT_COLOR[entry.impact] }} />
-          {entry.label}: {entry.count}
+          {entry.label} — {entry.count}
         </span>
       ))}
     </div>
@@ -247,7 +253,10 @@ function Unparsed({ config }: { config: GameConfig }): React.JSX.Element | null 
           </li>
         ))}
       </ul>
-      <div className="muted">Движок их, скорее всего, тоже пропустит. Мы их не трогаем.</div>
+      <div className="muted">
+        Разобрать их как «настройка — значение» не вышло: движок, скорее всего, тоже
+        пропустит. Мы их не трогаем и при записи сохраняем как есть.
+      </div>
     </div>
   );
 }
@@ -277,15 +286,16 @@ function DraftBar({
       </div>
       <div className="draft-actions">
         <button type="button" className="button" onClick={onDiscard} disabled={pending}>
-          Отменить
+          Отменить правки
         </button>
         <button type="button" className="button primary" onClick={onWrite} disabled={pending}>
           {pending ? 'Записываю…' : `Записать в файл (${edits.length})`}
         </button>
       </div>
       <div className="draft-note">
-        Конфиг выполняется при запуске игры: если Dota открыта, изменения
-        подхватятся со следующего запуска. Прежняя версия уедет в резервную копию.
+        Пока это только черновик — файл не тронут. По кнопке правки уйдут в файл, а
+        прежняя версия сохранится рядом копией. Игра читает конфиг при запуске: если
+        Dota открыта, изменения подействуют со следующего раза.
       </div>
     </div>
   );
@@ -364,7 +374,9 @@ function QuickLoad({
         <span className="card-title">{exists ? 'Заменить конфиг' : 'Создать конфиг'}</span>
       </div>
       <div className="muted">
-        Вставьте текст, перетащите файл или выберите его — в папку игры лезть не нужно.
+        Перенос конфига между компьютерами: вставьте текст, перетащите файл или
+        выберите его. Искать папку игры не нужно — файл ляжет туда, куда игра смотрит,
+        а нынешний сохранится рядом копией.
       </div>
 
       <textarea

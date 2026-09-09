@@ -1,5 +1,10 @@
 import type { ConfigNote, ConfigAnalysis } from '../../domain/gameconfig/config-analysis.ts';
-import { IMPACT_LABEL, IMPACT_SHORT, type CvarImpact } from '../../domain/gameconfig/cvar-knowledge.ts';
+import { IMPACT_LABEL, type CvarImpact } from '../../domain/gameconfig/cvar-knowledge.ts';
+import {
+  inGameSetting,
+  type InGameSetting,
+  type SettingNames,
+} from '../../domain/gameconfig/setting-names.ts';
 import { valueKindOf, type CvarValueKind } from '../../domain/gameconfig/cvar-value.ts';
 import type { GameConfigState } from '../../application/use-cases/manage-game-config.ts';
 
@@ -26,8 +31,15 @@ export interface ConfigSettingView {
   /** Чем за неё платят. `null` — ничем или неизвестно. */
   readonly cost: string | null;
   readonly impact: CvarImpact | 'unknown';
-  /** Осторожная формулировка влияния — та самая, с «возможно». */
+  /** Чего касается настройка: «считает процессор», «рисует видеокарта». */
   readonly impactLabel: string;
+  /**
+   * Как эта строка называется в меню игры.
+   *
+   * `null` — либо в меню её нет вовсе (таких в autoexec большинство: ради них
+   * файл и заводят), либо мы не уверены в соответствии и молчим.
+   */
+  readonly inGame: InGameSetting | null;
   readonly known: boolean;
 }
 
@@ -51,10 +63,12 @@ export interface ConfigView {
   readonly backupPath: string | null;
 }
 
-const UNKNOWN_LABEL = 'не знаем, что это делает';
+const UNKNOWN_LABEL = 'мы не знаем, что это делает';
 
-export function toConfigView(state: GameConfigState): ConfigView {
-  const settings = (state.config?.settings ?? []).map(toSettingView);
+export function toConfigView(state: GameConfigState, names: SettingNames): ConfigView {
+  const settings = (state.config?.settings ?? []).map((setting) =>
+    toSettingView(setting, names),
+  );
 
   return {
     path: state.path,
@@ -71,6 +85,7 @@ export function toConfigView(state: GameConfigState): ConfigView {
 
 function toSettingView(
   setting: NonNullable<GameConfigState['config']>['settings'][number],
+  names: SettingNames,
 ): ConfigSettingView {
   const known = setting.impact !== null;
   return {
@@ -82,6 +97,7 @@ function toSettingView(
     cost: setting.cost,
     impact: setting.impact ?? 'unknown',
     impactLabel: setting.impact === null ? UNKNOWN_LABEL : IMPACT_LABEL[setting.impact],
+    inGame: inGameSetting(setting.name, names),
     known,
   };
 }
@@ -89,7 +105,7 @@ function toSettingView(
 function toTallyView(entry: ConfigAnalysis['tally'][number]): ConfigTallyView {
   return {
     impact: entry.impact,
-    label: entry.impact === 'unknown' ? 'не знаем' : IMPACT_SHORT[entry.impact],
+    label: entry.impact === 'unknown' ? 'не знаем' : IMPACT_LABEL[entry.impact],
     count: entry.count,
   };
 }

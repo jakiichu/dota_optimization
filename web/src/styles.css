@@ -672,6 +672,19 @@ code {
   color: var(--critical);
 }
 
+/* Название из меню игры — отдельной строкой над описанием: человек ищет
+   настройку там, где привык её видеть. */
+.setting-ingame {
+  color: var(--info);
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+
+.setting-inverted {
+  color: var(--warning);
+  margin-left: 10px;
+}
+
 .setting-explain {
   color: var(--muted);
   display: flex;
@@ -965,6 +978,8 @@ code {
 
 .recommendation-evidence {
   color: var(--muted);
+  display: flex;
+  gap: 10px;
 }
 
 .recommendation-changes {
@@ -999,7 +1014,8 @@ code {
   flex: none;
   font-size: 12px;
   padding-top: 2px;
-  width: 62px;
+  text-align: right;
+  width: 92px;
 }
 
 .recommendation button {

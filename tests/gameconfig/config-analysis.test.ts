@@ -118,7 +118,7 @@ describe('analyzeGameConfig', () => {
   it('отделяет строки, которые меняют игру, а не скорость', () => {
     const analysis = analyze(['dota_enemy_color 255 0 255', 'con_enable 1']);
     const note = analysis.notes.find(
-      (entry) => entry.title === 'В конфиге есть строки не про производительность',
+      (entry) => entry.title === 'Часть строк меняет игру, а не её скорость',
     );
 
     expect(note?.detail).toContain('dota_enemy_color');
@@ -129,7 +129,7 @@ describe('analyzeGameConfig', () => {
     const analysis = analyze(['fps_max 0', 'r_ssao 0', 'fps_max 240']);
     const note = analysis.notes.find((entry) => entry.title.includes('несколько раз'));
 
-    expect(note?.detail).toContain('Строки 1, 3');
+    expect(note?.detail).toContain('в строках 1, 3');
     expect(note?.detail).toContain('fps_max 240');
   });
 

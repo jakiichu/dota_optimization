@@ -156,13 +156,17 @@ function noteNonPerformance(config: GameConfig): ConfigNote[] {
   return [
     {
       severity: 'info',
-      title: 'В конфиге есть строки не про производительность',
-      detail: changed
-        .map((setting) => `${setting.name} ${setting.value} (строка ${setting.line})`)
-        .join('; '),
+      title: 'Часть строк меняет игру, а не её скорость',
+      detail:
+        'Эти строки кадров не добавляют и не отнимают — они меняют то, что вы видите ' +
+        'и как играете: ' +
+        changed
+          .map((setting) => `${setting.name} ${setting.value} (строка ${setting.line})`)
+          .join('; ') +
+        '.',
       remediation: [
-        'Это не ошибка, но и не источник кадров — решайте по вкусу, а не по ' +
-          'обещаниям автора конфига.',
+        'Это не ошибка. Но и не источник кадров: решайте по вкусу, а не по ' +
+          'обещаниям того, у кого вы взяли конфиг.',
       ],
     },
   ];
@@ -178,8 +182,9 @@ function noteDuplicates(config: GameConfig): ConfigNote[] {
       severity: 'warning' as const,
       title: `Настройка ${group[0]?.name ?? ''} задана несколько раз`,
       detail:
-        `Строки ${group.map((setting) => setting.line).join(', ')}. ` +
-        `Сработает последняя: ${last?.name ?? ''} ${last?.value ?? ''}.`,
+        `Она встречается в строках ${group.map((setting) => setting.line).join(', ')}. ` +
+        'Движок читает файл сверху вниз, поэтому в силе окажется последняя: ' +
+        `${last?.name ?? ''} ${last?.value ?? ''}. Остальные не сделают ничего.`,
       remediation: ['Оставить одну строку, чтобы значение не зависело от порядка.'],
     };
   });
@@ -191,9 +196,13 @@ function noteUnparsed(config: GameConfig): ConfigNote[] {
   return [
     {
       severity: 'warning',
-      title: 'Строки, которые не разобрались',
-      detail: config.unparsed.join('; '),
-      remediation: ['Проверьте их: движок такие строки, скорее всего, тоже пропустит.'],
+      title: 'Некоторые строки разобрать не вышло',
+      detail:
+        'Они не похожи на пару «настройка значение»: ' + config.unparsed.join('; ') + '.',
+      remediation: [
+        'Проверьте их глазами: движок такие строки, скорее всего, тоже пропустит, ' +
+          'и то, ради чего они написаны, не работает.',
+      ],
     },
   ];
 }

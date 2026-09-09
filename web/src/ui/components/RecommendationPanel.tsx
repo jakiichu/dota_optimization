@@ -27,7 +27,7 @@ export function RecommendationPanel({
     <div className="card">
       <div className="card-head">
         <span className="card-title">Что попробовать</span>
-        <span className="card-note">выводы из этой записи, а не общие советы</span>
+        <span className="card-note">выводы из этой записи, а не советы вообще</span>
       </div>
 
       {recommendations.map((item) => (
@@ -37,7 +37,10 @@ export function RecommendationPanel({
             <span className="recommendation-confidence">{CONFIDENCE_LABEL[item.confidence]}</span>
           </div>
 
-          <div className="recommendation-evidence">{item.evidence}</div>
+          <div className="recommendation-evidence">
+            <span className="recommendation-mark">почему</span>
+            {item.evidence}
+          </div>
 
           {item.changes.length > 0 && (
             <div className="recommendation-changes">
@@ -52,13 +55,15 @@ export function RecommendationPanel({
             </div>
           )}
 
+          {/* Как проверить — обязательная часть. Без неё рекомендацию нельзя
+              опровергнуть, и она ничем не отличается от совета из интернета. */}
           <div className="recommendation-expect">
-            <span className="recommendation-mark">ожидаем</span>
+            <span className="recommendation-mark">как проверить</span>
             {item.expect}
           </div>
           {item.risk !== '' && (
             <div className="recommendation-risk">
-              <span className="recommendation-mark">цена</span>
+              <span className="recommendation-mark">чем платите</span>
               {item.risk}
             </div>
           )}

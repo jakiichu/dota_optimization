@@ -215,9 +215,18 @@ export interface ConfigSetting {
   readonly what: string | null;
   readonly cost: string | null;
   readonly impact: CvarImpact | 'unknown';
-  /** Осторожная формулировка: «возможно, разгружает процессор». */
+  /** Чего касается: «считает процессор», «рисует видеокарта». */
   readonly impactLabel: string;
+  /** Как строка называется в меню игры. `null` — в меню её нет. */
+  readonly inGame: InGameSetting | null;
   readonly known: boolean;
+}
+
+export interface InGameSetting {
+  /** Текст из меню игры, на языке её интерфейса. */
+  readonly label: string;
+  /** Значение переменной обратно галочке в меню: `1` значит «выключено». */
+  readonly inverted: boolean;
 }
 
 export type NoteSeverity = 'critical' | 'warning' | 'info';

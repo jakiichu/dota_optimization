@@ -10,8 +10,8 @@ interface Section {
 
 const SECTIONS: readonly Section[] = [
   { id: 'audit', label: 'Аудит', hint: 'настройки, которые стоят кадров' },
-  { id: 'capture', label: 'Запись кадров', hint: 'frametime, статтеры, ритм' },
-  { id: 'config', label: 'Конфиг', hint: 'что включено и чем это стоит' },
+  { id: 'capture', label: 'Запись кадров', hint: 'сколько длится каждый кадр' },
+  { id: 'config', label: 'Конфиг', hint: 'autoexec.cfg: что в нём включено' },
   { id: 'compare', label: 'Сравнение', hint: 'до и после правки' },
   { id: 'sensors', label: 'Сенсоры', hint: 'живые показания' },
 ];

@@ -6,7 +6,9 @@ import {
   type GameConfigState,
 } from '../application/use-cases/manage-game-config.ts';
 import type { MeasuredContext } from '../domain/gameconfig/config-analysis.ts';
+import type { SettingNames } from '../domain/gameconfig/setting-names.ts';
 import { FileGameConfigStore } from '../infrastructure/gameconfig/file-game-config.store.ts';
+import { readSettingNames } from '../infrastructure/gameconfig/game-strings.source.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 
 /**
@@ -22,18 +24,33 @@ export function createConfigRoutes(
 ): readonly JsonRoute[] {
   const manage = new ManageGameConfig(new FileGameConfigStore(), () => lastMeasured(sessions));
 
+  /**
+   * Названия настроек из меню игры.
+   *
+   * Читаются один раз за запуск: архивы игры меняются только при её обновлении,
+   * а разбор пяти мегабайт локализации при каждом открытии раздела был бы
+   * платой ни за что.
+   */
+  let names: Promise<SettingNames> | null = null;
+  const settingNames = async (path: string | null): Promise<SettingNames> => {
+    if (path === null) return new Map();
+    names ??= readSettingNames(path);
+    return names;
+  };
+
+  const describe = async (state: GameConfigState): Promise<unknown> =>
+    toConfigView(state, await settingNames(state.path));
+
   const changing = async (act: () => Promise<GameConfigState>): Promise<unknown> => {
     const state = await act();
     onChanged();
-    return toConfigView(state);
+    return describe(state);
   };
 
   return [
     {
       path: '/api/config',
-      async handle() {
-        return toConfigView(await manage.read());
-      },
+      handle: async () => describe(await manage.read()),
     },
     {
       path: '/api/config/apply',

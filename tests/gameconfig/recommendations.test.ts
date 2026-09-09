@@ -245,6 +245,6 @@ describe('recommend', () => {
     const found = recommend({ ...context({ cpuShare: 0.4, gpuShare: 0.4 }), network: analyzeNetworkQuality(jittery) });
     const note = found.find((entry) => entry.kind === 'not-config');
 
-    expect(note?.title).toContain('дело в канале');
+    expect(note?.title).toContain('дело в сети');
   });
 });
