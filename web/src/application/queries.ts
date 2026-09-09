@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type {
   Audit,
+  BenchmarkOptions,
   Capture,
   Comparison,
   ConfigEdit,
   GameConfig,
+  ReplayRun,
+  ReplayRunState,
   SessionSummary,
 } from '../domain/models.ts';
 import { useApi } from './api-context.ts';
@@ -27,6 +30,7 @@ export const queryKeys = {
     ['sessions', 'comparison', beforeId, afterId] as const,
   session: (id: string) => ['sessions', 'analysis', id] as const,
   config: ['config'] as const,
+  benchmark: ['benchmark'] as const,
 };
 
 /**
@@ -80,6 +84,41 @@ export function useSessionAnalysis(id: string | null): UseQueryResult<Capture> {
     queryFn: ({ signal }) => api.analyzeSession(id ?? '', signal),
     enabled: id !== null && id !== '',
     staleTime: ANALYSIS_STALE_MS,
+  });
+}
+
+/**
+ * Эталонный прогон.
+ *
+ * Опрашивается на ходу: главное в нём — идёт ли сейчас игра, а это меняется без
+ * нашего участия. Человек закрыл Dota — экран обязан сказать, что прогона
+ * больше нет, иначе следующая запись будет помечена сценой, которой уже нет.
+ */
+const GAME_RUNNING_POLL_MS = 5000;
+
+export function useBenchmark(): UseQueryResult<BenchmarkOptions> {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.benchmark,
+    queryFn: ({ signal }) => api.fetchBenchmark(signal),
+    refetchInterval: GAME_RUNNING_POLL_MS,
+  });
+}
+
+export function useLaunchReplayRun(): UseMutationResult<ReplayRunState, Error, ReplayRun> {
+  const api = useApi();
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (run: ReplayRun) => api.launchReplayRun(run),
+    // Игра запускается не мгновенно, поэтому состояние всё равно перечитаем —
+    // но ответ кладём сразу, чтобы шаги появились без ожидания.
+    onSuccess: (state) => {
+      client.setQueryData(queryKeys.benchmark, (previous: BenchmarkOptions | undefined) =>
+        previous === undefined ? previous : { ...previous, state },
+      );
+      void client.invalidateQueries({ queryKey: queryKeys.benchmark });
+    },
   });
 }
 

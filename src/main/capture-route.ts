@@ -3,6 +3,7 @@ import { CaptureFrameSession } from '../application/use-cases/capture-frame-sess
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
 import type { MachineContextSource } from './game-config-source.ts';
+import type { StartReplayRun } from '../application/use-cases/start-replay-run.ts';
 import type { SensorStream } from '../application/ports/sensor-stream.port.ts';
 import type { SessionStore } from '../application/ports/session-store.port.ts';
 import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
@@ -22,6 +23,7 @@ export function createCaptureRoute(
   sensors: SensorStream,
   store: SessionStore,
   machine: MachineContextSource,
+  replayRun: StartReplayRun,
 ): JsonRoute {
   const session = new CaptureFrameSession(new PresentMonCapture(), sensors, () => machine.get());
   let inFlight: Promise<unknown> | null = null;
@@ -43,7 +45,7 @@ export function createCaptureRoute(
       const running = session.execute(request).then(async (result) => {
         const summary = await store.save(
           query.get('label') ?? '',
-          sceneFromQuery(query),
+          await sceneOf(replayRun, query),
           result.capture,
           result.sensorSamples,
         );
@@ -57,6 +59,30 @@ export function createCaptureRoute(
         inFlight = null;
       }
     },
+  };
+}
+
+/**
+ * Чем помечена запись.
+ *
+ * Если игру запустили мы — сцену знаем точно: файл повтора и тик мы сами
+ * положили в её команды запуска. Это и есть весь смысл эталонного прогона:
+ * сцена перестаёт быть тем, что человек про неё написал.
+ *
+ * Прогона нет — возвращаемся к тому, что сказали в запросе.
+ */
+async function sceneOf(
+  replayRun: StartReplayRun,
+  query: URLSearchParams,
+): Promise<CaptureScene> {
+  const running = await replayRun.currentRun();
+  if (running === null) return sceneFromQuery(query);
+
+  return {
+    kind: 'replay',
+    replayFile: running.replayFile,
+    startTick: running.startTick,
+    note: running.label === '' ? null : running.label,
   };
 }
 

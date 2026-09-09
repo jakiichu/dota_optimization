@@ -258,6 +258,38 @@ export interface GameConfig {
   readonly backupPath: string | null;
 }
 
+// --- эталонный прогон -------------------------------------------------------
+
+export interface ReplayFile {
+  readonly name: string;
+  readonly sizeBytes: number;
+}
+
+export interface ReplayRun {
+  readonly replayFile: string;
+  /** Тик, с которого мерить. `null` — повтор идёт с начала. */
+  readonly startTick: number | null;
+  readonly label: string;
+}
+
+export interface ReplayRunState {
+  /** Прогон, который идёт прямо сейчас. `null` — игру запускали не мы. */
+  readonly current: ReplayRun | null;
+  readonly configPath: string | null;
+  readonly steps: readonly string[];
+  /** Команда для консоли, если движок не остановился на тике. */
+  readonly manualSeek: string | null;
+  readonly gameRunning: boolean;
+}
+
+export interface BenchmarkOptions {
+  readonly ready: boolean;
+  /** Почему запустить нельзя. Пусто, когда всё на месте. */
+  readonly obstacles: readonly string[];
+  readonly replays: readonly ReplayFile[];
+  readonly state: ReplayRunState;
+}
+
 /** Правка одной настройки. `value: null` — убрать её из файла. */
 export interface ConfigEdit {
   readonly name: string;

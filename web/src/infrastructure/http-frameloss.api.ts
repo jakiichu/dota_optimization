@@ -4,10 +4,13 @@ import type {
 } from '../application/ports/frameloss-api.port.ts';
 import type {
   Audit,
+  BenchmarkOptions,
   Capture,
   Comparison,
   ConfigEdit,
   GameConfig,
+  ReplayRun,
+  ReplayRunState,
   SensorSample,
   SessionSummary,
 } from '../domain/models.ts';
@@ -49,6 +52,14 @@ export class HttpFramelossApi implements FramelossApi {
       label: request.label,
     });
     return getJson<Capture>(`/api/capture?${query.toString()}`, signal);
+  }
+
+  async fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions> {
+    return getJson<BenchmarkOptions>('/api/benchmark', signal);
+  }
+
+  async launchReplayRun(run: ReplayRun): Promise<ReplayRunState> {
+    return postJson<ReplayRunState>('/api/benchmark/launch', run);
   }
 
   async fetchConfig(signal: AbortSignal): Promise<GameConfig> {

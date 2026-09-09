@@ -946,6 +946,28 @@ code {
   margin-top: 12px;
 }
 
+/* --- эталонный прогон --- */
+
+.run-active {
+  border-left: 2px solid var(--ok);
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-left: 12px;
+}
+
+/* Чем будет помечена запись — самое важное здесь: ради этого прогон и нужен. */
+.run-scene {
+  font-weight: 600;
+}
+
+.run-active code {
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
 /* --- рекомендации --- */
 
 .recommendation {

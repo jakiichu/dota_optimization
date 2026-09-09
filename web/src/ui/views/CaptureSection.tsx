@@ -7,6 +7,7 @@ import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
 import { PacingPanel } from '../components/PacingPanel.tsx';
 import { RecommendationPanel } from '../components/RecommendationPanel.tsx';
+import { ReplayRunPanel } from '../components/ReplayRunPanel.tsx';
 import { EmptyState, ErrorState, SectionHeader } from '../components/States.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
@@ -28,7 +29,14 @@ export function CaptureSection({
 
   return (
     <>
-      <SectionHeader title="Запись кадров" subtitle="frametime, статтеры, ритм" />
+      <SectionHeader
+        title="Запись кадров"
+        subtitle="сколько длится каждый кадр и почему иногда дольше обычного"
+      />
+
+      {/* Сцена задаётся до записи, а не описывается после: порядок на экране
+          повторяет порядок действий. */}
+      <ReplayRunPanel />
 
       <div className="capture-form">
         <label>

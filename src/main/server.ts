@@ -6,6 +6,7 @@ import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
 import { createCaptureRoute } from './capture-route.ts';
+import { createBenchmarkRoutes } from './benchmark-routes.ts';
 import { createConfigRoutes } from './config-routes.ts';
 import { createMachineContextSource } from './game-config-source.ts';
 import {
@@ -24,6 +25,8 @@ import {
   ensureSidecarBuilt,
   SidecarSensorStream,
 } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
+import { StartReplayRun } from '../application/use-cases/start-replay-run.ts';
+import { SteamGameLauncher } from '../infrastructure/game/steam-game.launcher.ts';
 import { RESOURCES } from '../infrastructure/paths/resources.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
@@ -63,6 +66,14 @@ const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
  * сбрасывает, поправив файл.
  */
 const machineContext = createMachineContextSource();
+
+/**
+ * Эталонный прогон, один на приложение.
+ *
+ * Он помнит, какой повтор мы запустили, а запись кадров у него это спрашивает.
+ * Два экземпляра означали бы, что запись помечается сценой от другого прогона.
+ */
+const replayRun = new StartReplayRun(new SteamGameLauncher());
 
 /**
  * Отметка «это мы».
@@ -176,7 +187,8 @@ async function startServer(
     jsonRoutes: [
       healthRoute,
       auditRoute,
-      createCaptureRoute(sensorStream, sessionStore, machineContext),
+      createCaptureRoute(sensorStream, sessionStore, machineContext, replayRun),
+      ...createBenchmarkRoutes(replayRun),
       createSessionListRoute(sessionStore),
       createSessionCompareRoute(sessionStore),
       createSessionAnalyzeRoute(sessionStore, machineContext),

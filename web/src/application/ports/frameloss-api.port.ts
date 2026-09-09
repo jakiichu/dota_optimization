@@ -1,9 +1,12 @@
 import type {
   Audit,
+  BenchmarkOptions,
   Capture,
   Comparison,
   ConfigEdit,
   GameConfig,
+  ReplayRun,
+  ReplayRunState,
   SensorSample,
   SessionSummary,
 } from '../../domain/models.ts';
@@ -31,6 +34,11 @@ export interface FramelossApi {
   ): Promise<Comparison>;
   analyzeSession(id: string, signal: AbortSignal): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
+
+  /** Что можно запустить эталонным прогоном и что уже запущено. */
+  fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions>;
+  /** Запускает игру с выбранным повтором. */
+  launchReplayRun(run: ReplayRun): Promise<ReplayRunState>;
 
   fetchConfig(signal: AbortSignal): Promise<GameConfig>;
   /** Точечные правки поверх текущего файла — так комментарии остаются на месте. */
