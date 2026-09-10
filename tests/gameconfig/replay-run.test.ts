@@ -35,22 +35,21 @@ describe('validateReplayRun', () => {
 });
 
 describe('buildLaunchScript', () => {
-  it('выставляет остановку до загрузки повтора, а не после', () => {
-    // playdemo загружает повтор не мгновенно, и команда следующей строкой ушла
-    // бы в ещё не начавшееся воспроизведение. Порядок здесь — единственный,
-    // который может сработать.
-    const { configLines } = buildLaunchScript(run());
-    const pauseAt = configLines.findIndex((line) => line.startsWith('demo_pauseatservertick'));
-    const playAt = configLines.findIndex((line) => line.startsWith('playdemo'));
-
-    expect(pauseAt).toBeGreaterThanOrEqual(0);
-    expect(pauseAt).toBeLessThan(playAt);
-  });
-
-  it('не кладёт в cfg перемотку: она промахнётся мимо незагруженного повтора', () => {
+  it('не кладёт в cfg ни перемотку, ни ожидание тика', () => {
+    // Перемотка промахнётся мимо ещё не загруженного повтора, а ожидание не
+    // перематывает вовсе: заказав тридцатую минуту, повтор полчаса шёл бы с
+    // начала, чтобы там замереть. Проверено на живом запуске.
     const { configLines } = buildLaunchScript(run());
 
     expect(configLines.some((line) => line.includes('demo_gototick'))).toBe(false);
+    expect(configLines.some((line) => line.includes('demo_pauseatservertick'))).toBe(false);
+  });
+
+  it('включает быстрый пропуск кадров заранее', () => {
+    // Единственное, что про перемотку можно выставить до загрузки повтора.
+    const { configLines } = buildLaunchScript(run());
+
+    expect(configLines).toContain('demo_usefastgoto 1');
   });
 
   it('передаёт повтор движку без расширения и по его пути', () => {
@@ -59,21 +58,21 @@ describe('buildLaunchScript', () => {
     expect(configLines).toContain('playdemo replays/8865634649');
   });
 
-  it('без тика не просит игру нигде останавливаться', () => {
-    const { configLines } = buildLaunchScript(run({ startTick: null }));
-
-    expect(configLines.some((line) => line.includes('demo_pauseatservertick'))).toBe(false);
-  });
-
-  it('просит Steam открыть Dota с нашим файлом команд', () => {
+  it('открывает консоль: перемотку всё равно вводить руками', () => {
     const { launchArgs } = buildLaunchScript(run());
 
-    expect(launchArgs).toEqual(['-applaunch', '570', '+exec', 'frameloss-bench']);
+    expect(launchArgs).toEqual([
+      '-applaunch',
+      '570',
+      '-console',
+      '+exec',
+      'frameloss-bench',
+    ]);
   });
 
   it('говорит человеку, что делать, а не делает вид, что всё само', () => {
-    // Перемотка внутри повтора — единственное место, где мы не можем ручаться
-    // за движок, и молчать об этом нельзя.
+    // Перемотка — единственная часть прогона, которую нельзя автоматизировать:
+    // начальный тик воспроизведения движку не задаётся.
     const { steps } = buildLaunchScript(run());
 
     expect(steps.join(' ')).toContain('demo_gototick 42000');

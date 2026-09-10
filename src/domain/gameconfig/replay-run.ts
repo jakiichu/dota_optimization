@@ -89,15 +89,20 @@ export function validateReplayRun(run: ReplayRun): void {
 /**
  * Команды прогона и параметры запуска.
  *
- * Порядок строк — не вкусовщина. `playdemo` загружает повтор не мгновенно, и
- * команда, поставленная следующей строкой, уходит в ещё не начавшееся
- * воспроизведение. Поэтому всё, что можно выставить заранее, выставляется до
- * него: остановка на нужном тике — это условие, которое движок проверяет по
- * ходу, а не действие в момент вызова.
+ * Тика здесь нет, и это не упущение: **начальный тик воспроизведения движку
+ * задать нечем**. Все команды перемотки — `demo_gototick`, `demo_goto`,
+ * `demo_gotomark` — описаны как «skips the **current** demo playback», то есть
+ * работают только по уже идущему повтору. Файл команд выполняется при запуске
+ * игры, когда никакого повтора ещё нет.
  *
- * `demo_gototick` в cfg не кладём именно по этой причине: он бы промахнулся
- * мимо ещё не загруженного повтора. Его отдаём человеку строкой для консоли —
- * на случай, если остановка не сработает.
+ * `demo_pauseatservertick` тут тоже не годится, хотя выставляется заранее: он
+ * не перематывает, а ждёт — «pauses when the render time reaches the tick».
+ * Заказав тридцатую минуту, человек полчаса смотрел бы повтор с начала, чтобы
+ * тот замер в нужном месте. Мы это попробовали, и вышло ровно так.
+ *
+ * Поэтому перемотка честно отдаётся человеку одной строкой в консоль, а
+ * `demo_usefastgoto` заранее включает быстрый пропуск кадров, чтобы прыжок был
+ * мгновенным. Консоль открывается сразу: `-console` в параметрах запуска.
  */
 export function buildLaunchScript(run: ReplayRun): LaunchScript {
   validateReplayRun(run);
@@ -106,17 +111,16 @@ export function buildLaunchScript(run: ReplayRun): LaunchScript {
   const configLines = [
     '// Создан frameloss для эталонного прогона. Файл перезаписывается при',
     '// каждом запуске — свои команды сюда добавлять не стоит.',
+    '// Быстрый пропуск кадров: без него перемотка внутри повтора идёт минутами.',
     'demo_usefastgoto 1',
+    `playdemo ${demo}`,
   ];
-
-  if (run.startTick !== null) {
-    configLines.push(`demo_pauseatservertick ${run.startTick}`);
-  }
-  configLines.push(`playdemo ${demo}`);
 
   return {
     configLines,
-    launchArgs: ['-applaunch', DOTA_APP_ID, '+exec', BENCHMARK_CONFIG_NAME],
+    // -console: перемотку всё равно вводить руками, и пусть окно для неё уже
+    // будет открыто.
+    launchArgs: ['-applaunch', DOTA_APP_ID, '-console', '+exec', BENCHMARK_CONFIG_NAME],
     steps: stepsFor(run),
   };
 }
@@ -128,9 +132,9 @@ function stepsFor(run: ReplayRun): readonly string[] {
     steps.push('Повтор пойдёт с начала: запись можно запускать сразу.');
   } else {
     steps.push(
-      `Игра должна остановиться на тике ${run.startTick}. Если этого не ` +
-        `произошло — выполнить в консоли: demo_gototick ${run.startTick}`,
-      'Снять паузу (пробел) и сразу нажать «Записать».',
+      `Выполнить в консоли: demo_gototick ${run.startTick} — она уже открыта.`,
+      'Прыжок мгновенный: быстрый пропуск кадров включён заранее.',
+      'Нажать «Записать», когда повтор пойдёт с нужного места.',
     );
   }
 
@@ -138,7 +142,12 @@ function stepsFor(run: ReplayRun): readonly string[] {
   return steps;
 }
 
-/** Строка для консоли на случай, если остановка на тике не сработала. */
+/**
+ * Строка перемотки для консоли.
+ *
+ * Это единственная часть прогона, которую человек делает руками, и обойти её
+ * нельзя: начальный тик воспроизведения движку не задаётся.
+ */
 export function manualSeekCommand(run: ReplayRun): string | null {
   return run.startTick === null ? null : `demo_gototick ${run.startTick}`;
 }

@@ -271,17 +271,48 @@ function RunningNow({ options }: { options: BenchmarkOptions }): React.JSX.Eleme
         ))}
       </ol>
 
-      {options.state.manualSeek !== null && (
-        <div className="muted">
-          Команда для консоли, если игра не остановилась сама:{' '}
-          <code>{options.state.manualSeek}</code>
-        </div>
-      )}
+      {options.state.manualSeek !== null && <SeekCommand command={options.state.manualSeek} />}
       {options.state.configPath !== null && (
         <div className="muted">
           Команды записаны в <code>{options.state.configPath}</code>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Перемотка к нужному месту повтора.
+ *
+ * Единственный шаг прогона, который делается руками, и обойти его нельзя:
+ * начальный тик воспроизведения движку не задаётся — все команды перемотки
+ * работают только по уже идущему повтору. Поэтому не прячем её в примечание,
+ * а показываем как то, что надо сделать.
+ */
+function SeekCommand({ command }: { command: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <div className="seek-command">
+      <div className="step-command">
+        <code>{command}</code>
+        <button
+          type="button"
+          className="copy"
+          onClick={() => {
+            void navigator.clipboard.writeText(command).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1200);
+            });
+          }}
+        >
+          {copied ? 'скопировано' : 'копировать'}
+        </button>
+      </div>
+      <div className="muted">
+        Вставьте это в консоль игры — она уже открыта. Прыжок мгновенный: быстрый
+        пропуск кадров включён заранее.
+      </div>
     </div>
   );
 }
