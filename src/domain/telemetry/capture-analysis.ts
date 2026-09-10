@@ -44,8 +44,10 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 10 — видно, кто ещё занимал процессор: улика «кадр ждал» получила имя.
  * 11 — AMD отдаёт температуры и причины троттлинга; разбор берёт показания у
  *      вендорского источника, а не у счётчиков Windows, и это меняет улики.
+ * 12 — инпут-лаг требует сотни кадров с вводом: перцентиль по дюжине значений
+ *      это просто худшее из них.
  */
-export const METRICS_VERSION = 11;
+export const METRICS_VERSION = 12;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;

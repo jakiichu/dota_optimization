@@ -76,6 +76,8 @@ export interface CaptureView {
   readonly frameTime: FrameStatistics['frameTime'];
   /** `null`, если за запись не было ввода: это не нулевая задержка. */
   readonly inputLatency: FrameStatistics['inputLatency'];
+  /** На скольких кадрах ввод вообще был: по этому числу видно, чего стоит p99. */
+  readonly inputLatencyFrames: number;
   readonly stutterCount: number;
   readonly stuttersPerMinute: number;
   readonly bottleneck: Bottleneck;
@@ -126,6 +128,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     averageFps: statistics.averageFps,
     frameTime: statistics.frameTime,
     inputLatency: statistics.inputLatency,
+    inputLatencyFrames: statistics.inputLatencyFrames,
     stutterCount: statistics.stutters.length,
     stuttersPerMinute: statistics.stuttersPerMinute,
     bottleneck: statistics.bottleneck,

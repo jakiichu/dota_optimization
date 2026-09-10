@@ -152,3 +152,39 @@ describe('classifyBottleneck', () => {
     expect(classifyBottleneck(frames, jumpy).kind).toBe('mixed');
   });
 });
+
+describe('инпут-лаг', () => {
+  /** Кадры, на первые `inputs` из которых пришёлся ввод. */
+  function withInput(total: number, inputs: number): FrameSample[] {
+    let seen = 0;
+    return frameTrace(steady(16.6, total), () => {
+      seen += 1;
+      if (seen > inputs) return {};
+      // Первый кадр с диким значением: ровно так и выглядела живая запись.
+      return { allInputToPhotonMs: seen === 1 ? 924 : 20 };
+    });
+  }
+
+  it('молчит, когда ввода было слишком мало для перцентиля', () => {
+    // На живой записи повтора вышло 12 кадров с вводом из 3224, и «p99» по ним
+    // равнялся худшему из двенадцати — то есть одному случайному кадру.
+    const found = computeFrameStatistics(withInput(3224, 12));
+
+    expect(found.inputLatency).toBeNull();
+    expect(found.inputLatencyFrames).toBe(12);
+  });
+
+  it('считает, когда выборки хватает', () => {
+    const found = computeFrameStatistics(withInput(3224, 300));
+
+    expect(found.inputLatency).not.toBeNull();
+    expect(found.inputLatencyFrames).toBe(300);
+  });
+
+  it('отличает «ввода не было» от «ввод был, но мало»', () => {
+    // И то и другое даёт null в задержке, но число кадров разное — по нему
+    // видно, чего не хватило.
+    expect(computeFrameStatistics(withInput(100, 0)).inputLatencyFrames).toBe(0);
+    expect(computeFrameStatistics(withInput(100, 5)).inputLatencyFrames).toBe(5);
+  });
+});

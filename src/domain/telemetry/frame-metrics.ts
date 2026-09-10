@@ -60,11 +60,19 @@ export interface FrameStatistics {
   /**
    * Задержка от ввода до кадра на экране.
    *
-   * `null`, если за запись не было ни одного ввода: PresentMon меряет её только
-   * по кадрам, на которые пришлось нажатие. Отсутствие ввода — не нулевая
-   * задержка, и подменять одно другим нельзя.
+   * `null`, если ввода не было или его было слишком мало: PresentMon меряет её
+   * только по кадрам, на которые пришлось нажатие. Отсутствие ввода — не
+   * нулевая задержка, и подменять одно другим нельзя.
    */
   readonly inputLatency: Percentiles | null;
+  /**
+   * На скольких кадрах ввод вообще был.
+   *
+   * Нужен, чтобы сказать, на чём стоит число. В повторе никто не играет, и на
+   * живой записи вышло 12 кадров с вводом из 3224 — перцентиль по дюжине
+   * значений это просто худшее из них, названное перцентилем.
+   */
+  readonly inputLatencyFrames: number;
   readonly durationSeconds: number;
   readonly averageFps: number;
   readonly frameTime: Percentiles;
@@ -88,6 +96,7 @@ const NO_DATA: FrameStatistics = {
   averageFps: 0,
   frameTime: EMPTY_PERCENTILES,
   inputLatency: null,
+  inputLatencyFrames: 0,
   pacing: analyzeFramePacing([]),
   stutters: [],
   stuttersPerMinute: 0,
@@ -109,9 +118,13 @@ export function computeFrameStatistics(frames: readonly FrameSample[]): FrameSta
   const percentiles = computePercentiles(frameTimes);
   const stutters = findStutters(frames);
 
+  const inputLatencies = inputLatenciesOf(frames);
+
   return {
     frameCount: frames.length,
-    inputLatency: computeInputLatency(frames),
+    inputLatency:
+      inputLatencies.length < MIN_INPUT_FRAMES ? null : computePercentiles(inputLatencies),
+    inputLatencyFrames: inputLatencies.length,
     durationSeconds,
     averageFps: durationSeconds === 0 ? 0 : frames.length / durationSeconds,
     frameTime: percentiles,
@@ -140,11 +153,25 @@ export function percentile(sortedAscending: readonly number[], fraction: number)
   return sortedAscending[index] ?? 0;
 }
 
-function computeInputLatency(frames: readonly FrameSample[]): Percentiles | null {
-  const measured = frames
+/**
+ * Сколько кадров с вводом нужно, чтобы p99 по ним что-то значил.
+ *
+ * Перцентиль методом ближайшего ранга по n значениям берёт элемент под номером
+ * ⌈0.99·n⌉: при дюжине это ровно максимум. На живой записи повтора так и вышло
+ * — 12 кадров с вводом из 3224 дали «p99 инпут-лага 924 мс», то есть один
+ * случайный кадр, названный перцентилем. Ста хватает, чтобы p99 перестал быть
+ * синонимом худшего значения.
+ *
+ * Ниже порога отдаём `null` — «не измерено». Показать число, за которым нет
+ * выборки, хуже, чем не показать ничего: спорить с ним нечем, а верят ему как
+ * остальным.
+ */
+const MIN_INPUT_FRAMES = 100;
+
+function inputLatenciesOf(frames: readonly FrameSample[]): readonly number[] {
+  return frames
     .map((frame) => frame.clickToPhotonMs ?? frame.allInputToPhotonMs)
     .filter((value): value is number => value !== null);
-  return measured.length === 0 ? null : computePercentiles(measured);
 }
 
 function computePercentiles(frameTimes: readonly number[]): Percentiles {

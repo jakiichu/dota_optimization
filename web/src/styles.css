@@ -1100,6 +1100,13 @@ code {
   margin-top: 12px;
 }
 
+.metric-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
 /* --- кто занимал процессор всю запись ------------------------------------ */
 
 .background-load {

@@ -200,6 +200,8 @@ export interface Capture {
   readonly averageFps: number;
   readonly frameTime: Percentiles;
   readonly inputLatency: Percentiles | null;
+  /** На скольких кадрах ввод вообще был. */
+  readonly inputLatencyFrames: number;
   readonly stutterCount: number;
   readonly stuttersPerMinute: number;
   readonly bottleneck: Bottleneck;

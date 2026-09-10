@@ -355,7 +355,11 @@ function CaptureReport({
           <Metric label="p99" value={ms(capture.frameTime.p99)} />
           <Metric label="p99.9" value={ms(capture.frameTime.p999)} />
           {capture.inputLatency !== null && (
-            <Metric label="инпут-лаг p99" value={ms(capture.inputLatency.p99)} />
+            <Metric
+              label="инпут-лаг p99"
+              value={ms(capture.inputLatency.p99)}
+              note={`по ${capture.inputLatencyFrames} кадрам с вводом`}
+            />
           )}
           <Metric
             label="статтеры"
@@ -544,11 +548,21 @@ function ChartNote({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }): React.JSX.Element {
+function Metric({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  /** На чём число стоит: без этого «p99» звучит одинаково по дюжине и по тысяче. */
+  note?: string;
+}): React.JSX.Element {
   return (
     <div>
       <span className="metric-label">{label}</span>
       <span className="metric-value">{value}</span>
+      {note !== undefined && <span className="metric-note">{note}</span>}
     </div>
   );
 }
