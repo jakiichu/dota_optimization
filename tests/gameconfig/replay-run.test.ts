@@ -78,6 +78,24 @@ describe('buildLaunchScript', () => {
     expect(steps.join(' ')).toContain('demo_gototick 42000');
   });
 
+  it('называет кнопку записи и тогда, когда тик не задан', () => {
+    // Запуск игры и запись — два разных действия, и между ними игра занимает
+    // весь экран. Раньше без тика шаг звучал как «запись можно запускать
+    // сразу»: из этого не следует, что где-то есть вторая кнопка и нажать её
+    // надо самому. Человек уходил в Dota и возвращался ни с чем.
+    const withTick = buildLaunchScript(run()).steps.join(' ');
+    const fromStart = buildLaunchScript(run({ startTick: null })).steps.join(' ');
+
+    expect(withTick).toContain('Записать прогон');
+    expect(fromStart).toContain('Записать прогон');
+  });
+
+  it('предупреждает, что во время записи надо быть в игре', () => {
+    // Свёрнутая Dota рисует иначе, а переключение туда-сюда само даёт всплески,
+    // которые запись зачтёт в статтеры.
+    expect(buildLaunchScript(run()).steps.join(' ')).toContain('вернуться в игру');
+  });
+
   it('отказывается собирать команды для негодного имени', () => {
     expect(() => buildLaunchScript(run({ replayFile: 'a";quit.dem' }))).toThrow();
   });

@@ -26,12 +26,30 @@ const PRESET_MINUTES = [10, 20, 30, 40];
 
 const SECONDS_IN_MINUTE = 60;
 
-export function ReplayRunPanel(): React.JSX.Element {
+/**
+ * Кнопка записи, которой панель распоряжается, но не владеет.
+ *
+ * Владеет ею экран записи: запись одна на всё приложение, и две независимые
+ * кнопки показывали бы разное — нажал здесь, а «Записываю…» зажглось бы там.
+ */
+export interface Recorder {
+  readonly recording: boolean;
+  /** Секунды до старта записи. `null` — отсчёт не идёт. */
+  readonly startsIn: number | null;
+  readonly onRecord: () => void;
+}
+
+export function ReplayRunPanel({ recorder }: { recorder: Recorder }): React.JSX.Element {
   const benchmark = useBenchmark();
   const launch = useLaunchReplayRun();
 
   const [replayFile, setReplayFile] = useState('');
   const [tick, setTick] = useState('');
+  // Прогон живёт, пока идёт игра, и с её закрытием исчезает бесследно. Помним
+  // сами, что он был: иначе закрытая Dota оставляет пустую форму, по которой не
+  // понять, случилось хоть что-нибудь или нет.
+  const [ranBefore, setRanBefore] = useState(false);
+  const [recorded, setRecorded] = useState(false);
 
   if (benchmark.isPending) {
     return (
@@ -49,6 +67,8 @@ export function ReplayRunPanel(): React.JSX.Element {
   }
 
   const options = benchmark.data;
+  if (options.state.current !== null && !ranBefore) setRanBefore(true);
+  if (recorder.recording && !recorded) setRecorded(true);
   const chosenName = replayFile === '' ? (options.replays[0]?.name ?? '') : replayFile;
   const chosen = options.replays.find((replay) => replay.name === chosenName);
   const parsedTick = Number.parseInt(tick, 10);
@@ -75,10 +95,20 @@ export function ReplayRunPanel(): React.JSX.Element {
       <Obstacles options={options} />
 
       {options.state.current !== null ? (
-        <RunningNow options={options} />
+        <RunningNow options={options} recorder={recorder} />
       ) : (
-        options.ready &&
-        options.replays.length > 0 && (
+        <>
+          {/* Прогон закончился вместе с игрой. Молча вернуть пустую форму значит
+              оставить человека гадать, случилось ли хоть что-то. */}
+          {ranBefore && (
+            <div className="notice" style={{ marginTop: 12 }}>
+              {recorded
+                ? 'Прошлый прогон закончился вместе с игрой. Запись ищите в списке ниже.'
+                : 'Прошлый прогон закончился вместе с игрой, а записи так и не было: ' +
+                  'её надо было запустить кнопкой «Записать прогон», пока Dota работала.'}
+            </div>
+          )}
+          {options.ready && options.replays.length > 0 && (
           <>
             <div className="capture-form" style={{ marginTop: 16 }}>
               <label>
@@ -156,7 +186,8 @@ export function ReplayRunPanel(): React.JSX.Element {
             )}
             {launch.isError && <div className="notice error">{launch.error.message}</div>}
           </>
-        )
+          )}
+        </>
       )}
     </div>
   );
@@ -239,7 +270,13 @@ function Obstacles({ options }: { options: BenchmarkOptions }): React.JSX.Elemen
 }
 
 /** Что показывать, пока прогон идёт: шаги и чем помечена будет запись. */
-function RunningNow({ options }: { options: BenchmarkOptions }): React.JSX.Element {
+function RunningNow({
+  options,
+  recorder,
+}: {
+  options: BenchmarkOptions;
+  recorder: Recorder;
+}): React.JSX.Element {
   const run = options.state.current;
   if (run === null) return <></>;
 
@@ -272,6 +309,25 @@ function RunningNow({ options }: { options: BenchmarkOptions }): React.JSX.Eleme
       </ol>
 
       {options.state.manualSeek !== null && <SeekCommand command={options.state.manualSeek} />}
+
+      {/* Кнопка стоит здесь, а не только в форме ниже: запуск игры и запись —
+          два разных действия, а между ними игра занимает весь экран. Человек,
+          вернувшийся из Dota, смотрит на список шагов, а не на форму под ним. */}
+      {options.state.gameRunning && (
+        <button
+          type="button"
+          className="button primary"
+          disabled={recorder.recording || recorder.startsIn !== null}
+          onClick={recorder.onRecord}
+        >
+          {recorder.startsIn !== null
+            ? `Вернитесь в игру… ${recorder.startsIn}`
+            : recorder.recording
+              ? 'Идёт запись…'
+              : 'Записать прогон'}
+        </button>
+      )}
+
       {options.state.configPath !== null && (
         <div className="muted">
           Команды записаны в <code>{options.state.configPath}</code>

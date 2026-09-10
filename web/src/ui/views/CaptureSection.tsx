@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  useBenchmark,
   useRunCapture,
   useSessionAnalysis,
   useSessions,
@@ -35,6 +36,16 @@ const DURATIONS = [30, 60, 120, 300, 600] as const;
 /** Значение в списке, означающее «пиши, пока идёт игра». */
 const WHOLE_GAME = 0;
 
+/**
+ * Сколько ждём после нажатия, прежде чем начать писать.
+ *
+ * Не украшение. Нажимают кнопку в этом окне, а мерить надо игру — и в
+ * полноэкранной Dota «переключиться в окно» значит «свернуть игру». Свёрнутая
+ * Dota рисует иначе, а само переключение туда-сюда даёт всплески времени кадра,
+ * которые запись честно зачтёт в статтеры. Пять секунд — чтобы успеть вернуться.
+ */
+const RECORDING_STARTS_IN = 5;
+
 export function CaptureSection({
   onOpenInConfig,
 }: {
@@ -48,6 +59,8 @@ export function CaptureSection({
 
   const capture = useRunCapture();
   const stop = useStopCapture();
+  const benchmark = useBenchmark();
+  const runActive = benchmark.data?.state.current != null;
   // Сохранённая запись, которую открыли посмотреть. Новая запись эту замену
   // отменяет: смотреть старую, когда только что сделали свежую, незачем.
   const [openedId, setOpenedId] = useState<string | null>(null);
@@ -56,6 +69,14 @@ export function CaptureSection({
   const wholeGame = durationSeconds === WHOLE_GAME;
   // Обратный отсчёт врал бы при записи целой игры: её длину мы не знаем.
   const remaining = useCountdown(capture.isPending && !wholeGame ? durationSeconds : null);
+  const delayed = useDelayedStart(() =>
+    capture.mutate({
+      processName,
+      seconds: wholeGame ? 0 : durationSeconds,
+      label,
+      wholeGame,
+    }),
+  );
 
   return (
     <>
@@ -66,7 +87,13 @@ export function CaptureSection({
 
       {/* Сцена задаётся до записи, а не описывается после: порядок на экране
           повторяет порядок действий. */}
-      <ReplayRunPanel />
+      <ReplayRunPanel
+        recorder={{
+          recording: capture.isPending,
+          startsIn: delayed.startsIn,
+          onRecord: delayed.begin,
+        }}
+      />
 
       <div className="capture-form">
         <label>
@@ -107,21 +134,18 @@ export function CaptureSection({
         <button
           type="button"
           className="button"
-          disabled={capture.isPending}
-          onClick={() =>
-            capture.mutate({
-              processName,
-              seconds: wholeGame ? 0 : durationSeconds,
-              label,
-              wholeGame,
-            })
-          }
+          disabled={capture.isPending || delayed.startsIn !== null}
+          onClick={delayed.begin}
         >
-          {capture.isPending
-            ? wholeGame
-              ? 'Пишу, пока идёт игра…'
-              : `Записываю… ${Math.max(remaining ?? 0, 0)} с`
-            : 'Записать'}
+          {delayed.startsIn !== null
+            ? `Вернитесь в игру… ${delayed.startsIn}`
+            : capture.isPending
+              ? wholeGame
+                ? 'Пишу, пока идёт игра…'
+                : `Записываю… ${Math.max(remaining ?? 0, 0)} с`
+              : runActive
+                ? 'Записать прогон'
+                : 'Записать'}
         </button>
 
         {capture.isPending && (
@@ -135,6 +159,17 @@ export function CaptureSection({
           </button>
         )}
       </div>
+
+      {/* Молча ждать пять секунд нельзя: человек решит, что кнопка не нажалась,
+          и нажмёт ещё раз. */}
+      {delayed.startsIn !== null && (
+        <EmptyState>
+          Запись начнётся через {delayed.startsIn} с — переключитесь в игру. В
+          полноэкранной Dota это окно поверх неё значит, что игра свёрнута, а
+          свёрнутая игра рисует иначе: и кадры другие, и переключение туда-сюда само
+          по себе даст всплески, которые запись зачтёт в статтеры.
+        </EmptyState>
+      )}
 
       {capture.isPending && (
         <EmptyState>
@@ -217,6 +252,40 @@ function SavedCaptures({
  * Чисто клиентский: PresentMon о прогрессе не сообщает, но длительность мы
  * задали сами, так что показать её честно можно.
  */
+/**
+ * Отложенный старт: нажали — досчитали — начали.
+ *
+ * Отсчёт живёт здесь, а не в кнопке, потому что кнопок две: одна в форме, вторая
+ * в панели прогона. Обе показывают один и тот же отсчёт и одну и ту же запись —
+ * иначе человек нажмёт в одном месте, а «Записываю…» зажжётся в другом.
+ */
+function useDelayedStart(begin: () => void): {
+  readonly startsIn: number | null;
+  readonly begin: () => void;
+} {
+  const [startsIn, setStartsIn] = useState<number | null>(null);
+  // Ссылка, а не значение: таймер заводится один раз, а `begin` пересоздаётся
+  // на каждом рендере вместе с полями формы.
+  const latest = useRef(begin);
+  latest.current = begin;
+
+  useEffect(() => {
+    if (startsIn === null) return undefined;
+    if (startsIn === 0) {
+      setStartsIn(null);
+      latest.current();
+      return undefined;
+    }
+    const timer = setTimeout(() => setStartsIn((value) => (value ?? 1) - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [startsIn]);
+
+  return {
+    startsIn,
+    begin: () => setStartsIn((running) => (running === null ? RECORDING_STARTS_IN : running)),
+  };
+}
+
 function useCountdown(totalSeconds: number | null): number | null {
   const [remaining, setRemaining] = useState<number | null>(null);
 
