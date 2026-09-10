@@ -1,4 +1,4 @@
-namespace Frameloss.Sidecar.Network;
+namespace Kadroskop.Sidecar.Network;
 
 /// <summary>
 /// Один замер задержки до узла.

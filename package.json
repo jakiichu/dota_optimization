@@ -1,5 +1,5 @@
 {
-  "name": "frameloss",
+  "name": "kadroskop",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -21,7 +21,7 @@
     "dev": "node scripts/dev.mjs",
     "ui": "vite --config web/vite.config.ts",
     "ui:build": "vite build --config web/vite.config.ts",
-    "sidecar:build": "dotnet publish sidecar/Frameloss.Sidecar/Frameloss.Sidecar.csproj -c Release -o sidecar/bin --nologo",
+    "sidecar:build": "dotnet publish sidecar/Kadroskop.Sidecar/Kadroskop.Sidecar.csproj -c Release -o sidecar/bin --nologo",
     "typecheck": "tsc --noEmit",
     "typecheck:ui": "tsc --noEmit -p web/tsconfig.json",
     "test": "vitest run",

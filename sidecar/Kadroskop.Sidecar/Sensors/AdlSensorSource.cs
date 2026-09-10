@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Показания AMD через ADL — библиотеку, которая приезжает с драйвером Radeon.

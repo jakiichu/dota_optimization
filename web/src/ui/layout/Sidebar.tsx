@@ -33,7 +33,7 @@ export function Sidebar({
 }): React.JSX.Element {
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">frameloss</div>
+      <div className="sidebar-brand">кадроскоп</div>
 
       <nav className="sidebar-nav">
         {SECTIONS.map((section) => (
@@ -72,7 +72,7 @@ export function Sidebar({
 
       {/* Версия внизу и всегда на виду: сборку раздают людям, и первый вопрос
           к чужому отчёту — «а версия какая». */}
-      {version !== undefined && <div className="sidebar-version">frameloss {version}</div>}
+      {version !== undefined && <div className="sidebar-version">кадроскоп {version}</div>}
     </aside>
   );
 }

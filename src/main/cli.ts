@@ -53,7 +53,7 @@ interface Options {
   readonly scene: CaptureScene;
 }
 
-const USAGE = `frameloss — диагностика потерь кадров на Windows
+const USAGE = `кадроскоп — диагностика потерь кадров на Windows
 
   node src/main/cli.ts audit [опции]     статический аудит конфигурации
   node src/main/cli.ts sensors [опции]   текущие показания видеоадаптеров

@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-namespace Frameloss.Sidecar.Network;
+namespace Kadroskop.Sidecar.Network;
 
 /// <summary>
 /// Замеряет задержку до шлюза и до интернета.

@@ -1,4 +1,4 @@
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Показания одного видеоадаптера.
@@ -50,7 +50,7 @@ public sealed record SensorSample
     /// Здесь же, а не отдельным потоком: сопоставить рывок с сетью можно только
     /// по общей оси времени, а она у замера одна.
     /// </remarks>
-    public IReadOnlyList<Frameloss.Sidecar.Network.NetworkProbeReading> Network { get; init; } = [];
+    public IReadOnlyList<Kadroskop.Sidecar.Network.NetworkProbeReading> Network { get; init; } = [];
 
     /// <summary>Что делал процессор в тот же момент. <c>null</c> — не прочитали.</summary>
     public CpuSensorReading? Cpu { get; init; }

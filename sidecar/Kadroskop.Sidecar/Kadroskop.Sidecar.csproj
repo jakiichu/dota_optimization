@@ -5,8 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>frameloss-sidecar</AssemblyName>
-    <RootNamespace>Frameloss.Sidecar</RootNamespace>
+    <AssemblyName>kadroskop-sidecar</AssemblyName>
+    <RootNamespace>Kadroskop.Sidecar</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>

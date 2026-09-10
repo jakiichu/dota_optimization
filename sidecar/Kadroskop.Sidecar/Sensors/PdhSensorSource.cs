@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Загрузка GPU и занятая видеопамять через счётчики производительности Windows.

@@ -1,4 +1,4 @@
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Что процессор делал в момент замера.

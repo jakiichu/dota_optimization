@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiProvider } from './application/api-context.ts';
-import { HttpFramelossApi } from './infrastructure/http-frameloss.api.ts';
+import { HttpKadroskopApi } from './infrastructure/http-kadroskop.api.ts';
 import { AppShell } from './ui/AppShell.tsx';
 import './styles.css';
 
@@ -12,7 +12,7 @@ import './styles.css';
  * Экраны знают только про порт доступа к данным, а какая за ним реализация —
  * решается здесь.
  */
-const api = new HttpFramelossApi();
+const api = new HttpKadroskopApi();
 
 const queryClient = new QueryClient({
   defaultOptions: {

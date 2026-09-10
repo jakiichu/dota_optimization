@@ -28,7 +28,7 @@ const TIMEOUT_MARGIN_MS = 20_000;
  * Задаём своё, а не берём умолчание: остановить сессию можно только назвав её,
  * и без этого кнопка «остановить» гасила бы чужую запись, а не нашу.
  */
-const SESSION_NAME = 'frameloss';
+const SESSION_NAME = 'kadroskop';
 
 /** Сколько ждём, пока идущая запись согласится остановиться. */
 const STOP_TIMEOUT_MS = 30_000;
@@ -73,7 +73,7 @@ export class PresentMonCapture implements FrameCaptureSource {
   async capture(request: FrameCaptureRequest): Promise<FrameCapture> {
     await ensureInstalled();
 
-    const workDir = await mkdtemp(join(tmpdir(), 'frameloss-capture-'));
+    const workDir = await mkdtemp(join(tmpdir(), 'kadroskop-capture-'));
     // Когда путь задан снаружи, PresentMon пишет сразу туда: копировать файл
     // из-под повышения прав было бы лишним шагом с лишними правами.
     const keepRaw = request.rawCsvPath !== undefined;

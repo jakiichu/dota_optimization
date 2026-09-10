@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Показания NVIDIA через NVML — библиотеку, которая приезжает с драйвером.

@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Frameloss.Sidecar.Sensors;
+using Kadroskop.Sidecar.Sensors;
 
-namespace Frameloss.Sidecar;
+namespace Kadroskop.Sidecar;
 
 /// <summary>
 /// Сайдкар: всё, чего нельзя достать из Node и PowerShell.
@@ -45,7 +45,7 @@ public static class Program
     };
 
     private const string Usage = """
-        frameloss-sidecar — сбор показаний, недоступных из Node и PowerShell.
+        kadroskop-sidecar — сбор показаний, недоступных из Node и PowerShell.
 
           probe --output <путь>        один замер, JSON в файл
           stream [--interval-ms 250]   поток замеров, по одному JSON на строку в stdout

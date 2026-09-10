@@ -43,7 +43,7 @@ export interface LaunchScript {
 const DOTA_APP_ID = '570';
 
 /** Имя нашего cfg. Отдельный файл: autoexec игрока мы для этого не трогаем. */
-export const BENCHMARK_CONFIG_NAME = 'frameloss-bench';
+export const BENCHMARK_CONFIG_NAME = 'kadroskop-bench';
 
 /** Где игра держит повторы относительно папки с cfg. */
 const REPLAY_FOLDER = 'replays';
@@ -109,7 +109,7 @@ export function buildLaunchScript(run: ReplayRun): LaunchScript {
 
   const demo = `${REPLAY_FOLDER}/${run.replayFile.replace(/\.dem$/i, '')}`;
   const configLines = [
-    '// Создан frameloss для эталонного прогона. Файл перезаписывается при',
+    '// Создан kadroskop для эталонного прогона. Файл перезаписывается при',
     '// каждом запуске — свои команды сюда добавлять не стоит.',
     '// Быстрый пропуск кадров: без него перемотка внутри повтора идёт минутами.',
     'demo_usefastgoto 1',

@@ -34,7 +34,7 @@ export interface CaptureRequest {
  * подменить в тестах, и перевести на другой транспорт, не трогая ни одной
  * кнопки.
  */
-export interface FramelossApi {
+export interface KadroskopApi {
   /**
    * Версия сборки.
    *

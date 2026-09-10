@@ -74,7 +74,7 @@ function buildVpk(entries: readonly FakeEntry[]): {
 let workDir = '';
 
 beforeEach(async () => {
-  workDir = await mkdtemp(join(tmpdir(), 'frameloss-vpk-'));
+  workDir = await mkdtemp(join(tmpdir(), 'kadroskop-vpk-'));
 });
 
 afterEach(async () => {

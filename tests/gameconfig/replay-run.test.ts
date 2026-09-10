@@ -66,7 +66,7 @@ describe('buildLaunchScript', () => {
       '570',
       '-console',
       '+exec',
-      'frameloss-bench',
+      'kadroskop-bench',
     ]);
   });
 

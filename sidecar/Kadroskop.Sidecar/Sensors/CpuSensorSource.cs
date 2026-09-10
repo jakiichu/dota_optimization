@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Загрузка процессора и то, на каких частотах он на самом деле работает.

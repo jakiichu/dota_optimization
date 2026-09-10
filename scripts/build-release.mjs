@@ -20,7 +20,7 @@ import { buildVersion } from './version.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BUILD = join(ROOT, 'build');
 const OUT = join(ROOT, 'release');
-const EXE_NAME = 'frameloss.exe';
+const EXE_NAME = 'kadroskop.exe';
 const VERSION = buildVersion();
 
 /**
@@ -67,7 +67,7 @@ step('Собираю сайдкар без зависимости от рант�
 const sidecarOut = join(BUILD, 'sidecar');
 run('dotnet', [
   'publish',
-  'sidecar/Frameloss.Sidecar/Frameloss.Sidecar.csproj',
+  'sidecar/Kadroskop.Sidecar/Kadroskop.Sidecar.csproj',
   '-c',
   'Release',
   '-r',
@@ -87,7 +87,7 @@ run('dotnet', [
 
 step('Свожу серверный код в один файл');
 mkdirSync(BUILD, { recursive: true });
-const bundlePath = join(BUILD, 'frameloss.cjs');
+const bundlePath = join(BUILD, 'kadroskop.cjs');
 
 await build({
   entryPoints: [join(ROOT, 'src', 'main', 'server.ts')],
@@ -102,8 +102,8 @@ await build({
   // Приложение узнаёт, что оно собрано, отсюда: ресурсы лежат рядом с exe, а
   // не в дереве исходников.
   define: {
-    FRAMELOSS_PACKAGED: 'true',
-    FRAMELOSS_VERSION: JSON.stringify(VERSION),
+    KADROSKOP_PACKAGED: 'true',
+    KADROSKOP_VERSION: JSON.stringify(VERSION),
   },
   // `import.meta` в CommonJS не существует — мы это знаем и обрабатываем.
   // Предупреждение об этом каждый раз выглядит как поломка сборки.
@@ -119,7 +119,7 @@ writeFileSync(
   JSON.stringify(
     {
       main: bundlePath,
-      output: join(BUILD, 'frameloss.blob'),
+      output: join(BUILD, 'kadroskop.blob'),
       disableExperimentalSEAWarning: true,
       // Ресурсы лежат рядом с exe отдельными файлами, а не внутри: PresentMon
       // и сайдкар всё равно должны существовать на диске, чтобы их запустить.
@@ -151,7 +151,7 @@ run('npx', [
   'postject',
   exePath,
   'NODE_SEA_BLOB',
-  join(BUILD, 'frameloss.blob'),
+  join(BUILD, 'kadroskop.blob'),
   '--sentinel-fuse',
   'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
 ]);
@@ -164,7 +164,7 @@ cpSync(
   join(ROOT, 'src', 'infrastructure', 'windows', 'collect-snapshot.ps1'),
   join(OUT, 'collect-snapshot.ps1'),
 );
-cpSync(join(sidecarOut, 'frameloss-sidecar.exe'), join(OUT, 'frameloss-sidecar.exe'));
+cpSync(join(sidecarOut, 'kadroskop-sidecar.exe'), join(OUT, 'kadroskop-sidecar.exe'));
 
 // Достаём сами, если его нет: единственный ручной шаг между «склонировал» и
 // «работает» был именно здесь, а шаг, о котором надо помнить, однажды забудут.
@@ -210,7 +210,7 @@ process.stdout.write(
  * Не собрался — это не повод ронять сборку: папка на месте и работает.
  */
 function packForSharing() {
-  const path = join(ROOT, `frameloss-${VERSION}.zip`);
+  const path = join(ROOT, `kadroskop-${VERSION}.zip`);
   rmSync(path, { force: true });
 
   const result = spawnSync(
@@ -248,7 +248,7 @@ function clearOutputFolder() {
       [
         `Не удалось очистить ${OUT}: файлы заняты.`,
         'Скорее всего, из этой папки запущено приложение.',
-        'Закройте frameloss.exe и frameloss-sidecar.exe — через диспетчер задач,',
+        'Закройте kadroskop.exe и kadroskop-sidecar.exe — через диспетчер задач,',
         'если окна уже нет.',
         '',
       ].join('\n'),
@@ -259,14 +259,14 @@ function clearOutputFolder() {
 
 function readmeText() {
   return [
-    `frameloss ${VERSION} — диагностика потерь кадров`,
+    `кадроскоп ${VERSION} — диагностика потерь кадров`,
     '',
-    'Запуск: frameloss.exe (двойным щелчком). Откроется браузер.',
+    'Запуск: kadroskop.exe (двойным щелчком). Откроется браузер.',
     '',
     'Ничего ставить не нужно: рантайм Node и .NET уже внутри.',
     '',
     'Запись кадров требует прав администратора — PresentMon читает события ETW.',
-    'Чтобы не отвечать на запрос UAC каждый раз, запускайте frameloss.exe',
+    'Чтобы не отвечать на запрос UAC каждый раз, запускайте kadroskop.exe',
     'через правую кнопку → «Запуск от имени администратора».',
     '',
     'Все файлы в этой папке нужны, переносите её целиком.',

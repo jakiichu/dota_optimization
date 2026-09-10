@@ -54,7 +54,7 @@ function buildDemo(options: { ticks?: number; seconds?: number; summaryAt?: numb
 let workDir = '';
 
 beforeEach(async () => {
-  workDir = await mkdtemp(join(tmpdir(), 'frameloss-demo-'));
+  workDir = await mkdtemp(join(tmpdir(), 'kadroskop-demo-'));
 });
 
 afterEach(async () => {

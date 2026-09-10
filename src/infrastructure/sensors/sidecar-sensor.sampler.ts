@@ -30,7 +30,7 @@ export class SidecarSensorSampler implements SensorSampler {
     const raw = await runJsonProducingProcess(
       SIDECAR_PATH,
       (outputPath) => ['probe', '--output', outputPath],
-      { label: 'frameloss-sidecar probe' },
+      { label: 'kadroskop-sidecar probe' },
     );
     return toSensorSample(raw);
   }

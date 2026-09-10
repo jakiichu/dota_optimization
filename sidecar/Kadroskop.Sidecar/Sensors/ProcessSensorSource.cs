@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Кто ещё занимал процессор, пока шла игра.

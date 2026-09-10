@@ -1,7 +1,7 @@
 import type {
   CaptureRequest,
-  FramelossApi,
-} from '../application/ports/frameloss-api.port.ts';
+  KadroskopApi,
+} from '../application/ports/kadroskop-api.port.ts';
 import type {
   Audit,
   BenchmarkOptions,
@@ -24,7 +24,7 @@ import type {
  * Единственное место, которое знает про HTTP, адреса и формат ответа. Экраны
  * про это не знают вовсе — они видят только порт.
  */
-export class HttpFramelossApi implements FramelossApi {
+export class HttpKadroskopApi implements KadroskopApi {
   async fetchVersion(signal: AbortSignal): Promise<string> {
     const health = await getJson<{ version?: string }>('/api/health', signal);
     return health.version ?? 'неизвестна';

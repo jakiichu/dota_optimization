@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using Frameloss.Sidecar.Network;
+using Kadroskop.Sidecar.Network;
 
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Собирает показания со всех источников, которые завелись на этой машине.

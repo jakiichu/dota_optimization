@@ -15,7 +15,7 @@ import type {
   SessionSummary,
 } from '../domain/models.ts';
 import { useApi } from './api-context.ts';
-import type { CaptureRequest } from './ports/frameloss-api.port.ts';
+import type { CaptureRequest } from './ports/kadroskop-api.port.ts';
 
 /**
  * Чтение данных с кешем.

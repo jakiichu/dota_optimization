@@ -30,7 +30,7 @@ describe('FileSessionStore', () => {
   let store: FileSessionStore;
 
   beforeEach(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'frameloss-store-'));
+    directory = await mkdtemp(join(tmpdir(), 'kadroskop-store-'));
     store = new FileSessionStore(directory);
   });
 

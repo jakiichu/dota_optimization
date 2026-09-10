@@ -38,7 +38,7 @@ export async function runJsonProducingProcess(
   buildArgs: (outputPath: string) => readonly string[],
   options: JsonProcessOptions,
 ): Promise<unknown> {
-  const workDir = await mkdtemp(join(tmpdir(), 'frameloss-'));
+  const workDir = await mkdtemp(join(tmpdir(), 'kadroskop-'));
   const outputPath = join(workDir, 'output.json');
 
   try {

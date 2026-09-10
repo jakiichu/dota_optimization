@@ -1,4 +1,4 @@
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Сколько процессора заняла одна программа за прошедший интервал.

@@ -25,7 +25,7 @@ const STEPS = [
     command: ['npm', ['install', '--no-audit', '--no-fund']],
   },
   {
-    marker: join(ROOT, 'sidecar', 'bin', 'frameloss-sidecar.exe'),
+    marker: join(ROOT, 'sidecar', 'bin', 'kadroskop-sidecar.exe'),
     what: 'сайдкар показаний',
     command: ['npm', ['run', 'sidecar:build']],
     // Без .NET SDK сайдкар не собрать, но аудит и запись кадров работают и без

@@ -18,7 +18,7 @@ snapshot-*.json
 /*.csv
 
 # Архив для раздачи: собирается из release/, в репозитории ему делать нечего.
-/frameloss-*.zip
+/kadroskop-*.zip
 
 web/dist/
 sidecar/bin/

@@ -12,7 +12,7 @@ class FakeLauncher implements GameLauncher {
   targets(): Promise<GameLaunchTargets> {
     return Promise.resolve({
       ready: true,
-      configPath: 'C:/dota/cfg/frameloss-bench.cfg',
+      configPath: 'C:/dota/cfg/kadroskop-bench.cfg',
       obstacles: [],
       replays: [
         {
@@ -33,7 +33,7 @@ class FakeLauncher implements GameLauncher {
     this.launched = { lines: configLines, args: launchArgs };
     // Steam открывает игру десятки секунд: сразу после запуска процесса ещё
     // нет, и именно на этом ломалась первая версия.
-    return Promise.resolve('C:/dota/cfg/frameloss-bench.cfg');
+    return Promise.resolve('C:/dota/cfg/kadroskop-bench.cfg');
   }
 }
 

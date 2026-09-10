@@ -1,4 +1,4 @@
-namespace Frameloss.Sidecar.Sensors;
+namespace Kadroskop.Sidecar.Sensors;
 
 /// <summary>
 /// Источник показаний по видеоадаптерам.

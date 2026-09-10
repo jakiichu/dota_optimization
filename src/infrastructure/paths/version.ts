@@ -10,10 +10,10 @@
  * там собирается то, что сейчас лежит на диске, а не то, что закоммичено.
  */
 
-declare const FRAMELOSS_VERSION: string;
+declare const KADROSKOP_VERSION: string;
 
 const UNPACKAGED = 'из исходников';
 
 export function buildVersion(): string {
-  return typeof FRAMELOSS_VERSION === 'undefined' ? UNPACKAGED : FRAMELOSS_VERSION;
+  return typeof KADROSKOP_VERSION === 'undefined' ? UNPACKAGED : KADROSKOP_VERSION;
 }

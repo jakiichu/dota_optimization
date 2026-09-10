@@ -114,12 +114,12 @@ try {
 
 $displays = @()
 try {
-    if (-not ('FrameLoss.DisplayApi' -as [type])) {
+    if (-not ('Kadroskop.DisplayApi' -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-namespace FrameLoss {
+namespace Kadroskop {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public struct DisplayDevice {
         public int cb;
@@ -192,24 +192,24 @@ namespace FrameLoss {
 
     $adapterIndex = 0
     while ($true) {
-        $adapter = [FrameLoss.DisplayApi]::NewDevice()
+        $adapter = [Kadroskop.DisplayApi]::NewDevice()
         # PowerShell подменяет $null пустой строкой при привязке к [string]-параметру,
         # а EnumDisplayDevices на пустое имя отвечает отказом. Нужен настоящий NULL.
-        if (-not [FrameLoss.DisplayApi]::EnumDisplayDevices([NullString]::Value, $adapterIndex, [ref]$adapter, 0)) { break }
+        if (-not [Kadroskop.DisplayApi]::EnumDisplayDevices([NullString]::Value, $adapterIndex, [ref]$adapter, 0)) { break }
         $adapterIndex++
 
-        if (($adapter.StateFlags -band [FrameLoss.DisplayApi]::AttachedToDesktop) -eq 0) { continue }
+        if (($adapter.StateFlags -band [Kadroskop.DisplayApi]::AttachedToDesktop) -eq 0) { continue }
 
-        $current = [FrameLoss.DisplayApi]::NewMode()
-        if (-not [FrameLoss.DisplayApi]::EnumDisplaySettings($adapter.DeviceName, [FrameLoss.DisplayApi]::CurrentSettings, [ref]$current)) { continue }
+        $current = [Kadroskop.DisplayApi]::NewMode()
+        if (-not [Kadroskop.DisplayApi]::EnumDisplaySettings($adapter.DeviceName, [Kadroskop.DisplayApi]::CurrentSettings, [ref]$current)) { continue }
 
         # Максимум считаем только среди режимов с тем же разрешением: 240 Гц в
         # 720p не повод объявлять проблемой 60 Гц в 1440p.
         $maxRefresh = $current.dmDisplayFrequency
         $modeIndex = 0
         while ($true) {
-            $mode = [FrameLoss.DisplayApi]::NewMode()
-            if (-not [FrameLoss.DisplayApi]::EnumDisplaySettings($adapter.DeviceName, $modeIndex, [ref]$mode)) { break }
+            $mode = [Kadroskop.DisplayApi]::NewMode()
+            if (-not [Kadroskop.DisplayApi]::EnumDisplaySettings($adapter.DeviceName, $modeIndex, [ref]$mode)) { break }
             $modeIndex++
             if ($mode.dmPelsWidth -ne $current.dmPelsWidth) { continue }
             if ($mode.dmPelsHeight -ne $current.dmPelsHeight) { continue }
@@ -219,8 +219,8 @@ namespace FrameLoss {
 
         # Имя панели читаем вторым вызовом: у самого адаптера его нет.
         $monitorName = $adapter.DeviceName
-        $monitor = [FrameLoss.DisplayApi]::NewDevice()
-        if ([FrameLoss.DisplayApi]::EnumDisplayDevices($adapter.DeviceName, 0, [ref]$monitor, 0)) {
+        $monitor = [Kadroskop.DisplayApi]::NewDevice()
+        if ([Kadroskop.DisplayApi]::EnumDisplayDevices($adapter.DeviceName, 0, [ref]$monitor, 0)) {
             if (-not [string]::IsNullOrWhiteSpace($monitor.DeviceString)) {
                 $monitorName = "$($monitor.DeviceString) ($($adapter.DeviceName))"
             }

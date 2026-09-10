@@ -57,7 +57,7 @@ const PORT_ATTEMPTS = 10;
 const PROBE_TIMEOUT_MS = 1500;
 
 const HEALTH_PATH = '/api/health';
-const APP_ID = 'frameloss';
+const APP_ID = 'kadroskop';
 
 const UI_ROOT = RESOURCES.webRoot();
 
@@ -247,7 +247,7 @@ async function startServer(
 
   throw new Error(
     `Свободного порта не нашлось: пробовал ${preferredPort}–${preferredPort + PORT_ATTEMPTS - 1}. ` +
-      'Задайте другой через переменную FRAMELOSS_PORT.',
+      'Задайте другой через переменную KADROSKOP_PORT.',
   );
 }
 
@@ -260,20 +260,20 @@ async function main(): Promise<void> {
     process.stdout.write(`${sidecar}\n`);
   }
 
-  const port = Number.parseInt(process.env['FRAMELOSS_PORT'] ?? '', 10) || DEFAULT_PORT;
+  const port = Number.parseInt(process.env['KADROSKOP_PORT'] ?? '', 10) || DEFAULT_PORT;
   const staticRoot = (await directoryExists(UI_ROOT)) ? UI_ROOT : null;
 
   const { server, existingUrl } = await startServer(port, staticRoot);
 
   if (server === null) {
-    process.stdout.write(`frameloss уже запущен на ${existingUrl ?? ''} — открываю его.\n`);
+    process.stdout.write(`кадроскоп уже запущен на ${existingUrl ?? ''} — открываю его.\n`);
     if (process.argv.includes('--open') && existingUrl !== null) {
       openInBrowser(existingUrl);
     }
     return;
   }
 
-  process.stdout.write(`frameloss слушает ${server.url}\n`);
+  process.stdout.write(`кадроскоп слушает ${server.url}\n`);
   if (staticRoot === null) {
     process.stdout.write('Интерфейс не собран: npm run ui:build (или npm run dev)\n');
   }

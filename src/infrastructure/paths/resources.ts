@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
  * поэтому проверять его можно только через `typeof`. В сборке esbuild заменяет
  * его на `true` ещё до выполнения.
  */
-declare const FRAMELOSS_PACKAGED: boolean;
+declare const KADROSKOP_PACKAGED: boolean;
 
 /**
  * Запущены ли мы как собранный exe.
@@ -31,7 +31,7 @@ declare const FRAMELOSS_PACKAGED: boolean;
  * `import.meta` осталась запасной — на случай сборки без флага.
  */
 const PACKAGED = ((): boolean => {
-  if (typeof FRAMELOSS_PACKAGED !== 'undefined' && FRAMELOSS_PACKAGED) return true;
+  if (typeof KADROSKOP_PACKAGED !== 'undefined' && KADROSKOP_PACKAGED) return true;
   const moduleUrl: string | undefined = import.meta.url;
   return moduleUrl === undefined || moduleUrl === '';
 })();
@@ -67,8 +67,8 @@ export function isPackaged(): boolean {
 export const RESOURCES = {
   sidecar: (): string =>
     PACKAGED
-      ? resourcePath('frameloss-sidecar.exe')
-      : resourcePath('sidecar', 'bin', 'frameloss-sidecar.exe'),
+      ? resourcePath('kadroskop-sidecar.exe')
+      : resourcePath('sidecar', 'bin', 'kadroskop-sidecar.exe'),
   presentMon: (): string =>
     PACKAGED
       ? resourcePath('PresentMon.exe')
