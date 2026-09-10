@@ -136,10 +136,29 @@ export interface NetworkQuality {
   readonly summary: string;
 }
 
+/**
+ * Отметка статтера вместе с тем, чем он объясняется.
+ *
+ * Отдельным списком, а не колонкой в сериях: статтеров десятки, а точек тысячи,
+ * и восемь параллельных массивов с одними `null` весили бы больше самих кадров.
+ */
+export interface StutterMark {
+  /** Номер точки в сериях. */
+  readonly index: number;
+  readonly atSeconds: number;
+  readonly frameTimeMs: number;
+  /** Главная улика: ею красится точка. `null` — улик не нашлось. */
+  readonly kind: EvidenceKind | null;
+  /** Все улики словами и с числами. */
+  readonly evidence: readonly string[];
+}
+
 export interface CaptureSeries {
   readonly time: readonly number[];
   readonly frameTimeMs: readonly number[];
   readonly stutterMs: readonly (number | null)[];
+  /** Чем объясняется каждая отметка. */
+  readonly stutterMarks: readonly StutterMark[];
   readonly cpuBusyMs: readonly (number | null)[] | null;
   readonly gpuBusyMs: readonly (number | null)[] | null;
   /**

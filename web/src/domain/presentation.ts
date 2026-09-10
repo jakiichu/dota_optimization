@@ -95,6 +95,23 @@ export const NETWORK_COLOR: Record<NetworkSeverity, string> = {
  * Цвет улики несёт смысл: красное — кадр ждал снаружи, жёлтое — устройство
  * заняло его целиком, синее — обстоятельства вокруг.
  */
+/**
+ * Улика в двух словах — для легенды графика.
+ *
+ * Полные формулировки остаются в самих уликах: в легенде «Кадр целиком занят
+ * работой GPU» не помещается, а смысл цвета передать надо.
+ */
+export const EVIDENCE_SHORT: Record<EvidenceKind, string> = {
+  'gpu-work': 'GPU занял кадр',
+  'cpu-work': 'CPU занял кадр',
+  waiting: 'кадр ждал',
+  'present-mode': 'сменился вывод',
+  dropped: 'отброшены кадры',
+  'gpu-idle': 'GPU простаивал',
+  'vram-growth': 'росла видеопамять',
+  throttling: 'троттлинг',
+};
+
 export const EVIDENCE_COLOR: Record<EvidenceKind, string> = {
   'gpu-work': 'var(--ok)',
   'cpu-work': 'var(--warning)',

@@ -523,6 +523,80 @@ code {
   margin-top: 8px;
 }
 
+/* Подсказка над графиком: без неё точка сообщала, что рывок был, но не что
+   случилось. */
+.frame-chart-wrap {
+  position: relative;
+}
+
+.stutter-tip {
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  font-size: 12.5px;
+  max-width: 340px;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(12px, -50%);
+  z-index: 6;
+}
+
+.stutter-tip-head {
+  align-items: center;
+  display: flex;
+  font-weight: 600;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stutter-tip-list {
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.saved-list {
+  display: grid;
+  gap: 2px;
+}
+
+.saved-item {
+  align-items: baseline;
+  appearance: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  font: inherit;
+  font-size: 12.5px;
+  gap: 4px 14px;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.saved-item:hover {
+  border-color: var(--line);
+}
+
+.saved-item[aria-current='true'] {
+  background: rgba(74, 168, 255, 0.08);
+  border-color: var(--info);
+}
+
+.saved-label {
+  flex: 1;
+  font-weight: 600;
+  min-width: 160px;
+  overflow-wrap: anywhere;
+}
+
 /* --- состояния --- */
 
 .notice {

@@ -107,3 +107,53 @@ describe('toCaptureView', () => {
     expect(view.worstStutters[1]?.frameTimeMs).toBe(40);
   });
 });
+
+describe('отметки статтеров', () => {
+  it('несут улики с числами, а не только время', () => {
+    // Иначе график сообщает, что рывок был, но не что случилось, и отправляет
+    // глазами в таблицу ниже — сопоставлять секунды человек должен сам.
+    const frames = capture([...steady(8, 30), 60, ...steady(8, 30)], {
+      cpuBusyMs: 1,
+      gpuBusyMs: 1,
+    });
+    const view = toView(frames);
+
+    expect(view.series.stutterMarks).toHaveLength(1);
+    expect(view.series.stutterMarks[0]?.frameTimeMs).toBe(60);
+    expect(view.series.stutterMarks[0]?.evidence.join(' ')).toContain('ждал');
+  });
+
+  it('называют главную улику, когда их несколько', () => {
+    const frames = capture([...steady(8, 30), 60, ...steady(8, 30)], {
+      cpuBusyMs: 1,
+      gpuBusyMs: 1,
+    });
+    const view = toView(frames);
+
+    // «Кадр ждал» перевешивает: этой улики не видно ни в одном счётчике
+    // загрузки, и без разбора кадра о ней не узнать вовсе.
+    expect(view.series.stutterMarks[0]?.kind).toBe('waiting');
+  });
+
+  it('указывают на ту точку, которая нарисована', () => {
+    const frames = capture([...steady(8, 30), 60, ...steady(8, 30)]);
+    const view = toView(frames);
+    const mark = view.series.stutterMarks[0];
+
+    expect(view.series.time[mark?.index ?? -1]).toBe(mark?.atSeconds);
+    expect(view.series.frameTimeMs[mark?.index ?? -1]).toBe(mark?.frameTimeMs);
+  });
+
+  it('переживают выбор точек на длинной записи', () => {
+    // Статтеры включаются в график принудительно, значит и отметки к ним
+    // обязаны найтись — иначе на часовой записи причины пропадут.
+    const times = steady(8, 200_000);
+    times[123_456] = 200;
+    const view = toView(capture(times));
+
+    expect(view.series.decimated).toBe(true);
+    expect(view.series.stutterMarks.length).toBeGreaterThan(0);
+    const mark = view.series.stutterMarks[0];
+    expect(view.series.frameTimeMs[mark?.index ?? -1]).toBe(mark?.frameTimeMs);
+  });
+});

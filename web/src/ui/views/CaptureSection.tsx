@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import {
   useRunCapture,
+  useSessionAnalysis,
+  useSessions,
   useSessionWindow,
   useStopCapture,
 } from '../../application/queries.ts';
 import type { Capture, ConfigChange, CpuLoad, FrameWindow } from '../../domain/models.ts';
 import { BOTTLENECK_COLOR, BOTTLENECK_LABEL } from '../../domain/presentation.ts';
-import { ms, seconds } from '../../domain/formatting.ts';
+import { dateTime, ms, seconds } from '../../domain/formatting.ts';
 import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
 import { PacingPanel } from '../components/PacingPanel.tsx';
 import { RecommendationPanel } from '../components/RecommendationPanel.tsx';
 import { ReplayRunPanel } from '../components/ReplayRunPanel.tsx';
-import { EmptyState, ErrorState, SectionHeader } from '../components/States.tsx';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  SectionHeader,
+} from '../components/States.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
 
@@ -41,6 +48,11 @@ export function CaptureSection({
 
   const capture = useRunCapture();
   const stop = useStopCapture();
+  // Сохранённая запись, которую открыли посмотреть. Новая запись эту замену
+  // отменяет: смотреть старую, когда только что сделали свежую, незачем.
+  const [openedId, setOpenedId] = useState<string | null>(null);
+  const opened = useSessionAnalysis(openedId);
+  const shownCapture = capture.data ?? opened.data;
   const wholeGame = durationSeconds === WHOLE_GAME;
   // Обратный отсчёт врал бы при записи целой игры: её длину мы не знаем.
   const remaining = useCountdown(capture.isPending && !wholeGame ? durationSeconds : null);
@@ -136,10 +148,66 @@ export function CaptureSection({
       {stop.isError && <ErrorState message={stop.error.message} />}
 
       {capture.isError && <ErrorState message={capture.error.message} />}
-      {capture.data !== undefined && (
-        <CaptureReport capture={capture.data} onOpenInConfig={onOpenInConfig} />
+
+      <SavedCaptures
+        openedId={openedId}
+        onOpen={(id) => {
+          capture.reset();
+          setOpenedId(id);
+        }}
+      />
+
+      {opened.isFetching && openedId !== null && <LoadingState what="Читаю запись…" />}
+      {opened.isError && <ErrorState message={opened.error.message} />}
+      {shownCapture !== undefined && (
+        <CaptureReport capture={shownCapture} onOpenInConfig={onOpenInConfig} />
       )}
     </>
+  );
+}
+
+/**
+ * Сохранённые записи.
+ *
+ * Без этого списка запись можно было увидеть только сразу после её окончания:
+ * закрыл приложение — и часовой матч остался лежать файлом, до которого не
+ * добраться иначе как через консоль. Улики на графике, ритм, узкое место — всё
+ * это переставало существовать через минуту после замера.
+ */
+function SavedCaptures({
+  openedId,
+  onOpen,
+}: {
+  openedId: string | null;
+  onOpen: (id: string) => void;
+}): React.JSX.Element | null {
+  const sessions = useSessions();
+  if (sessions.data === undefined || sessions.data.length === 0) return null;
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Сохранённые записи</span>
+        <span className="card-note">{sessions.data.length}</span>
+      </div>
+      <div className="saved-list">
+        {sessions.data.map((session) => (
+          <button
+            key={session.id}
+            type="button"
+            className="saved-item"
+            aria-current={session.id === openedId}
+            onClick={() => onOpen(session.id)}
+          >
+            <span className="saved-label">{session.label}</span>
+            <span className="muted">{dateTime(session.capturedAt)}</span>
+            <span className="muted">{seconds(session.durationSeconds, 0)}</span>
+            <span className="muted">{session.averageFps.toFixed(0)} FPS</span>
+            <span className="muted">{session.stutterCount} статтеров</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

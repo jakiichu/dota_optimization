@@ -13,16 +13,45 @@ import {
 import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
 import type { CpuLoadProfile } from '../../domain/telemetry/cpu-load.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
-import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
+import {
+  EVIDENCE_LABEL,
+  primaryEvidence,
+  type CorrelationReport,
+  type EvidenceKind,
+} from '../../domain/telemetry/stutter-correlation.ts';
 
 /** Сколько худших статтеров показываем списком; остальные видны на графике. */
 const WORST_STUTTERS_SHOWN = 12;
+
+/**
+ * Отметка статтера на графике вместе с тем, чем он объясняется.
+ *
+ * Отдельным списком, а не колонкой в сериях: статтеров десятки, а точек тысячи,
+ * и восемь параллельных массивов с одними `null` весили бы больше самих кадров.
+ */
+export interface StutterMark {
+  /** Номер точки в отданных сериях — по нему интерфейс её и находит. */
+  readonly index: number;
+  readonly atSeconds: number;
+  readonly frameTimeMs: number;
+  /** Главная улика: ею красится точка. `null` — улик не нашлось. */
+  readonly kind: EvidenceKind | null;
+  /** Все улики словами и с числами — для подсказки под курсором. */
+  readonly evidence: readonly string[];
+}
 
 export interface CaptureSeries {
   readonly time: readonly number[];
   readonly frameTimeMs: readonly number[];
   /** Те же кадры, но значения оставлены только у статтеров — для отметок. */
   readonly stutterMs: readonly (number | null)[];
+  /**
+   * Чем объясняется каждая отметка.
+   *
+   * Без этого график показывал, что рывок был, но не что случилось, — и
+   * отправлял глазами в таблицу ниже, где статтеры перечислены по времени.
+   */
+  readonly stutterMarks: readonly StutterMark[];
   readonly cpuBusyMs: readonly (number | null)[] | null;
   readonly gpuBusyMs: readonly (number | null)[] | null;
   /**
@@ -98,7 +127,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     bottleneck: statistics.bottleneck,
     pacing: statistics.pacing,
     worstStutters: worstStutters(statistics.stutters),
-    series: toSeries(capture.frames, statistics.stutters, input.window),
+    series: toSeries(capture.frames, statistics.stutters, input.correlation, input.window),
     availableColumns: capture.availableColumns,
     correlation: input.correlation,
     network: input.network,
@@ -117,6 +146,7 @@ function worstStutters(stutters: readonly Stutter[]): Stutter[] {
 function toSeries(
   allFrames: readonly FrameSample[],
   stutters: readonly Stutter[],
+  correlation: CorrelationReport,
   window: FrameWindow | undefined,
 ): CaptureSeries {
   // Сначала окно, потом выбор точек: приблизив кусок часовой записи, человек
@@ -137,6 +167,13 @@ function toSeries(
   const selection = selectFramesForChart(frames, shifted);
   const stutterSeconds = new Set(inWindow.map((stutter) => stutter.atSeconds));
 
+  // Улики лежат отдельно от статтеров, и связывает их время кадра: оно
+  // уникально в пределах записи и переживает и окно, и выбор точек.
+  const explained = new Map(
+    correlation.stutters.map((entry) => [entry.stutter.atSeconds, entry.evidence]),
+  );
+  const marks: StutterMark[] = [];
+
   const time: number[] = [];
   const frameTimeMs: number[] = [];
   const stutterMs: (number | null)[] = [];
@@ -146,6 +183,17 @@ function toSeries(
   for (const index of selection.indices) {
     const frame = frames[index];
     if (frame === undefined) continue;
+
+    if (stutterSeconds.has(frame.startSeconds)) {
+      const evidence = explained.get(frame.startSeconds) ?? [];
+      marks.push({
+        index: time.length,
+        atSeconds: frame.startSeconds,
+        frameTimeMs: frame.frameTimeMs,
+        kind: primaryEvidence(evidence),
+        evidence: evidence.map((item) => `${EVIDENCE_LABEL[item.kind]}: ${item.detail}`),
+      });
+    }
 
     time.push(frame.startSeconds);
     frameTimeMs.push(frame.frameTimeMs);
@@ -163,6 +211,7 @@ function toSeries(
     // метрики нет, вместо того чтобы рисовать ноль.
     cpuBusyMs: hasAnyValue(cpuBusyMs) ? cpuBusyMs : null,
     gpuBusyMs: hasAnyValue(gpuBusyMs) ? gpuBusyMs : null,
+    stutterMarks: marks,
     decimated: selection.decimated,
     sourceFrameCount: selection.sourceFrameCount,
   };

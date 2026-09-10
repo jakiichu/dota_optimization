@@ -61,6 +61,39 @@ export interface CorrelatedStutter {
   readonly evidence: readonly Evidence[];
 }
 
+/**
+ * Порядок улик по объяснительной силе.
+ *
+ * Нужен там, где на статтер приходится одна пометка, а улик у него несколько:
+ * на графике точку можно покрасить только в один цвет.
+ *
+ * Первым идёт «кадр ждал» — самая неприятная и самая полезная улика: её не
+ * видно ни в одном счётчике загрузки, и без разбора кадра о ней не узнать
+ * вовсе. Дальше то, о чём железо сообщило само. Замыкают обстоятельства вокруг
+ * кадра: они сопутствуют, но ничего не объясняют.
+ *
+ * Полный список улик от этого никуда не девается — он показывается рядом.
+ * Порядок решает только, какого цвета точка.
+ */
+const EVIDENCE_PRIORITY: readonly EvidenceKind[] = [
+  'waiting',
+  'throttling',
+  'present-mode',
+  'cpu-work',
+  'gpu-work',
+  'gpu-idle',
+  'vram-growth',
+  'dropped',
+];
+
+/** Улика, по которой стоит называть причину. `null` — улик не нашлось. */
+export function primaryEvidence(evidence: readonly Evidence[]): EvidenceKind | null {
+  for (const kind of EVIDENCE_PRIORITY) {
+    if (evidence.some((item) => item.kind === kind)) return kind;
+  }
+  return null;
+}
+
 export interface CauseTally {
   readonly kind: EvidenceKind;
   readonly label: string;
