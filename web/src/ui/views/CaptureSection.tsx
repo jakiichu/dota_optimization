@@ -4,7 +4,7 @@ import {
   useSessionWindow,
   useStopCapture,
 } from '../../application/queries.ts';
-import type { Capture, ConfigChange, FrameWindow } from '../../domain/models.ts';
+import type { Capture, ConfigChange, CpuLoad, FrameWindow } from '../../domain/models.ts';
 import { BOTTLENECK_COLOR, BOTTLENECK_LABEL } from '../../domain/presentation.ts';
 import { ms, seconds } from '../../domain/formatting.ts';
 import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
@@ -234,6 +234,8 @@ function CaptureReport({
         <div className="muted">{capture.bottleneck.explanation}</div>
       </div>
 
+      <CpuPanel load={capture.cpuLoad} />
+
       <PacingPanel pacing={capture.pacing} />
 
       {capture.stutterCount > 0 && (
@@ -254,6 +256,70 @@ function CaptureReport({
         onOpenInConfig={onOpenInConfig}
       />
     </>
+  );
+}
+
+/**
+ * Что было с процессором.
+ *
+ * Рядом с узким местом, потому что отвечает на следующий вопрос: «упор в
+ * процессор» верен, но не говорит, добавлять ядер или искать, почему они
+ * сбрасывают частоты. Ответы разные, и путать их дорого.
+ */
+function CpuPanel({ load }: { load: CpuLoad }): React.JSX.Element | null {
+  if (!load.measured) return null;
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Процессор</span>
+        {load.threadCount !== null && (
+          <span className="card-note">{load.threadCount} потоков</span>
+        )}
+      </div>
+
+      <div className="metrics">
+        {load.busyThreads !== null && load.threadCount !== null && (
+          <Metric
+            label="занято потоков"
+            value={`${load.busyThreads} из ${load.threadCount}`}
+          />
+        )}
+        {load.utilizationPercent !== null && (
+          <Metric label="загрузка" value={`${load.utilizationPercent.toFixed(0)} %`} />
+        )}
+        {load.performancePercent !== null && (
+          <Metric
+            label="частота от базовой"
+            value={`${load.performancePercent.toFixed(0)} %`}
+          />
+        )}
+        {load.lowestPerformancePercent !== null && (
+          <Metric
+            label="самый низкий провал"
+            value={`${load.lowestPerformancePercent.toFixed(0)} %`}
+          />
+        )}
+      </div>
+
+      <div
+        className="verdict"
+        style={{
+          color: load.throttled
+            ? 'var(--critical)'
+            : load.singleThreadBound
+              ? 'var(--warning)'
+              : 'var(--muted)',
+        }}
+      >
+        {load.throttled
+          ? 'Процессор сбрасывал частоты'
+          : load.singleThreadBound
+            ? 'Упор в скорость одного ядра'
+            : 'Ничего необычного'}
+      </div>
+      <div className="muted">{load.summary}</div>
+    </div>
   );
 }
 

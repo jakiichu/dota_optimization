@@ -1,6 +1,7 @@
 import type { Bottleneck, FrameStatistics } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
+import type { CpuLoadProfile } from '../../domain/telemetry/cpu-load.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
@@ -28,6 +29,7 @@ export function renderCaptureReport(
   statistics: FrameStatistics,
   correlation: CorrelationReport,
   network: NetworkQuality,
+  cpuLoad: CpuLoadProfile,
   recommendations: readonly Recommendation[],
   options: ConsoleCaptureOptions,
 ): string {
@@ -111,6 +113,14 @@ export function renderCaptureReport(
   // вещи, и путать их нельзя.
   for (const limitation of correlation.limitations) {
     lines.push(paint(`  · ${limitation}`, DIM));
+  }
+
+  // Процессор рядом с узким местом: «упор в процессор» без этого не говорит,
+  // что делать — добавлять ядер или искать, почему он сбрасывает частоты.
+  if (cpuLoad.measured) {
+    lines.push('');
+    lines.push(paint('Процессор', BOLD));
+    lines.push(`  ${cpuLoad.summary}`);
   }
 
   // Сеть отдельным разделом, а не среди улик по кадрам: она не удлиняет кадр,

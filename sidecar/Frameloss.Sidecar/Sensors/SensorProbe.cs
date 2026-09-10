@@ -16,6 +16,7 @@ public sealed class SensorProbe : IDisposable
     private readonly List<IGpuSensorSource> _active = [];
     private readonly List<string> _errors = [];
     private NetworkProbeSource? _network;
+    private CpuSensorSource? _cpu;
 
     public SensorProbe(IEnumerable<IGpuSensorSource> sources)
     {
@@ -30,6 +31,19 @@ public sealed class SensorProbe : IDisposable
                 _errors.Add($"{source.Name}: {reason}");
                 source.Dispose();
             }
+        }
+
+        // Процессор отдельно от видеоадаптеров: у него своя форма замера, и
+        // притворяться адаптером ради общего списка он не должен.
+        var cpu = new CpuSensorSource();
+        if (cpu.TryInitialize(out string? cpuReason))
+        {
+            _cpu = cpu;
+        }
+        else
+        {
+            _errors.Add($"{cpu.Name}: {cpuReason}");
+            cpu.Dispose();
         }
     }
 
@@ -77,12 +91,23 @@ public sealed class SensorProbe : IDisposable
             }
         }
 
+        CpuSensorReading? cpu = null;
+        try
+        {
+            cpu = _cpu?.Read();
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"cpu: {ex.Message}");
+        }
+
         return new SensorSample
         {
             CapturedAt = DateTimeOffset.UtcNow.ToString("o"),
             QpcTimestamp = Stopwatch.GetTimestamp(),
             QpcFrequency = Stopwatch.Frequency,
             Gpus = readings,
+            Cpu = cpu,
             Errors = errors,
         };
     }
@@ -96,5 +121,7 @@ public sealed class SensorProbe : IDisposable
         _active.Clear();
         _network?.Dispose();
         _network = null;
+        _cpu?.Dispose();
+        _cpu = null;
     }
 }

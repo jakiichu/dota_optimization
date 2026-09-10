@@ -17,6 +17,21 @@ export interface ConsoleSensorsOptions {
  * Прочерк вместо нуля — не косметика: увидев «0 °C», человек решит, что датчик
  * сломан, а увидев прочерк — что температуру мы просто не читаем.
  */
+/** Один процессор описывается тремя числами; больше сказать нечем и незачем. */
+function renderCpu(cpu: NonNullable<SensorSample['cpu']>): string[] {
+  const threads = cpu.coreUtilizationPercent.length;
+  const busy =
+    cpu.utilizationPercent === null || threads === 0
+      ? null
+      : Math.round(((cpu.utilizationPercent * threads) / 100) * 10) / 10;
+
+  return [
+    `  загрузка:    ${cpu.utilizationPercent === null ? '—' : `${cpu.utilizationPercent.toFixed(1)} %`}`,
+    `  занято:      ${busy === null ? '—' : `${busy} из ${threads} потоков`}`,
+    `  частота:     ${cpu.performancePercent === null ? '—' : `${cpu.performancePercent.toFixed(0)} % от базовой`}`,
+  ];
+}
+
 export function renderSensorSample(
   sample: SensorSample,
   options: ConsoleSensorsOptions,
@@ -25,7 +40,7 @@ export function renderSensorSample(
     options.color ? `${code}${text}${RESET}` : text;
 
   const lines: string[] = [];
-  lines.push(paint('Показания видеоадаптеров', BOLD));
+  lines.push(paint('Показания железа', BOLD));
   lines.push(paint(`${sample.capturedAt} · QPC ${sample.qpcTimestamp}`, DIM));
   lines.push('');
 
@@ -35,6 +50,14 @@ export function renderSensorSample(
 
   for (const gpu of sample.gpus) {
     lines.push(...renderGpu(gpu, paint));
+    lines.push('');
+  }
+
+  // Процессор: «занято потоков» отвечает на вопрос, на который проценты не
+  // отвечают, — поможет ли процессор с бо́льшим числом ядер.
+  if (sample.cpu !== null) {
+    lines.push(paint('Процессор', BOLD));
+    lines.push(...renderCpu(sample.cpu));
     lines.push('');
   }
 

@@ -52,5 +52,8 @@ public sealed record SensorSample
     /// </remarks>
     public IReadOnlyList<Frameloss.Sidecar.Network.NetworkProbeReading> Network { get; init; } = [];
 
+    /// <summary>Что делал процессор в тот же момент. <c>null</c> — не прочитали.</summary>
+    public CpuSensorReading? Cpu { get; init; }
+
     public IReadOnlyList<string> Errors { get; init; } = [];
 }

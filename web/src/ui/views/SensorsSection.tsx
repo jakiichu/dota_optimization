@@ -3,8 +3,8 @@ import {
   SENSOR_HISTORY_SECONDS,
   useSensorStream,
 } from '../../application/use-sensor-stream.ts';
-import type { GpuReading } from '../../domain/models.ts';
-import { mib, ms, percent } from '../../domain/formatting.ts';
+import type { GpuReading, SensorSample } from '../../domain/models.ts';
+import { mib, ms, percent, UNKNOWN } from '../../domain/formatting.ts';
 import { UtilizationChart } from '../components/UtilizationChart.tsx';
 import { EmptyState, ErrorState, SectionHeader } from '../components/States.tsx';
 
@@ -52,6 +52,8 @@ export function SensorsSection(): React.JSX.Element {
           <UtilizationChart time={history.time} series={series} maxY={100} unit=" %" />
         </div>
       )}
+
+      {latest.cpu !== null && <CpuCard cpu={latest.cpu} />}
 
       {latest.gpus.map((gpu, index) => (
         <GpuCard
@@ -126,6 +128,39 @@ function Metric({ label, value }: { label: string; value: string }): React.JSX.E
     <div>
       <span className="metric-label">{label}</span>
       <span className={unknown ? 'metric-value unknown' : 'metric-value'}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Живые показания процессора.
+ *
+ * «Занято 4 потока из 16» говорит то, чего не говорят проценты: поможет ли
+ * процессор с бо́льшим числом ядер. Частота — в процентах от базовой, потому что
+ * выше ста означает обычный разгон, а ниже под нагрузкой — уже диагноз.
+ */
+function CpuCard({ cpu }: { cpu: NonNullable<SensorSample['cpu']> }): React.JSX.Element {
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="dot" style={{ background: 'var(--warning)' }} />
+        <span className="card-title">Процессор</span>
+        <span className="card-note">{cpu.threadCount} потоков</span>
+      </div>
+      <div className="metrics">
+        <Metric
+          label="загрузка"
+          value={cpu.utilizationPercent === null ? UNKNOWN : `${cpu.utilizationPercent.toFixed(1)} %`}
+        />
+        <Metric
+          label="занято потоков"
+          value={cpu.busyThreads === null ? UNKNOWN : `${cpu.busyThreads} из ${cpu.threadCount}`}
+        />
+        <Metric
+          label="частота от базовой"
+          value={cpu.performancePercent === null ? UNKNOWN : `${cpu.performancePercent.toFixed(0)} %`}
+        />
+      </div>
     </div>
   );
 }

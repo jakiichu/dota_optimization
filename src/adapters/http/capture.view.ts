@@ -11,6 +11,7 @@ import {
   type FrameWindow,
 } from '../../domain/telemetry/frame-window.ts';
 import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
+import type { CpuLoadProfile } from '../../domain/telemetry/cpu-load.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
 
@@ -54,6 +55,7 @@ export interface CaptureView {
   readonly availableColumns: readonly string[];
   readonly correlation: CorrelationReport;
   readonly network: NetworkQuality;
+  readonly cpuLoad: CpuLoadProfile;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
 }
@@ -70,6 +72,7 @@ export interface CaptureViewInput {
   readonly statistics: FrameStatistics;
   readonly correlation: CorrelationReport;
   readonly network: NetworkQuality;
+  readonly cpuLoad: CpuLoadProfile;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
   /**
@@ -99,6 +102,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     availableColumns: capture.availableColumns,
     correlation: input.correlation,
     network: input.network,
+    cpuLoad: input.cpuLoad,
     recommendations: input.recommendations,
     sensorSampleCount: input.sensorSampleCount,
   };

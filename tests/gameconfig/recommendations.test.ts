@@ -6,6 +6,7 @@ import {
 } from '../../src/domain/gameconfig/recommendations.ts';
 import { computeFrameStatistics } from '../../src/domain/telemetry/frame-metrics.ts';
 import { analyzeNetworkQuality } from '../../src/domain/telemetry/network-quality.ts';
+import { analyzeCpuLoad } from '../../src/domain/telemetry/cpu-load.ts';
 import { correlateStutters } from '../../src/domain/telemetry/stutter-correlation.ts';
 import { frameTrace } from '../support/frame-builder.ts';
 
@@ -40,6 +41,7 @@ function context(options: Options = {}): RecommendationContext {
     statistics,
     correlation: correlateStutters(frames, statistics.stutters, []),
     network: analyzeNetworkQuality([]),
+    cpuLoad: analyzeCpuLoad([], statistics.bottleneck),
     config:
       options.configLines === undefined
         ? null
@@ -206,6 +208,7 @@ describe('recommend', () => {
             throttleReasons: ['аппаратный троттлинг по температуре'],
           },
         ],
+        cpu: null,
         network: [],
         errors: [],
       },
@@ -215,6 +218,7 @@ describe('recommend', () => {
       statistics,
       correlation: correlateStutters(frames, statistics.stutters, sensors),
       network: analyzeNetworkQuality([]),
+      cpuLoad: analyzeCpuLoad(sensors, statistics.bottleneck),
       config: null,
       displayHz: 60,
     });
@@ -230,6 +234,7 @@ describe('recommend', () => {
       qpcTimestamp: 0,
       qpcFrequency: 1000,
       gpus: [],
+      cpu: null,
       network: [
         {
           target: '192.168.1.1',

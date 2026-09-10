@@ -8,6 +8,7 @@ function sample(probes: readonly NetworkProbe[]): SensorSample {
     qpcTimestamp: 0,
     qpcFrequency: 10_000_000,
     gpus: [],
+    cpu: null,
     network: probes,
     errors: [],
   };

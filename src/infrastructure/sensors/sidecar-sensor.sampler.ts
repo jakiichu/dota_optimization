@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import type { SensorSampler } from '../../application/ports/sensor-sampler.port.ts';
 import type { GpuVendor, Maybe } from '../../domain/snapshot/system-snapshot.ts';
 import type {
+  CpuReading,
   GpuReading,
   NetworkProbe,
   SensorSample,
@@ -57,10 +58,25 @@ export function toSensorSample(raw: unknown): SensorSample {
     qpcTimestamp: asNumber(root['qpcTimestamp']) ?? 0,
     qpcFrequency: asNumber(root['qpcFrequency']) ?? 0,
     gpus: asArray(root['gpus']).map(toGpuReading),
+    cpu: toCpuReading(root['cpu']),
     network: asArray(root['network']).map(toNetworkProbe),
     errors: asArray(root['errors'])
       .map((entry) => asString(entry))
       .filter((entry): entry is string => entry !== null),
+  };
+}
+
+/** `null` — счётчиков процессора на этой машине не оказалось, а не ноль загрузки. */
+function toCpuReading(raw: unknown): CpuReading | null {
+  const record = asRecord(raw);
+  if (record === null) return null;
+
+  return {
+    utilizationPercent: asNumber(record['utilizationPercent']),
+    performancePercent: asNumber(record['performancePercent']),
+    coreUtilizationPercent: asArray(record['coreUtilizationPercent'])
+      .map((entry) => asNumber(entry))
+      .filter((entry): entry is number => entry !== null),
   };
 }
 

@@ -1,4 +1,8 @@
-import type { GpuReading, SensorSample } from '../../domain/telemetry/sensor-sample.ts';
+import type {
+  CpuReading,
+  GpuReading,
+  SensorSample,
+} from '../../domain/telemetry/sensor-sample.ts';
 
 /**
  * Замер в форме, готовой для графика.
@@ -20,9 +24,20 @@ export interface GpuReadingView {
   readonly throttleReasons: readonly string[];
 }
 
+export interface CpuReadingView {
+  readonly utilizationPercent: number | null;
+  /** Частота в процентах от базовой: выше ста — разгон, ниже — сброс. */
+  readonly performancePercent: number | null;
+  readonly threadCount: number;
+  /** Сколько потоков занято целиком: понятнее процентов. */
+  readonly busyThreads: number | null;
+}
+
 export interface SensorSampleView {
   readonly elapsedSeconds: number;
   readonly gpus: readonly GpuReadingView[];
+  /** `null` — счётчики процессора недоступны, а не ноль загрузки. */
+  readonly cpu: CpuReadingView | null;
   readonly errors: readonly string[];
 }
 
@@ -44,6 +59,7 @@ export class SensorViewMapper {
     return {
       elapsedSeconds: this.#elapsedSeconds(sample),
       gpus: sample.gpus.map(toGpuReadingView),
+      cpu: toCpuReadingView(sample.cpu),
       errors: sample.errors,
     };
   }
@@ -52,6 +68,21 @@ export class SensorViewMapper {
     if (sample.qpcFrequency === 0 || this.#originTicks === null) return 0;
     return (sample.qpcTimestamp - this.#originTicks) / sample.qpcFrequency;
   }
+}
+
+function toCpuReadingView(cpu: CpuReading | null): CpuReadingView | null {
+  if (cpu === null) return null;
+
+  const threadCount = cpu.coreUtilizationPercent.length;
+  return {
+    utilizationPercent: cpu.utilizationPercent,
+    performancePercent: cpu.performancePercent,
+    threadCount,
+    busyThreads:
+      cpu.utilizationPercent === null || threadCount === 0
+        ? null
+        : Math.round(((cpu.utilizationPercent * threadCount) / 100) * 10) / 10,
+  };
 }
 
 function toGpuReadingView(gpu: GpuReading): GpuReadingView {

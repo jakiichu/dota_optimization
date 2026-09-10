@@ -1,3 +1,4 @@
+import type { CpuLoadProfile } from '../telemetry/cpu-load.ts';
 import type { FrameStatistics } from '../telemetry/frame-metrics.ts';
 import type { NetworkQuality } from '../telemetry/network-quality.ts';
 import type { CorrelationReport } from '../telemetry/stutter-correlation.ts';
@@ -66,6 +67,8 @@ export interface RecommendationContext {
   readonly statistics: FrameStatistics;
   readonly correlation: CorrelationReport;
   readonly network: NetworkQuality;
+  /** Что было с процессором: сброс частот настройками графики не лечится. */
+  readonly cpuLoad: CpuLoadProfile;
   /** Конфиг игры, если он есть: повторять уже сделанное незачем. */
   readonly config: GameConfig | null;
   /**
@@ -189,6 +192,26 @@ function notConfigProblems(context: RecommendationContext): Recommendation[] {
     });
   }
 
+  // Сброс частот процессора — то же по сути, что троттлинг видеокарты, и
+  // молчать о нём вдвойне обидно: на ноутбуке он случается чаще.
+  if (context.cpuLoad.throttled && context.cpuLoad.performancePercent !== null) {
+    found.push({
+      kind: 'not-config',
+      title: 'Настройками графики это не лечится: процессор сбрасывает частоты',
+      evidence:
+        `Процессор шёл на ${context.cpuLoad.performancePercent.toFixed(0)}% от базовой ` +
+        'частоты — он не тянул даже её. Обычно это нагрев, предел питания или ' +
+        'схема электропитания.',
+      changes: [],
+      expect:
+        'Смотрите охлаждение, питание и схему электропитания в разделе «Аудит». ' +
+        'Снижение качества картинки отодвинет перегрев, но не устранит его.',
+      risk: '',
+      confidence: 'measured',
+      prediction: null,
+    });
+  }
+
   if (context.network.severity !== 'ok') {
     found.push({
       kind: 'not-config',
@@ -238,6 +261,9 @@ function deviceRelief(context: RecommendationContext): Recommendation[] {
 
   const onCpu = bottleneck.kind === 'cpu';
   const candidates = onCpu ? CPU_RELIEF : GPU_RELIEF;
+  // Упор в одно ядро — тот случай, когда снятие работы с процессора и правда
+  // помогает: разгружаем именно главный поток, а не добавляем ядер.
+  const singleThread = onCpu && context.cpuLoad.singleThreadBound;
   const changes = candidates.filter((change) => !alreadySet(context.config, change));
 
   if (changes.length === 0) {
@@ -264,7 +290,9 @@ function deviceRelief(context: RecommendationContext): Recommendation[] {
     {
       kind: onCpu ? 'cpu-relief' : 'gpu-relief',
       title: onCpu ? 'Снять работу с процессора' : 'Снять работу с видеокарты',
-      evidence: bottleneck.explanation,
+      evidence: singleThread
+        ? `${bottleneck.explanation} ${context.cpuLoad.summary}`
+        : bottleneck.explanation,
       changes,
       expect: onCpu
         ? 'Запишите ещё раз в той же сцене: самые долгие кадры (p99) должны стать ' +

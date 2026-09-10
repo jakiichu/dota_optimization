@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toCaptureView } from '../../src/adapters/http/capture.view.ts';
 import { computeFrameStatistics } from '../../src/domain/telemetry/frame-metrics.ts';
+import { analyzeCpuLoad } from '../../src/domain/telemetry/cpu-load.ts';
 import { analyzeNetworkQuality } from '../../src/domain/telemetry/network-quality.ts';
 import { correlateStutters } from '../../src/domain/telemetry/stutter-correlation.ts';
 import type { FrameCapture, FrameSample } from '../../src/domain/telemetry/frame-sample.ts';
@@ -36,6 +37,7 @@ function toView(frames: FrameCapture, window?: { fromSeconds: number; toSeconds:
     statistics,
     correlation: correlateStutters(frames.frames, statistics.stutters, []),
     network: analyzeNetworkQuality([]),
+    cpuLoad: analyzeCpuLoad([], statistics.bottleneck),
     recommendations: [],
     sensorSampleCount: 0,
     ...(window === undefined ? {} : { window }),

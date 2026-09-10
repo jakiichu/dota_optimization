@@ -46,11 +46,33 @@ export interface NetworkProbe {
   readonly status: Maybe<string>;
 }
 
+/**
+ * Что процессор делал в момент замера.
+ *
+ * Загрузка по ядрам отдаётся как есть, но судить по ней об однопоточности
+ * нельзя: Windows перекидывает поток между ядрами, и одна занятая нить выглядит
+ * как половина на двух. Толкует эти числа `cpu-load.ts`.
+ */
+export interface CpuReading {
+  /** Загрузка всех ядер вместе, 0…100. */
+  readonly utilizationPercent: Maybe<number>;
+  /**
+   * Фактическая частота в процентах от базовой.
+   *
+   * Выше ста — обычный разгон. Ниже ста под нагрузкой — процессор не держит
+   * даже базовую частоту, и это уже диагноз.
+   */
+  readonly performancePercent: Maybe<number>;
+  readonly coreUtilizationPercent: readonly number[];
+}
+
 export interface SensorSample {
   readonly capturedAt: string;
   readonly qpcTimestamp: number;
   readonly qpcFrequency: number;
   readonly gpus: readonly GpuReading[];
+  /** Процессор в тот же момент. `null` — счётчики недоступны. */
+  readonly cpu: Maybe<CpuReading>;
   /** Замеры сети в тот же момент. Пусто — сеть не измерялась. */
   readonly network: readonly NetworkProbe[];
   readonly errors: readonly string[];

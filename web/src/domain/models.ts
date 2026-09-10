@@ -176,6 +176,7 @@ export interface Capture {
   readonly availableColumns: readonly string[];
   readonly correlation: Correlation;
   readonly network: NetworkQuality;
+  readonly cpuLoad: CpuLoad;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
   readonly sessionId: string;
@@ -427,8 +428,38 @@ export interface GpuReading {
   readonly throttleReasons: readonly string[];
 }
 
+export interface CpuReading {
+  readonly utilizationPercent: number | null;
+  /** Частота в процентах от базовой: выше ста — разгон, ниже — сброс. */
+  readonly performancePercent: number | null;
+  readonly threadCount: number;
+  /** Сколько потоков занято целиком: понятнее процентов. */
+  readonly busyThreads: number | null;
+}
+
 export interface SensorSample {
   readonly elapsedSeconds: number;
   readonly gpus: readonly GpuReading[];
+  /** `null` — счётчики процессора недоступны, а не ноль загрузки. */
+  readonly cpu: CpuReading | null;
   readonly errors: readonly string[];
+}
+
+/**
+ * Что происходило с процессором за запись.
+ *
+ * «Упор в процессор» — вердикт верный, но бесполезный. Здесь он разложен на
+ * «упёрлись в скорость одного ядра» и «процессор сбрасывал частоты»: действия
+ * по ним разные.
+ */
+export interface CpuLoad {
+  readonly measured: boolean;
+  readonly utilizationPercent: number | null;
+  readonly threadCount: number | null;
+  readonly busyThreads: number | null;
+  readonly performancePercent: number | null;
+  readonly lowestPerformancePercent: number | null;
+  readonly throttled: boolean;
+  readonly singleThreadBound: boolean;
+  readonly summary: string;
 }

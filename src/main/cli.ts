@@ -189,7 +189,7 @@ async function runCapture(options: Options): Promise<number> {
     stdout.write(`${JSON.stringify(session, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(capture, statistics, session.correlation, session.network, session.recommendations, {
+      `${renderCaptureReport(capture, statistics, session.correlation, session.network, session.cpuLoad, session.recommendations, {
         color: options.color,
       })}\n`,
     );
@@ -243,7 +243,7 @@ async function runAnalyze(id: string | undefined, options: Options): Promise<num
     stdout.write(`${JSON.stringify(analyzed, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, analyzed.network, analyzed.recommendations, {
+      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, analyzed.network, analyzed.cpuLoad, analyzed.recommendations, {
         color: options.color,
       })}
 `,

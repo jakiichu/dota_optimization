@@ -4,6 +4,7 @@ import type { FrameCapture } from './frame-sample.ts';
 import { parseGameConfig, type GameConfig } from '../gameconfig/game-config.ts';
 import { UNKNOWN_MACHINE, type MachineContext } from '../gameconfig/machine-context.ts';
 import { recommend, type Recommendation } from '../gameconfig/recommendations.ts';
+import { analyzeCpuLoad, type CpuLoadProfile } from './cpu-load.ts';
 import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
 import type { SensorSample } from './sensor-sample.ts';
 import type { SessionSummary } from './session-comparison.ts';
@@ -31,8 +32,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 4 — добавлено качество сети.
  * 5 — записи помечаются сценой; без неё сравнение считается невозможным.
  * 6 — по записи считаются рекомендации.
+ * 7 — разбирается нагрузка на процессор: занятые потоки и сброс частот.
  */
-export const METRICS_VERSION = 6;
+export const METRICS_VERSION = 7;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -45,6 +47,14 @@ export interface CaptureAnalysis {
    * где виноват канал.
    */
   readonly network: NetworkQuality;
+  /**
+   * Что происходило с процессором.
+   *
+   * «Упор в процессор» — вердикт верный, но бесполезный: непонятно, что делать.
+   * Здесь он разложен на «упёрлись в одно ядро» и «процессор сбрасывал
+   * частоты», и действия по ним разные.
+   */
+  readonly cpuLoad: CpuLoadProfile;
   /**
    * Что попробовать поменять — исходя из этой записи.
    *
@@ -69,12 +79,14 @@ export function analyzeCapture(
   const statistics = computeFrameStatistics(capture.frames);
   const correlation = correlateStutters(capture.frames, statistics.stutters, sensors);
   const network = analyzeNetworkQuality(sensors);
+  const cpuLoad = analyzeCpuLoad(sensors, statistics.bottleneck);
 
   return {
     statistics,
     correlation,
     network,
-    recommendations: recommend({ statistics, correlation, network, ...machine }),
+    cpuLoad,
+    recommendations: recommend({ statistics, correlation, network, cpuLoad, ...machine }),
   };
 }
 

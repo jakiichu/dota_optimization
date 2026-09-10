@@ -72,6 +72,7 @@ export function createSessionAnalyzeRoute(
           statistics: analyzed.statistics,
           correlation: analyzed.correlation,
           network: analyzed.network,
+          cpuLoad: analyzed.cpuLoad,
           recommendations: analyzed.recommendations,
           sensorSampleCount: analyzed.sensorSampleCount,
           ...windowFrom(query),

@@ -72,6 +72,7 @@ function sensorSample(
         throttleReasons: reading.throttle ?? [],
       },
     ],
+    cpu: null,
     network: [],
     errors: [],
   };
