@@ -4,6 +4,7 @@ import type {
   Capture,
   Comparison,
   ConfigEdit,
+  FrameWindow,
   GameConfig,
   Hypothesis,
   RecommendationKind,
@@ -17,6 +18,13 @@ export interface CaptureRequest {
   readonly processName: string;
   readonly seconds: number;
   readonly label: string;
+  /**
+   * Писать, пока идёт игра.
+   *
+   * Длительность тогда становится верхней границей: длину матча заранее не
+   * знает никто.
+   */
+  readonly wholeGame: boolean;
 }
 
 /**
@@ -34,8 +42,11 @@ export interface FramelossApi {
     afterId: string,
     signal: AbortSignal,
   ): Promise<Comparison>;
-  analyzeSession(id: string, signal: AbortSignal): Promise<Capture>;
+  /** `window` задаёт кусок для графика; метрики от него не зависят. */
+  analyzeSession(id: string, signal: AbortSignal, window?: FrameWindow): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
+  /** Прекратить идущую запись досрочно. */
+  stopCapture(): Promise<void>;
 
   /** Что можно запустить эталонным прогоном и что уже запущено. */
   fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions>;

@@ -43,6 +43,16 @@ export function createSessionAnalyzeRoute(
 ): JsonRoute {
   const analyze = new AnalyzeSession(store, () => machine.get());
 
+  /**
+   * Последняя разобранная запись остаётся в памяти.
+   *
+   * Ради увеличения: приблизив кусок часовой записи, человек ждёт следующего
+   * окна, а не повторного чтения девяноста мегабайт с диска. Помним ровно одну
+   * — держать в памяти весь архив незачем.
+   */
+  let last: { id: string; analyzed: Awaited<ReturnType<typeof analyze.execute>> } | null =
+    null;
+
   return {
     path: '/api/sessions/analyze',
     async handle(query) {
@@ -50,7 +60,12 @@ export function createSessionAnalyzeRoute(
       if (id === null) {
         throw new Error('Нужен идентификатор записи: id.');
       }
-      const analyzed = await analyze.execute(id);
+
+      if (last?.id !== id) {
+        last = { id, analyzed: await analyze.execute(id) };
+      }
+      const analyzed = last.analyzed;
+
       return {
         ...toCaptureView({
           capture: analyzed.capture,
@@ -59,9 +74,24 @@ export function createSessionAnalyzeRoute(
           network: analyzed.network,
           recommendations: analyzed.recommendations,
           sensorSampleCount: analyzed.sensorSampleCount,
+          ...windowFrom(query),
         }),
         sessionId: analyzed.id,
       };
     },
   };
+}
+
+/**
+ * Окно времени для графика.
+ *
+ * Метрики от него не зависят: они всегда считаются по всей записи. Окно — это
+ * увеличение, а не выборка, и подменять им статистику нельзя.
+ */
+function windowFrom(query: URLSearchParams): { window?: { fromSeconds: number; toSeconds: number } } {
+  const from = Number.parseFloat(query.get('from') ?? '');
+  const to = Number.parseFloat(query.get('to') ?? '');
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return {};
+
+  return { window: { fromSeconds: from, toSeconds: to } };
 }

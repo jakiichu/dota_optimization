@@ -6,6 +6,7 @@ import type {
   Capture,
   Comparison,
   ConfigEdit,
+  FrameWindow,
   GameConfig,
   Hypothesis,
   RecommendationKind,
@@ -31,6 +32,8 @@ export const queryKeys = {
   comparison: (beforeId: string, afterId: string) =>
     ['sessions', 'comparison', beforeId, afterId] as const,
   session: (id: string) => ['sessions', 'analysis', id] as const,
+  sessionWindow: (id: string, from: number, to: number) =>
+    ['sessions', 'analysis', id, from, to] as const,
   config: ['config'] as const,
   benchmark: ['benchmark'] as const,
   hypotheses: ['hypotheses'] as const,
@@ -240,6 +243,31 @@ export function useConfigMutations(): {
  * Не запрос, а действие: она меняет состояние машины и длится минуту. Кешировать
  * её нельзя — повторный вызов должен записывать заново, а не отдавать старое.
  */
+/**
+ * Кусок записи для графика.
+ *
+ * Отдельный запрос, а не фильтрация на клиенте: часовая запись это сотня
+ * мегабайт, и держать её в браузере целиком ради увеличения нельзя.
+ */
+export function useSessionWindow(
+  id: string,
+  window: FrameWindow | null,
+): UseQueryResult<Capture> {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.sessionWindow(id, window?.fromSeconds ?? 0, window?.toSeconds ?? 0),
+    queryFn: ({ signal }) => api.analyzeSession(id, signal, window ?? undefined),
+    enabled: id !== '' && window !== null,
+    staleTime: ANALYSIS_STALE_MS,
+  });
+}
+
+/** Досрочная остановка записи: ещё один запрос прав, о чём интерфейс и говорит. */
+export function useStopCapture(): UseMutationResult<void, Error, void> {
+  const api = useApi();
+  return useMutation({ mutationFn: () => api.stopCapture() });
+}
+
 export function useRunCapture(): UseMutationResult<Capture, Error, CaptureRequest> {
   const api = useApi();
   const client = useQueryClient();

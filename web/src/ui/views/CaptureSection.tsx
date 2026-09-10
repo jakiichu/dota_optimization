@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useRunCapture } from '../../application/queries.ts';
-import type { Capture, ConfigChange } from '../../domain/models.ts';
+import {
+  useRunCapture,
+  useSessionWindow,
+  useStopCapture,
+} from '../../application/queries.ts';
+import type { Capture, ConfigChange, FrameWindow } from '../../domain/models.ts';
 import { BOTTLENECK_COLOR, BOTTLENECK_LABEL } from '../../domain/presentation.ts';
 import { ms, seconds } from '../../domain/formatting.ts';
 import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
@@ -11,7 +15,18 @@ import { ReplayRunPanel } from '../components/ReplayRunPanel.tsx';
 import { EmptyState, ErrorState, SectionHeader } from '../components/States.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
-const DURATIONS = [15, 30, 60, 120] as const;
+
+/**
+ * Длительности записи.
+ *
+ * Тридцати секунд не хватает: p99.9 при шестидесяти кадрах — это второй худший
+ * кадр из 1800, то есть одна случайная загрузка текстуры. Числа начинают
+ * значить обещанное на минутах, а не на секундах.
+ */
+const DURATIONS = [30, 60, 120, 300, 600] as const;
+
+/** Значение в списке, означающее «пиши, пока идёт игра». */
+const WHOLE_GAME = 0;
 
 export function CaptureSection({
   onOpenInConfig,
@@ -20,12 +35,15 @@ export function CaptureSection({
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
 }): React.JSX.Element {
   const [processName, setProcessName] = useState(DEFAULT_PROCESS);
-  const [durationSeconds, setDurationSeconds] = useState<number>(30);
+  const [durationSeconds, setDurationSeconds] = useState<number>(60);
   // Подпись нужна, чтобы через полчаса отличить «до HAGS» от «после».
   const [label, setLabel] = useState('');
 
   const capture = useRunCapture();
-  const remaining = useCountdown(capture.isPending ? durationSeconds : null);
+  const stop = useStopCapture();
+  const wholeGame = durationSeconds === WHOLE_GAME;
+  // Обратный отсчёт врал бы при записи целой игры: её длину мы не знаем.
+  const remaining = useCountdown(capture.isPending && !wholeGame ? durationSeconds : null);
 
   return (
     <>
@@ -61,6 +79,7 @@ export function CaptureSection({
                 {value} с
               </option>
             ))}
+            <option value={WHOLE_GAME}>вся игра</option>
           </select>
         </label>
         <label>
@@ -78,19 +97,43 @@ export function CaptureSection({
           className="button"
           disabled={capture.isPending}
           onClick={() =>
-            capture.mutate({ processName, seconds: durationSeconds, label })
+            capture.mutate({
+              processName,
+              seconds: wholeGame ? 0 : durationSeconds,
+              label,
+              wholeGame,
+            })
           }
         >
-          {capture.isPending ? `Записываю… ${Math.max(remaining ?? 0, 0)} с` : 'Записать'}
+          {capture.isPending
+            ? wholeGame
+              ? 'Пишу, пока идёт игра…'
+              : `Записываю… ${Math.max(remaining ?? 0, 0)} с`
+            : 'Записать'}
         </button>
+
+        {capture.isPending && (
+          <button
+            type="button"
+            className="button"
+            disabled={stop.isPending || stop.isSuccess}
+            onClick={() => stop.mutate()}
+          >
+            {stop.isSuccess ? 'Останавливаю…' : 'Остановить'}
+          </button>
+        )}
       </div>
 
       {capture.isPending && (
         <EmptyState>
           Игра должна быть запущена и рисовать. PresentMon требует прав администратора —
           если появился запрос UAC, подтвердите его.
+          {wholeGame && ' Запись остановится сама, когда вы выйдете из игры.'}
+          {' Остановка вручную попросит права ещё раз: своего процесса у записи нет,'}
+          {' и погасить её может только второй экземпляр с теми же правами.'}
         </EmptyState>
       )}
+      {stop.isError && <ErrorState message={stop.error.message} />}
 
       {capture.isError && <ErrorState message={capture.error.message} />}
       {capture.data !== undefined && (
@@ -131,6 +174,13 @@ function CaptureReport({
   capture: Capture;
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
 }): React.JSX.Element {
+  // Увеличение: приблизив кусок часовой записи, человек должен увидеть его
+  // кадр за кадром, а не ту же огибающую крупнее. Кадры за окном лежат на
+  // сервере — держать сотню мегабайт в браузере ради этого нельзя.
+  const [window, setWindow] = useState<FrameWindow | null>(null);
+  const zoomed = useSessionWindow(capture.sessionId, window);
+  const shown = zoomed.data?.series ?? capture.series;
+
   if (capture.frameCount === 0) {
     return (
       <EmptyState>
@@ -148,7 +198,16 @@ function CaptureReport({
             {capture.frameCount} кадров за {seconds(capture.durationSeconds)}
           </span>
         </div>
-        <FrameTimeChart series={capture.series} />
+        <FrameTimeChart
+          series={shown}
+          onZoom={(fromSeconds, toSeconds) => setWindow({ fromSeconds, toSeconds })}
+        />
+        <ChartNote
+          series={shown}
+          zooming={zoomed.isFetching}
+          windowed={window !== null}
+          onReset={() => setWindow(null)}
+        />
       </div>
 
       <div className="card">
@@ -232,6 +291,44 @@ function NetworkPanel({ capture }: { capture: Capture }): React.JSX.Element {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/**
+ * Что именно нарисовано.
+ *
+ * Точек на экране может быть меньше, чем кадров в записи, и промолчать об этом
+ * нельзя: человек читает график как полный. Здесь же и выход из увеличения.
+ */
+function ChartNote({
+  series,
+  zooming,
+  windowed,
+  onReset,
+}: {
+  series: Capture['series'];
+  zooming: boolean;
+  windowed: boolean;
+  onReset: () => void;
+}): React.JSX.Element | null {
+  if (!series.decimated && !windowed) return null;
+
+  return (
+    <div className="chart-note">
+      {series.decimated && (
+        <span className="muted">
+          Показано {series.time.length} точек из {series.sourceFrameCount} кадров: из
+          каждого окна взяты самый короткий и самый длинный кадр, все статтеры оставлены.
+          Приблизьте участок, чтобы увидеть его целиком.
+        </span>
+      )}
+      {zooming && <span className="muted">Читаю участок…</span>}
+      {windowed && (
+        <button type="button" className="chip" onClick={onReset}>
+          Показать запись целиком
+        </button>
+      )}
     </div>
   );
 }

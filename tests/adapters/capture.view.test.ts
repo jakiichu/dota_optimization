@@ -29,7 +29,7 @@ function steady(frameTimeMs: number, count: number): number[] {
   return new Array<number>(count).fill(frameTimeMs);
 }
 
-function toView(frames: FrameCapture) {
+function toView(frames: FrameCapture, window?: { fromSeconds: number; toSeconds: number }) {
   const statistics = computeFrameStatistics(frames.frames);
   return toCaptureView({
     capture: frames,
@@ -38,16 +38,39 @@ function toView(frames: FrameCapture) {
     network: analyzeNetworkQuality([]),
     recommendations: [],
     sensorSampleCount: 0,
+    ...(window === undefined ? {} : { window }),
   });
 }
 
 describe('toCaptureView', () => {
-  it('отдаёт все кадры без прореживания', () => {
-    // Прореживание стёрло бы одиночные выбросы — то, ради чего запись делается.
+  it('отдаёт все кадры, пока их немного', () => {
     const view = toView(capture(steady(8, 5000)));
 
     expect(view.series.time).toHaveLength(5000);
-    expect(view.series.frameTimeMs).toHaveLength(5000);
+    expect(view.series.decimated).toBe(false);
+  });
+
+  it('на длинной записи выбирает точки, но сохраняет размах', () => {
+    // Целый матч — это сотни тысяч кадров. Отдать их браузером нельзя, но и
+    // усреднить нельзя: усреднение стирает ровно то, ради чего писали.
+    const times = steady(8, 200_000);
+    times[77_777] = 250;
+    const view = toView(capture(times));
+
+    expect(view.series.decimated).toBe(true);
+    expect(view.series.time.length).toBeLessThan(times.length);
+    expect(view.series.sourceFrameCount).toBe(200_000);
+    expect(Math.max(...view.series.frameTimeMs)).toBe(250);
+  });
+
+  it('окно показывает свой кусок, не трогая метрики', () => {
+    // Увеличение — это увеличение, а не выборка: статистика считается по всей
+    // записи, иначе приближение меняло бы вердикт.
+    const view = toView(capture(steady(10, 3000)), { fromSeconds: 5, toSeconds: 6 });
+
+    expect(view.frameCount).toBe(3000);
+    expect(view.series.time[0]).toBeGreaterThanOrEqual(5);
+    expect(view.series.time.at(-1)).toBeLessThanOrEqual(6);
   });
 
   it('оставляет значение только у статтеров, остальное — разрывы', () => {

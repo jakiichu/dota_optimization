@@ -3,7 +3,22 @@ import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 export interface FrameCaptureRequest {
   /** Имя исполняемого файла игры, например `dota2.exe`. */
   readonly processName: string;
+  /**
+   * Верхняя граница записи в секундах.
+   *
+   * Она есть всегда, даже когда пишем «всю игру»: процесс, поднятый через UAC,
+   * нам не принадлежит и убить его мы не можем — он обязан знать, когда
+   * остановиться, сам. Запись без верхней границы — это запись, которую нечем
+   * прекратить.
+   */
   readonly seconds: number;
+  /**
+   * Останавливаться, когда игра закроется.
+   *
+   * Так пишется целый матч: заранее его длину не знает никто, а PresentMon
+   * умеет следить за жизнью процесса сам.
+   */
+  readonly stopWhenGameExits?: boolean;
   /**
    * Куда положить сырой CSV от PresentMon.
    *
@@ -22,4 +37,11 @@ export interface FrameCaptureRequest {
  */
 export interface FrameCaptureSource {
   capture(request: FrameCaptureRequest): Promise<FrameCapture>;
+  /**
+   * Прекратить идущую запись досрочно.
+   *
+   * Убить чужой процесс мы не можем, поэтому просим его остановиться сам — тем
+   * же способом, которым он останавливает чужую забытую сессию.
+   */
+  stop(): Promise<void>;
 }

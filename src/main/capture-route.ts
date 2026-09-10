@@ -11,7 +11,20 @@ import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/tele
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
 const DEFAULT_SECONDS = 60;
 const MIN_SECONDS = 5;
-const MAX_SECONDS = 600;
+
+/**
+ * Верхняя граница записи — четыре часа.
+ *
+ * Раньше стояло десять минут, и этого хватало ровно на то, ради чего запись
+ * задумывалась: короткий кусок для сравнения настроек. Но на тридцати секундах
+ * половина метрик — фикция: p99.9 при 60 кадрах — это второй худший кадр из
+ * 1800, то есть одна случайная загрузка текстуры. На целом матче то же число
+ * считается по сотне тысяч кадров и наконец значит то, что обещает.
+ *
+ * Граница всё равно есть, и убрать её нельзя: процесс, поднятый через UAC, нам
+ * не принадлежит, и остановиться он обязан сам.
+ */
+const MAX_SECONDS = 4 * 60 * 60;
 
 /**
  * Запись кадров по запросу интерфейса.
@@ -19,25 +32,30 @@ const MAX_SECONDS = 600;
  * Одновременно идёт только одна: PresentMon держит именованную ETW-сессию, и
  * вторая запись оборвала бы первую на середине.
  */
-export function createCaptureRoute(
+export function createCaptureRoutes(
   sensors: SensorStream,
   store: SessionStore,
   machine: MachineContextSource,
   replayRun: StartReplayRun,
-): JsonRoute {
-  const session = new CaptureFrameSession(new PresentMonCapture(), sensors, () => machine.get());
+): readonly JsonRoute[] {
+  const frames = new PresentMonCapture();
+  const session = new CaptureFrameSession(frames, sensors, () => machine.get());
   let inFlight: Promise<unknown> | null = null;
 
-  return {
+  const capture: JsonRoute = {
     path: '/api/capture',
     async handle(query) {
       if (inFlight !== null) {
         throw new Error('Запись уже идёт — дождитесь её окончания.');
       }
 
+      // «Вся игра»: длину матча заранее не знает никто, поэтому длительность
+      // становится верхней границей, а остановит запись выход из игры.
+      const wholeGame = query.get('whole') === '1';
       const request = {
         processName: query.get('process') ?? DEFAULT_PROCESS_NAME,
-        seconds: clampSeconds(query.get('seconds')),
+        seconds: wholeGame ? MAX_SECONDS : clampSeconds(query.get('seconds')),
+        stopWhenGameExits: wholeGame,
       };
 
       // Сохраняем всё, что записали: сравнение «до и после» разделено
@@ -60,6 +78,28 @@ export function createCaptureRoute(
       }
     },
   };
+
+  /**
+   * Досрочная остановка.
+   *
+   * Нужна ровно из-за записи целого матча: заказав четыре часа, человек должен
+   * иметь возможность передумать. Запрос UAC появится второй раз — своего
+   * процесса у нас нет, и остановить сессию может только новый экземпляр
+   * PresentMon с теми же правами.
+   */
+  const stop: JsonRoute = {
+    path: '/api/capture/stop',
+    method: 'POST',
+    async handle() {
+      if (inFlight === null) {
+        throw new Error('Останавливать нечего: запись не идёт.');
+      }
+      await frames.stop();
+      return { stopping: true };
+    },
+  };
+
+  return [capture, stop];
 }
 
 /**

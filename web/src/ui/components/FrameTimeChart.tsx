@@ -5,10 +5,13 @@ import type { CaptureSeries } from '../../domain/models.ts';
 /**
  * График времени кадра за записанную сессию.
  *
- * Точки не прореживаются. Прореживание убирает ровно то, ради чего запись и
- * делалась: одиночный кадр на 200 мс — это одна точка из двенадцати тысяч, и
- * первое же усреднение её сотрёт. uPlot рисует такие объёмы на canvas без
- * потери отзывчивости, чем и оправдан его выбор.
+ * Кадры не усредняются — никогда. Усреднение убирает ровно то, ради чего запись
+ * и делалась: одиночный кадр на 200 мс исчезает в соседях. Когда кадров сотни
+ * тысяч, сервер выбирает из каждого окна настоящие самый короткий и самый
+ * длинный, поэтому пик остаётся на месте и остаётся собой.
+ *
+ * Выделение мышью просит у сервера этот участок целиком: увеличение должно
+ * показывать кадры, а не ту же огибающую крупнее.
  */
 const STUTTER_COLOR = '#ff5f56';
 const FRAME_COLOR = '#4aa8ff';
@@ -20,14 +23,28 @@ const GRID_COLOR = '#262b36';
 
 const CHART_HEIGHT = 260;
 
-export function FrameTimeChart({ series }: { series: CaptureSeries }): React.JSX.Element {
+export function FrameTimeChart({
+  series,
+  onZoom,
+}: {
+  series: CaptureSeries;
+  /** Человек выделил участок: показать его кадр за кадром. */
+  onZoom?: (fromSeconds: number, toSeconds: number) => void;
+}): React.JSX.Element {
   const container = useRef<HTMLDivElement>(null);
+  // Через ref, чтобы смена обработчика не пересоздавала график целиком.
+  const zoom = useRef(onZoom);
+  zoom.current = onZoom;
 
   useEffect(() => {
     const element = container.current;
     if (element === null) return undefined;
 
-    const chart = new uPlot(buildOptions(series, element.clientWidth), buildData(series), element);
+    const chart = new uPlot(
+      buildOptions(series, element.clientWidth, zoom),
+      buildData(series),
+      element,
+    );
 
     const observer = new ResizeObserver(() => {
       chart.setSize({ width: element.clientWidth, height: CHART_HEIGHT });
@@ -58,7 +75,11 @@ function buildData(series: CaptureSeries): uPlot.AlignedData {
   return data as uPlot.AlignedData;
 }
 
-function buildOptions(series: CaptureSeries, width: number): uPlot.Options {
+function buildOptions(
+  series: CaptureSeries,
+  width: number,
+  zoom: { current: ((from: number, to: number) => void) | undefined },
+): uPlot.Options {
   const lines: uPlot.Series[] = [
     {
       label: 'кадр',
@@ -90,6 +111,25 @@ function buildOptions(series: CaptureSeries, width: number): uPlot.Options {
     legend: { show: true },
     cursor: { y: false },
     scales: { x: { time: false } },
+    hooks: {
+      // uPlot меняет диапазон и после сброса двойным щелчком; отличаем выделение
+      // по тому, что новый диапазон уже показанного.
+      setScale: [
+        (self, key) => {
+          if (key !== 'x' || zoom.current === undefined) return;
+          const scale = self.scales['x'];
+          const min = scale?.min;
+          const max = scale?.max;
+          if (min === undefined || max === undefined) return;
+
+          const shownFrom = series.time[0] ?? 0;
+          const shownTo = series.time.at(-1) ?? 0;
+          if (min <= shownFrom && max >= shownTo) return;
+
+          zoom.current(min, max);
+        },
+      ],
+    },
     axes: [
       {
         stroke: AXIS_COLOR,

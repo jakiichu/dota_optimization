@@ -5,6 +5,11 @@ import type {
   Stutter,
 } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture, FrameSample } from '../../domain/telemetry/frame-sample.ts';
+import {
+  framesInWindow,
+  selectFramesForChart,
+  type FrameWindow,
+} from '../../domain/telemetry/frame-window.ts';
 import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import type { CorrelationReport } from '../../domain/telemetry/stutter-correlation.ts';
@@ -19,6 +24,17 @@ export interface CaptureSeries {
   readonly stutterMs: readonly (number | null)[];
   readonly cpuBusyMs: readonly (number | null)[] | null;
   readonly gpuBusyMs: readonly (number | null)[] | null;
+  /**
+   * Показаны не все кадры записи.
+   *
+   * Не усреднение: из каждого окна взяты настоящие самый короткий и самый
+   * длинный кадры, плюс все статтеры. Ни одно значение записи не выходит за
+   * нарисованную огибающую — но точек на экране меньше, чем кадров в файле, и
+   * молчать об этом нельзя.
+   */
+  readonly decimated: boolean;
+  /** Сколько кадров стоит за этими точками. */
+  readonly sourceFrameCount: number;
 }
 
 export interface CaptureView {
@@ -56,6 +72,13 @@ export interface CaptureViewInput {
   readonly network: NetworkQuality;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
+  /**
+   * Какой кусок записи показать на графике.
+   *
+   * Метрики от этого не меняются: они всегда считаются по всей записи. Окно —
+   * это увеличение, а не выборка, и подменять им статистику нельзя.
+   */
+  readonly window?: FrameWindow;
 }
 
 export function toCaptureView(input: CaptureViewInput): CaptureView {
@@ -72,7 +95,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     bottleneck: statistics.bottleneck,
     pacing: statistics.pacing,
     worstStutters: worstStutters(statistics.stutters),
-    series: toSeries(capture.frames, statistics.stutters),
+    series: toSeries(capture.frames, statistics.stutters, input.window),
     availableColumns: capture.availableColumns,
     correlation: input.correlation,
     network: input.network,
@@ -88,10 +111,27 @@ function worstStutters(stutters: readonly Stutter[]): Stutter[] {
 }
 
 function toSeries(
-  frames: readonly FrameSample[],
+  allFrames: readonly FrameSample[],
   stutters: readonly Stutter[],
+  window: FrameWindow | undefined,
 ): CaptureSeries {
-  const stutterSeconds = new Set(stutters.map((stutter) => stutter.atSeconds));
+  // Сначала окно, потом выбор точек: приблизив кусок часовой записи, человек
+  // должен увидеть его кадр за кадром, а не ту же огибающую крупнее.
+  const bounds =
+    window === undefined
+      ? { from: 0, to: allFrames.length }
+      : framesInWindow(allFrames, window);
+  const frames = allFrames.slice(bounds.from, bounds.to);
+
+  const inWindow = stutters.filter(
+    (stutter) => stutter.frameIndex >= bounds.from && stutter.frameIndex < bounds.to,
+  );
+  const shifted = inWindow.map((stutter) => ({
+    ...stutter,
+    frameIndex: stutter.frameIndex - bounds.from,
+  }));
+  const selection = selectFramesForChart(frames, shifted);
+  const stutterSeconds = new Set(inWindow.map((stutter) => stutter.atSeconds));
 
   const time: number[] = [];
   const frameTimeMs: number[] = [];
@@ -99,7 +139,10 @@ function toSeries(
   const cpuBusyMs: (number | null)[] = [];
   const gpuBusyMs: (number | null)[] = [];
 
-  for (const frame of frames) {
+  for (const index of selection.indices) {
+    const frame = frames[index];
+    if (frame === undefined) continue;
+
     time.push(frame.startSeconds);
     frameTimeMs.push(frame.frameTimeMs);
     // Разрывы между отметками uPlot просто не рисует — получается россыпь точек.
@@ -116,6 +159,8 @@ function toSeries(
     // метрики нет, вместо того чтобы рисовать ноль.
     cpuBusyMs: hasAnyValue(cpuBusyMs) ? cpuBusyMs : null,
     gpuBusyMs: hasAnyValue(gpuBusyMs) ? gpuBusyMs : null,
+    decimated: selection.decimated,
+    sourceFrameCount: selection.sourceFrameCount,
   };
 }
 

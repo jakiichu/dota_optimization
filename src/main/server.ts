@@ -5,7 +5,7 @@ import process from 'node:process';
 import { toAuditView } from '../adapters/http/audit.view.ts';
 import { SensorViewMapper } from '../adapters/http/sensor.view.ts';
 import { RunConfigurationAudit } from '../application/use-cases/run-configuration-audit.ts';
-import { createCaptureRoute } from './capture-route.ts';
+import { createCaptureRoutes } from './capture-route.ts';
 import { createBenchmarkRoutes } from './benchmark-routes.ts';
 import { createConfigRoutes } from './config-routes.ts';
 import { createHypothesisRoutes } from './hypothesis-routes.ts';
@@ -206,7 +206,7 @@ async function startServer(
     jsonRoutes: [
       healthRoute,
       auditRoute,
-      createCaptureRoute(sensorStream, sessionStore, machineContext, replayRun),
+      ...createCaptureRoutes(sensorStream, sessionStore, machineContext, replayRun),
       ...createBenchmarkRoutes(replayRun),
       ...createHypothesisRoutes(hypotheses),
       createSessionListRoute(sessionStore),

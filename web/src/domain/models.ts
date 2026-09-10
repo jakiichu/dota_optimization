@@ -142,6 +142,22 @@ export interface CaptureSeries {
   readonly stutterMs: readonly (number | null)[];
   readonly cpuBusyMs: readonly (number | null)[] | null;
   readonly gpuBusyMs: readonly (number | null)[] | null;
+  /**
+   * Показаны не все кадры записи.
+   *
+   * Не усреднение: из каждого окна взяты настоящие самый короткий и самый
+   * длинный кадры плюс все статтеры. Ни одно значение не выходит за
+   * нарисованную огибающую — но точек меньше, чем кадров, и молчать нельзя.
+   */
+  readonly decimated: boolean;
+  /** Сколько кадров стоит за этими точками. */
+  readonly sourceFrameCount: number;
+}
+
+/** Кусок записи, показанный на графике. */
+export interface FrameWindow {
+  readonly fromSeconds: number;
+  readonly toSeconds: number;
 }
 
 export interface Capture {

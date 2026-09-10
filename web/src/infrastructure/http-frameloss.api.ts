@@ -8,6 +8,7 @@ import type {
   Capture,
   Comparison,
   ConfigEdit,
+  FrameWindow,
   GameConfig,
   Hypothesis,
   RecommendationKind,
@@ -42,8 +43,16 @@ export class HttpFramelossApi implements FramelossApi {
     return getJson<Comparison>(`/api/sessions/compare?${query.toString()}`, signal);
   }
 
-  async analyzeSession(id: string, signal: AbortSignal): Promise<Capture> {
+  async analyzeSession(
+    id: string,
+    signal: AbortSignal,
+    window?: FrameWindow,
+  ): Promise<Capture> {
     const query = new URLSearchParams({ id });
+    if (window !== undefined) {
+      query.set('from', String(window.fromSeconds));
+      query.set('to', String(window.toSeconds));
+    }
     return getJson<Capture>(`/api/sessions/analyze?${query.toString()}`, signal);
   }
 
@@ -53,7 +62,12 @@ export class HttpFramelossApi implements FramelossApi {
       seconds: String(request.seconds),
       label: request.label,
     });
+    if (request.wholeGame) query.set('whole', '1');
     return getJson<Capture>(`/api/capture?${query.toString()}`, signal);
+  }
+
+  async stopCapture(): Promise<void> {
+    await postJson<{ stopping: boolean }>('/api/capture/stop', {});
   }
 
   async fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions> {

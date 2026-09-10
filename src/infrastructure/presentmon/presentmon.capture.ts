@@ -22,6 +22,17 @@ const EXIT_NEEDS_ELEVATION = 6;
 /** Запас поверх заказанной длительности: PresentMon ещё дописывает файл. */
 const TIMEOUT_MARGIN_MS = 20_000;
 
+/**
+ * Имя сессии трассировки.
+ *
+ * Задаём своё, а не берём умолчание: остановить сессию можно только назвав её,
+ * и без этого кнопка «остановить» гасила бы чужую запись, а не нашу.
+ */
+const SESSION_NAME = 'frameloss';
+
+/** Сколько ждём, пока идущая запись согласится остановиться. */
+const STOP_TIMEOUT_MS = 30_000;
+
 const MS_IN_SECOND = 1000;
 
 export class PresentMonMissingError extends Error {
@@ -43,6 +54,22 @@ export class PresentMonMissingError extends Error {
  * значит, он обязан знать, когда остановиться, сам.
  */
 export class PresentMonCapture implements FrameCaptureSource {
+  /**
+   * Просит идущую запись остановиться.
+   *
+   * Своего процесса у нас нет — он поднят через UAC и нам не принадлежит.
+   * Поэтому запускаем второй экземпляр PresentMon: он гасит сессию по имени и
+   * выходит, а первый дописывает файл и завершается сам. Прав это тоже требует,
+   * поэтому запрос UAC появится во второй раз.
+   */
+  async stop(): Promise<void> {
+    await ensureInstalled();
+    await runCapture(
+      ['--session_name', SESSION_NAME, '--terminate_existing_session'],
+      STOP_TIMEOUT_MS,
+    );
+  }
+
   async capture(request: FrameCaptureRequest): Promise<FrameCapture> {
     await ensureInstalled();
 
@@ -81,9 +108,14 @@ function buildArgs(request: FrameCaptureRequest, csvPath: string): string[] {
     request.processName,
     '--output_file',
     csvPath,
+    '--session_name',
+    SESSION_NAME,
     '--timed',
     String(request.seconds),
     '--terminate_after_timed',
+    // Запись целого матча: длину заранее не знает никто, а PresentMon умеет
+    // следить за жизнью процесса сам.
+    ...(request.stopWhenGameExits === true ? ['--terminate_on_proc_exit'] : []),
     // Без этого PresentMon 2.x пишет собственную статистику в консоль и мешает
     // читать наши сообщения.
     '--no_console_stats',
