@@ -79,6 +79,9 @@ function toCpuReading(raw: unknown): CpuReading | null {
     coreUtilizationPercent: asArray(record['coreUtilizationPercent'])
       .map((entry) => asNumber(entry))
       .filter((entry): entry is number => entry !== null),
+    throttleReasons: asArray(record['throttleReasons'])
+      .map((entry) => asString(entry))
+      .filter((entry): entry is string => entry !== null),
   };
 }
 

@@ -507,6 +507,8 @@ export interface CpuReading {
   readonly threadCount: number;
   /** Сколько потоков занято целиком: понятнее процентов. */
   readonly busyThreads: number | null;
+  /** Почему частота ниже базовой, по словам драйвера. Пусто — не сообщал. */
+  readonly throttleReasons: readonly string[];
 }
 
 export interface SensorSample {
@@ -532,6 +534,10 @@ export interface CpuLoad {
   readonly performancePercent: number | null;
   readonly lowestPerformancePercent: number | null;
   readonly throttled: boolean;
+  /** Что об этом говорит драйвер: предел мощности, перегрев, предел тока. */
+  readonly throttleReasons: readonly string[];
+  /** Доля замеров с причиной. `null` — спросить было некого. */
+  readonly throttleTimeShare: number | null;
   readonly singleThreadBound: boolean;
   readonly summary: string;
 }

@@ -64,7 +64,7 @@ public sealed class SensorProbe : IDisposable
 
     public static SensorProbe CreateDefault()
     {
-        return new SensorProbe([new NvmlSensorSource(), new PdhSensorSource()]);
+        return new SensorProbe([new NvmlSensorSource(), new AdlSensorSource(), new PdhSensorSource()]);
     }
 
     /// <summary>Включает замеры сети. Без вызова они не делаются вовсе.</summary>
@@ -110,6 +110,19 @@ public sealed class SensorProbe : IDisposable
         try
         {
             cpu = _cpu?.Read();
+            // Почему процессор сбросил частоты, знает драйвер AMD: у APU питание
+            // общее, и SMU отдаёт состояние процессора тем же вызовом, что и
+            // состояние видеоядра. Счётчики Windows этого не знают вовсе —
+            // «частота ниже базовой» они показывают, а причину нет.
+            if (cpu is not null)
+            {
+                IReadOnlyList<string> reasons = _active
+                    .OfType<AdlSensorSource>()
+                    .SelectMany(source => source.CpuThrottleReasons)
+                    .Distinct()
+                    .ToArray();
+                if (reasons.Count > 0) cpu = cpu with { ThrottleReasons = reasons };
+            }
         }
         catch (Exception ex)
         {

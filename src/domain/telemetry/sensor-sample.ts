@@ -64,6 +64,14 @@ export interface CpuReading {
    */
   readonly performancePercent: Maybe<number>;
   readonly coreUtilizationPercent: readonly number[];
+  /**
+   * Почему процессор сбрасывает частоты, по словам драйвера.
+   *
+   * Счётчики Windows показывают, что частота ниже базовой, но не говорят
+   * отчего. У AMD причина приезжает через ADL тем же вызовом, что и состояние
+   * видеоядра: у APU питание общее. Пусто — причин не было или источника нет.
+   */
+  readonly throttleReasons: readonly string[];
 }
 
 /**
@@ -80,6 +88,16 @@ export interface ProcessReading {
   /** Сколько процессов с этим именем сложилось в строку. */
   readonly processCount: number;
 }
+
+/**
+ * Источник, который есть на любой машине, но знает мало.
+ *
+ * Счётчики Windows дают загрузку и занятую видеопамять — и всё: ни температур,
+ * ни частот, ни причин троттлинга. По наличию любого другого источника в замере
+ * видно, спрашивали ли вообще про эти величины, а значит — можно отличить
+ * «причин не было» от «некому было ответить».
+ */
+export const GENERIC_SENSOR_SOURCE = 'pdh';
 
 export interface SensorSample {
   readonly capturedAt: string;

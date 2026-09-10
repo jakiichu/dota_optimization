@@ -122,7 +122,14 @@ describe('FileSessionStore', () => {
 
     const stored = JSON.parse(await readFile(path, 'utf8'));
     stored.record.sensors = [
-      { capturedAt: '2026-09-08T00:00:00Z', qpcTimestamp: 1, qpcFrequency: 1, gpus: [], errors: [] },
+      {
+        capturedAt: '2026-09-08T00:00:00Z',
+        qpcTimestamp: 1,
+        qpcFrequency: 1,
+        gpus: [],
+        cpu: { utilizationPercent: 30, performancePercent: 99, coreUtilizationPercent: [] },
+        errors: [],
+      },
     ];
     delete stored.record.scene;
     await writeFile(path, JSON.stringify(stored), 'utf8');
@@ -131,6 +138,7 @@ describe('FileSessionStore', () => {
 
     expect(record.sensors[0]?.network).toEqual([]);
     expect(record.sensors[0]?.processes).toBeNull();
+    expect(record.sensors[0]?.cpu?.throttleReasons).toEqual([]);
     expect(record.scene.kind).toBe('unknown');
 
     // И весь путь чтения целиком: список пересчитывает сводку новыми метриками,

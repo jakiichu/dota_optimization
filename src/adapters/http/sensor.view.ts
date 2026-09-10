@@ -31,6 +31,14 @@ export interface CpuReadingView {
   readonly threadCount: number;
   /** Сколько потоков занято целиком: понятнее процентов. */
   readonly busyThreads: number | null;
+  /**
+   * Почему частота ниже базовой, по словам драйвера.
+   *
+   * Само по себе «93% от базовой» человеку ничего не говорит. «Упёрся в предел
+   * мощности» говорит, и в живых показаниях это видно прямо сейчас, а не после
+   * разбора записи.
+   */
+  readonly throttleReasons: readonly string[];
 }
 
 export interface SensorSampleView {
@@ -82,6 +90,7 @@ function toCpuReadingView(cpu: CpuReading | null): CpuReadingView | null {
       cpu.utilizationPercent === null || threadCount === 0
         ? null
         : Math.round(((cpu.utilizationPercent * threadCount) / 100) * 10) / 10,
+    throttleReasons: cpu.throttleReasons,
   };
 }
 

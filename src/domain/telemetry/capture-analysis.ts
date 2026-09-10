@@ -42,8 +42,10 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 8 — запись помнит состояние машины, и сравнение показывает, что менялось.
  * 9 — сводка несёт улики: аудит сверяется с записью, не читая кадры.
  * 10 — видно, кто ещё занимал процессор: улика «кадр ждал» получила имя.
+ * 11 — AMD отдаёт температуры и причины троттлинга; разбор берёт показания у
+ *      вендорского источника, а не у счётчиков Windows, и это меняет улики.
  */
-export const METRICS_VERSION = 10;
+export const METRICS_VERSION = 11;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;

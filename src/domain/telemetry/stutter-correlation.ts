@@ -5,7 +5,7 @@ import {
 } from './background-load.ts';
 import type { Stutter } from './frame-metrics.ts';
 import type { FrameSample } from './frame-sample.ts';
-import type { GpuReading, SensorSample } from './sensor-sample.ts';
+import { GENERIC_SENSOR_SOURCE, type GpuReading, type SensorSample } from './sensor-sample.ts';
 
 /**
  * Что происходило рядом с каждым статтером.
@@ -33,6 +33,15 @@ const VRAM_GROWTH_MIB = 64;
 
 /** Сколько кадров вокруг смотрим на смену режима вывода и отброшенные кадры. */
 const NEIGHBOUR_FRAMES = 5;
+
+/**
+ * С какой доли записи троттлинг перестаёт объяснять отдельный кадр.
+ *
+ * Держится он почти всю запись — значит был и в хороших кадрах тоже, и
+ * выделять им плохие нечестно. Улику при этом не убираем: троттлинг никуда не
+ * делся, просто он про всю запись, а не про этот кадр.
+ */
+const THROTTLING_IS_BACKGROUND = 0.9;
 
 export type EvidenceKind =
   | 'background-process'
@@ -315,9 +324,14 @@ function fromSensors(timeline: SensorTimeline, frameQpcMs: number): Evidence[] {
 
   const throttled = window.flatMap((point) => point.throttleReasons);
   if (throttled.length > 0) {
+    const share = Math.round(timeline.throttleTimeShare * 100);
     evidence.push({
       kind: 'throttling',
-      detail: `Драйвер сообщил: ${[...new Set(throttled)].join(', ')}.`,
+      detail:
+        `Драйвер сообщил: ${[...new Set(throttled)].join(', ')}. ` +
+        (timeline.throttleTimeShare >= THROTTLING_IS_BACKGROUND
+          ? `Но так было ${share}% записи — это фон, а не примета этого кадра.`
+          : `За запись это встретилось в ${share}% замеров.`),
     });
   }
 
@@ -337,6 +351,15 @@ interface SensorTimeline {
   readonly points: readonly SensorPoint[];
   readonly medianUtilization: number | null;
   readonly adapterName: string;
+  /**
+   * Доля замеров, где драйвер вообще сообщал о троттлинге.
+   *
+   * Нужна, чтобы улика не врала масштабом. Замерено: на холостом ходу бит стоял
+   * в двух замерах из двенадцати, под нагрузкой — во всех двадцати шести. Если
+   * троттлинг держался всю запись, он совпадёт с каждым рывком, и назвать его
+   * приметой конкретного кадра будет подлогом.
+   */
+  readonly throttleTimeShare: number;
 }
 
 const BYTES_IN_MIB = 1024 * 1024;
@@ -350,7 +373,7 @@ const BYTES_IN_MIB = 1024 * 1024;
 function buildSensorTimeline(sensors: readonly SensorSample[]): SensorTimeline | null {
   if (sensors.length === 0) return null;
 
-  const adapter = busiestAdapter(sensors);
+  const adapter = mainAdapter(sensors);
   if (adapter === null) return null;
 
   const points: SensorPoint[] = [];
@@ -378,20 +401,41 @@ function buildSensorTimeline(sensors: readonly SensorSample[]): SensorTimeline |
         .filter((value): value is number => value !== null),
     ),
     adapterName: adapter,
+    throttleTimeShare:
+      points.length === 0
+        ? 0
+        : points.filter((point) => point.throttleReasons.length > 0).length / points.length,
   };
 }
 
-function busiestAdapter(sensors: readonly SensorSample[]): string | null {
+/**
+ * Какой адаптер считать тем, что рендерит игру.
+ *
+ * Сначала — умеет ли источник отвечать про троттлинг и температуры. Одна и та
+ * же карта приезжает дважды: счётчиками Windows под именем вида `luid_…` и
+ * вендорским источником под настоящим именем. Выбор «по загрузке» сравнивал бы
+ * эти две записи между собой и мог отдать победу счётчикам — вместе с их
+ * незнанием причин.
+ *
+ * Внутри группы — по наибольшей средней загрузке: на ноутбуке видно и
+ * встроенное ядро, и дискретное, а рендерит одно из них.
+ */
+function mainAdapter(sensors: readonly SensorSample[]): string | null {
   const totals = new Map<string, number>();
+  const vendorKnown = new Set<string>();
   for (const sample of sensors) {
     for (const gpu of sample.gpus) {
       totals.set(gpu.adapterName, (totals.get(gpu.adapterName) ?? 0) + utilizationOf(gpu));
+      if (gpu.source !== GENERIC_SENSOR_SOURCE) vendorKnown.add(gpu.adapterName);
     }
   }
 
+  const candidates = vendorKnown.size > 0 ? vendorKnown : new Set(totals.keys());
+
   let best: string | null = null;
   let bestTotal = -1;
-  for (const [name, total] of totals) {
+  for (const name of candidates) {
+    const total = totals.get(name) ?? 0;
     if (total > bestTotal) {
       best = name;
       bestTotal = total;

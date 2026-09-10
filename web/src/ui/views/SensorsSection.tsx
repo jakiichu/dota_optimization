@@ -161,6 +161,13 @@ function CpuCard({ cpu }: { cpu: NonNullable<SensorSample['cpu']> }): React.JSX.
           value={cpu.performancePercent === null ? UNKNOWN : `${cpu.performancePercent.toFixed(0)} %`}
         />
       </div>
+      {/* «93% от базовой» само по себе ничего не говорит. Причина говорит — и
+          видна прямо сейчас, а не после разбора записи. */}
+      {cpu.throttleReasons.length > 0 && (
+        <div className="muted">
+          Драйвер сейчас сообщает: {cpu.throttleReasons.join(', ')}.
+        </div>
+      )}
     </div>
   );
 }

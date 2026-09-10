@@ -7,6 +7,10 @@ interface Reading {
   readonly utilization?: number;
   readonly performance?: number;
   readonly threads?: number;
+  /** Что сказал драйвер про сброс частот. */
+  readonly reasons?: readonly string[];
+  /** Был ли в замере вендорский источник, у которого вообще можно спросить. */
+  readonly vendorSource?: boolean;
 }
 
 function sample(reading: Reading): SensorSample {
@@ -15,15 +19,33 @@ function sample(reading: Reading): SensorSample {
     capturedAt: '2026-09-10T00:00:00Z',
     qpcTimestamp: 0,
     qpcFrequency: 1000,
-    gpus: [],
+    gpus: reading.vendorSource === true ? [gpu('adl')] : [gpu('pdh')],
     cpu: {
       utilizationPercent: reading.utilization ?? null,
       performancePercent: reading.performance ?? null,
       coreUtilizationPercent: new Array<number>(threads).fill(0),
+      throttleReasons: reading.reasons ?? [],
     },
     network: [],
     processes: null,
     errors: [],
+  };
+}
+
+function gpu(source: string): SensorSample['gpus'][number] {
+  return {
+    adapterName: 'адаптер',
+    vendor: 'amd',
+    source,
+    temperatureC: null,
+    coreClockMhz: null,
+    memoryClockMhz: null,
+    powerWatts: null,
+    powerLimitWatts: null,
+    memoryUsedBytes: null,
+    memoryTotalBytes: null,
+    utilizationPercent: null,
+    throttleReasons: [],
   };
 }
 
@@ -112,5 +134,60 @@ describe('analyzeCpuLoad', () => {
 
     expect(found.throttled).toBe(false);
     expect(found.lowestPerformancePercent).toBe(60);
+  });
+  it('называет причину сброса частот, когда драйвер её сообщил', () => {
+    // «Частота упала» — наблюдение. «Упёрлись в предел мощности» — диагноз, и
+    // до появления вендорского источника сказать этого было нечем.
+    const found = analyzeCpuLoad(
+      [
+        sample({ utilization: 90, performance: 70, reasons: ['предел мощности'], vendorSource: true }),
+        sample({ utilization: 90, performance: 72, reasons: ['предел мощности'], vendorSource: true }),
+      ],
+      bottleneck('cpu'),
+    );
+
+    expect(found.throttled).toBe(true);
+    expect(found.throttleReasons).toEqual(['предел мощности']);
+    expect(found.throttleTimeShare).toBe(1);
+    expect(found.summary).toContain('предел мощности');
+    expect(found.summary).toContain('100%');
+  });
+
+  it('отличает «причин не было» от «спросить было некого»', () => {
+    // Пустой список причин без вендорского источника значит, что вопрос никто
+    // не задавал, и выдавать это за чистый результат нельзя.
+    const silent = analyzeCpuLoad(
+      [sample({ utilization: 90, performance: 70, vendorSource: true })],
+      bottleneck('cpu'),
+    );
+    const nobody = analyzeCpuLoad([sample({ utilization: 90, performance: 70 })], bottleneck('cpu'));
+
+    expect(silent.throttleTimeShare).toBe(0);
+    expect(silent.summary).toContain('ни на что не жаловался');
+    expect(nobody.throttleTimeShare).toBeNull();
+    expect(nobody.summary).toContain('спросить некого');
+  });
+
+  it('молчит о причинах, пока частота в порядке', () => {
+    // На нормальных частотах те же биты изредка мигают: это работа регулятора
+    // питания, а не проблема, и объявлять её проблемой значит кричать зря.
+    const found = analyzeCpuLoad(
+      [sample({ utilization: 20, performance: 98, reasons: ['предел мощности'], vendorSource: true })],
+      bottleneck('gpu'),
+    );
+
+    expect(found.throttled).toBe(false);
+    expect(found.summary).not.toContain('предел мощности');
+  });
+  it('склоняет число потоков', () => {
+    // Строка идёт человеку на глаза как есть, и «16 потока» читается как
+    // опечатка в расчёте.
+    const whole = analyzeCpuLoad([sample({ utilization: 100, threads: 16 })], bottleneck('cpu'));
+    const one = analyzeCpuLoad([sample({ utilization: 6.25, threads: 16 })], bottleneck('cpu'));
+    const fraction = analyzeCpuLoad([sample({ utilization: 20, threads: 16 })], bottleneck('cpu'));
+
+    expect(whole.summary).toContain('16 потоков');
+    expect(one.summary).toContain('1 поток ');
+    expect(fraction.summary).toContain('3.2 потока');
   });
 });

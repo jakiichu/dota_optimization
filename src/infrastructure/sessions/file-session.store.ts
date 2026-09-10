@@ -174,6 +174,8 @@ function migrate(stored: StoredFile | LegacyStoredFile): StoredFile {
  *
  * Процессы дополняются именно `null`, а не пустым списком: в старой записи их
  * действительно не собирали, и сказать по ней «никто не был занят» нельзя.
+ * Причины троттлинга процессора — наоборот пустым списком: там список и есть
+ * ответ, а «спрашивали ли вообще» видно по наличию вендорского источника.
  */
 function normalizeRecord(record: SessionRecord): SessionRecord {
   return {
@@ -184,6 +186,10 @@ function normalizeRecord(record: SessionRecord): SessionRecord {
       ...sample,
       network: sample.network ?? [],
       processes: sample.processes ?? null,
+      cpu:
+        sample.cpu == null
+          ? sample.cpu
+          : { ...sample.cpu, throttleReasons: sample.cpu.throttleReasons ?? [] },
     })),
   };
 }

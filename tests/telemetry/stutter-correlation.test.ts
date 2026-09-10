@@ -166,6 +166,43 @@ describe('correlateStutters', () => {
     expect(throttling?.detail).toContain('аппаратный троттлинг по температуре');
   });
 
+  it('оговаривает троттлинг, который держался всю запись', () => {
+    // Замерено на живой машине: под нагрузкой бит стоял во всех замерах подряд.
+    // Совпав с каждым рывком, он совпал и с каждым хорошим кадром — выдавать
+    // его за примету этого кадра нельзя.
+    const frames = traceWithSpike({ cpuBusyShare: 0.4, gpuBusyShare: 0.4 });
+    const spikeAt = (frames[30]?.qpcMs ?? 0) - ORIGIN_MS;
+    const sensors = [
+      sensorSample(spikeAt - 400, { throttle: ['предел мощности'] }),
+      sensorSample(spikeAt - 200, { throttle: ['предел мощности'] }),
+      sensorSample(spikeAt - 50, { throttle: ['предел мощности'] }),
+    ];
+
+    const evidence = correlate(frames, sensors).stutters[0]?.evidence ?? [];
+
+    expect(evidence.find((item) => item.kind === 'throttling')?.detail).toContain('это фон');
+  });
+
+  it('берёт адаптер у вендорского источника, а не у счётчиков Windows', () => {
+    // Одна карта приезжает дважды: счётчиками под именем вида «luid_…» и
+    // вендорским источником под настоящим. Выбор «по загрузке» отдал бы победу
+    // счётчикам вместе с их незнанием причин троттлинга.
+    const frames = traceWithSpike({ cpuBusyShare: 0.4, gpuBusyShare: 0.4 });
+    const spikeAt = (frames[30]?.qpcMs ?? 0) - ORIGIN_MS;
+    const sample = sensorSample(spikeAt - 50, { throttle: ['предел мощности'] });
+    const both: SensorSample = {
+      ...sample,
+      gpus: [
+        { ...sample.gpus[0]!, adapterName: 'luid_0x0000', source: 'pdh', utilizationPercent: 99, throttleReasons: [] },
+        ...sample.gpus,
+      ],
+    };
+
+    const evidence = correlate(frames, [both]).stutters[0]?.evidence ?? [];
+
+    expect(evidence.find((item) => item.kind === 'throttling')?.detail).toContain('предел мощности');
+  });
+
   it('не приписывает статтеру показания из будущего', () => {
     const frames = traceWithSpike({ cpuBusyShare: 0.1, gpuBusyShare: 0.1 });
     const spikeAt = (frames[30]?.qpcMs ?? 0) - ORIGIN_MS;

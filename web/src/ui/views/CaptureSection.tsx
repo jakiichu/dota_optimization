@@ -383,8 +383,13 @@ function CpuPanel({ load }: { load: CpuLoad }): React.JSX.Element | null {
               : 'var(--muted)',
         }}
       >
+        {/* Причину ставим прямо в вердикт: «сбрасывал частоты» — наблюдение,
+            «упёрся в предел мощности» — ответ, и это разные строки для того,
+            кто читает. */}
         {load.throttled
-          ? 'Процессор сбрасывал частоты'
+          ? load.throttleReasons.length > 0
+            ? `Процессор упирался в ${load.throttleReasons.join(', ')}`
+            : 'Процессор сбрасывал частоты'
           : load.singleThreadBound
             ? 'Упор в скорость одного ядра'
             : 'Ничего необычного'}
