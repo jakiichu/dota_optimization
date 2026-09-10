@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EMPTY_PASSPORT } from '../../src/domain/snapshot/machine-passport.ts';
 import type { CaptureScene } from '../../src/domain/telemetry/capture-scene.ts';
 import {
   compareSessions,
@@ -53,6 +54,7 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
     stuttersPerMinute: options.stuttersPerMinute ?? 10,
     bottleneck: options.bottleneck ?? 'gpu',
     scene: options.scene ?? SAME_REPLAY,
+    passport: EMPTY_PASSPORT,
   };
 }
 

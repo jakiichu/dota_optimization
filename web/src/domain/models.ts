@@ -277,6 +277,8 @@ export interface Hypothesis {
   readonly after: SessionSummary | null;
   readonly comparison: Comparison | null;
   readonly check: HypothesisCheck | null;
+  /** Что поменялось сверх обещанного: опыт был нечистым. */
+  readonly unexpected: readonly PassportChange[];
   readonly candidates: readonly HypothesisCandidate[];
 }
 
@@ -428,11 +430,28 @@ export interface MetricDelta {
   readonly lowerIsBetter: boolean;
 }
 
+/** Настройка машины появилась, исчезла или поменяла значение. */
+export interface PassportChange {
+  readonly key: string;
+  readonly label: string;
+  /** `null` — настройки не было в первой записи. */
+  readonly before: string | null;
+  /** `null` — настройки нет во второй. */
+  readonly after: string | null;
+}
+
 export interface Comparison {
   readonly before: SessionSummary;
   readonly after: SessionSummary;
   readonly metrics: readonly MetricDelta[];
   readonly bottleneckChanged: boolean;
+  /**
+   * Что между записями поменялось на машине.
+   *
+   * Пусто — либо ничего не меняли, либо записи сделаны до того, как мы стали
+   * это запоминать.
+   */
+  readonly changes: readonly PassportChange[];
   readonly verdict: Verdict;
   readonly summary: string;
   readonly caveats: readonly string[];

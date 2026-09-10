@@ -179,6 +179,7 @@ async function runCapture(options: Options): Promise<number> {
   const summary = await sessionStore.save(
     options.label ?? '',
     options.scene,
+    await machineContext.passport(),
     session.capture,
     session.sensorSamples,
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useComparison, useSessions } from '../../application/queries.ts';
-import type { Comparison, SessionSummary } from '../../domain/models.ts';
+import type { Comparison, PassportChange, SessionSummary } from '../../domain/models.ts';
 import { VERDICT_COLOR, VERDICT_LABEL } from '../../domain/presentation.ts';
 import { dateTime, seconds, signed, withUnit } from '../../domain/formatting.ts';
 import { HypothesisPanel } from '../components/HypothesisPanel.tsx';
@@ -110,6 +110,46 @@ function SessionPicker({
   );
 }
 
+/**
+ * Чем машина отличалась между записями.
+ *
+ * Раньше этого не знал никто: в записи лежали кадры и сцена, но не состояние
+ * машины, и «стало лучше» приходилось соотносить с правкой по памяти.
+ */
+function WhatChanged({
+  changes,
+}: {
+  changes: readonly PassportChange[];
+}): React.JSX.Element {
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Что изменилось между записями</span>
+        <span className="card-note">{changes.length}</span>
+      </div>
+
+      {changes.length === 0 ? (
+        <div className="muted">
+          Ничего не изменилось — либо настройки те же, либо записи сделаны до того,
+          как приложение стало запоминать состояние машины. Во втором случае разницу
+          в числах объяснить нечем.
+        </div>
+      ) : (
+        <div className="changes">
+          {changes.map((change) => (
+            <div key={change.key} className="change">
+              <span className="change-label">{change.label}</span>
+              <code>{change.before ?? '—'}</code>
+              <span className="muted">→</span>
+              <code>{change.after ?? '—'}</code>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX.Element {
   return (
     <>
@@ -123,6 +163,13 @@ function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX
             {comparison.after.bottleneck}
           </div>
         )}
+      </div>
+
+      {/* Что менялось — сразу за вердиктом: без этого человек видит разницу в
+          числах и вспоминает по памяти, чем он её вызвал. */}
+      <WhatChanged changes={comparison.changes} />
+
+      <div className="card">
       </div>
 
       <div className="card">

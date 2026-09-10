@@ -64,6 +64,7 @@ export function createCaptureRoutes(
         const summary = await store.save(
           query.get('label') ?? '',
           await sceneOf(replayRun, query),
+          await machine.passport(),
           result.capture,
           result.sensorSamples,
         );

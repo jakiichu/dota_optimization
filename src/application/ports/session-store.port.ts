@@ -1,3 +1,4 @@
+import type { MachinePassport } from '../../domain/snapshot/machine-passport.ts';
 import type { CaptureScene } from '../../domain/telemetry/capture-scene.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
@@ -20,12 +21,21 @@ export interface SessionRecord {
   readonly sensors: readonly SensorSample[];
   /** Что записывали: без этого записи несравнимы. */
   readonly scene: CaptureScene;
+  /**
+   * Состояние машины на момент записи.
+   *
+   * Без него сравнение двух записей не может сказать, чем они отличались, а
+   * проверка гипотезы объявляет её подтверждённой, даже если человек поменял
+   * не только предсказанное.
+   */
+  readonly passport: MachinePassport;
 }
 
 export interface SessionStore {
   save(
     label: string,
     scene: CaptureScene,
+    passport: MachinePassport,
     capture: FrameCapture,
     sensors: readonly SensorSample[],
   ): Promise<SessionSummary>;

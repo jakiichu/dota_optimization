@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { EMPTY_PASSPORT } from '../../src/domain/snapshot/machine-passport.ts';
 import { METRICS_VERSION } from '../../src/domain/telemetry/capture-analysis.ts';
 import type { FrameCapture } from '../../src/domain/telemetry/frame-sample.ts';
 import { FileSessionStore } from '../../src/infrastructure/sessions/file-session.store.ts';
@@ -38,7 +39,7 @@ describe('FileSessionStore', () => {
   });
 
   it('сохраняет запись и находит её в списке', async () => {
-    const saved = await store.save('до правки', SCENE, capture(), []);
+    const saved = await store.save('до правки', SCENE, EMPTY_PASSPORT, capture(), []);
     const list = await store.list();
 
     expect(list).toHaveLength(1);
@@ -47,7 +48,7 @@ describe('FileSessionStore', () => {
   });
 
   it('подставляет имя приложения вместо пустой подписи', async () => {
-    const saved = await store.save('   ', SCENE, capture(), []);
+    const saved = await store.save('   ', SCENE, EMPTY_PASSPORT, capture(), []);
 
     expect(saved.label).toBe('dota2.exe');
   });
@@ -55,7 +56,7 @@ describe('FileSessionStore', () => {
   it('хранит сырые кадры, а не посчитанные метрики', async () => {
     // Метрики в файле законсервировали бы версию кода: новый детектор пришлось
     // бы применять к каждому файлу руками.
-    const saved = await store.save('запись', SCENE, capture(), []);
+    const saved = await store.save('запись', SCENE, EMPTY_PASSPORT, capture(), []);
     const raw = JSON.parse(await readFile(join(directory, `${saved.id}.json`), 'utf8'));
 
     expect(raw.record.capture.frames).toHaveLength(200);
@@ -64,7 +65,7 @@ describe('FileSessionStore', () => {
   });
 
   it('пересчитывает сводку, посчитанную прошлой версией метрик', async () => {
-    const saved = await store.save('запись', SCENE, capture(), []);
+    const saved = await store.save('запись', SCENE, EMPTY_PASSPORT, capture(), []);
     const path = join(directory, `${saved.id}.json`);
 
     // Подделываем файл так, будто его записала прошлая версия с чужими числами.
@@ -113,7 +114,7 @@ describe('FileSessionStore', () => {
   it('дополняет запись полями, которых не было в её версии', async () => {
     // Файл переживает несколько версий модели, а читается как обычный JSON без
     // проверок: замер без поля сети роняет разбор на первом же цикле по нему.
-    const saved = await store.save('запись', SCENE, capture(), []);
+    const saved = await store.save('запись', SCENE, EMPTY_PASSPORT, capture(), []);
     const path = join(directory, `${saved.id}.json`);
 
     const stored = JSON.parse(await readFile(path, 'utf8'));
@@ -139,7 +140,7 @@ describe('FileSessionStore', () => {
   it('не калечит имя с кириллицей', async () => {
     // Замена «недопустимых» символов молча превращала такое имя в
     // подчёркивания, и файл потом не находился.
-    const saved = await store.save('запись', SCENE, capture(), []);
+    const saved = await store.save('запись', SCENE, EMPTY_PASSPORT, capture(), []);
 
     await expect(store.load(saved.id)).resolves.toBeDefined();
   });

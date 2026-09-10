@@ -1,5 +1,10 @@
 import { configFrom } from '../domain/telemetry/capture-analysis.ts';
 import { UNKNOWN_MACHINE, type MachineContext } from '../domain/gameconfig/machine-context.ts';
+import {
+  EMPTY_PASSPORT,
+  passportFrom,
+  type MachinePassport,
+} from '../domain/snapshot/machine-passport.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -16,6 +21,13 @@ import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snap
 export interface MachineContextSource {
   get(): Promise<MachineContext>;
   /**
+   * Состояние машины для записи.
+   *
+   * Из того же снимка, что и остальное: собирать его второй раз ради паспорта
+   * значило бы платить секундами за уже прочитанное.
+   */
+  passport(): Promise<MachinePassport>;
+  /**
    * Забыть прочитанное.
    *
    * Нужно ровно после правки конфига: иначе рекомендации будут отговариваться
@@ -25,27 +37,39 @@ export interface MachineContextSource {
 }
 
 export function createMachineContextSource(): MachineContextSource {
-  let cached: Promise<MachineContext> | null = null;
+  let cached: Promise<Read> | null = null;
+  const read = (): Promise<Read> => (cached ??= readMachine());
 
   return {
-    get: () => (cached ??= read()),
+    get: async () => (await read()).context,
+    passport: async () => (await read()).passport,
     forget: () => {
       cached = null;
     },
   };
 }
 
-async function read(): Promise<MachineContext> {
+interface Read {
+  readonly context: MachineContext;
+  readonly passport: MachinePassport;
+}
+
+async function readMachine(): Promise<Read> {
   try {
     const snapshot = await new WindowsSnapshotCollector().collect();
     const game = snapshot.games.find((candidate) => candidate.config !== null);
     return {
-      config: game === undefined ? null : configFrom(game.configPath, game.config),
-      displayHz: highestRefresh(snapshot.displays),
+      context: {
+        config: game === undefined ? null : configFrom(game.configPath, game.config),
+        displayHz: highestRefresh(snapshot.displays),
+      },
+      passport: passportFrom(snapshot),
     };
   } catch {
-    // Без этих сведений рекомендации просто будут осторожнее.
-    return UNKNOWN_MACHINE;
+    // Без этих сведений рекомендации просто будут осторожнее, а запись
+    // останется без паспорта — и сравнение честно скажет, что не знает, что
+    // менялось.
+    return { context: UNKNOWN_MACHINE, passport: EMPTY_PASSPORT };
   }
 }
 

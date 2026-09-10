@@ -1,4 +1,5 @@
 import { computeFrameStatistics, type FrameStatistics } from './frame-metrics.ts';
+import { EMPTY_PASSPORT, type MachinePassport } from '../snapshot/machine-passport.ts';
 import { UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { FrameCapture } from './frame-sample.ts';
 import { parseGameConfig, type GameConfig } from '../gameconfig/game-config.ts';
@@ -33,8 +34,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 5 — записи помечаются сценой; без неё сравнение считается невозможным.
  * 6 — по записи считаются рекомендации.
  * 7 — разбирается нагрузка на процессор: занятые потоки и сброс частот.
+ * 8 — запись помнит состояние машины, и сравнение показывает, что менялось.
  */
-export const METRICS_VERSION = 7;
+export const METRICS_VERSION = 8;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -108,6 +110,7 @@ export function summarize(
   capture: FrameCapture,
   statistics: FrameStatistics,
   scene: CaptureScene = UNKNOWN_SCENE,
+  passport: MachinePassport = EMPTY_PASSPORT,
 ): SessionSummary {
   return {
     id,
@@ -124,5 +127,6 @@ export function summarize(
     pacingTimeShare: statistics.pacing.timeShareInLongFrames,
     bottleneck: statistics.bottleneck.kind,
     scene,
+    passport,
   };
 }

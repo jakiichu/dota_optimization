@@ -1,3 +1,9 @@
+import {
+  diffPassports,
+  EMPTY_PASSPORT,
+  type MachinePassport,
+  type PassportChange,
+} from '../snapshot/machine-passport.ts';
 import { compareScenes, describeScene, UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { BottleneckKind, Percentiles } from './frame-metrics.ts';
 
@@ -48,6 +54,8 @@ export interface SessionSummary {
   readonly bottleneck: BottleneckKind;
   /** Что записывали: без этого сравнение выдаёт разницу сцен за результат. */
   readonly scene: CaptureScene;
+  /** Состояние машины на момент записи — чтобы видеть, что между записями поменяли. */
+  readonly passport: MachinePassport;
 }
 
 export type Verdict = 'better' | 'worse' | 'same';
@@ -93,6 +101,14 @@ export interface SessionComparison {
   readonly comparable: boolean;
   readonly metrics: readonly MetricDelta[];
   readonly bottleneckChanged: boolean;
+  /**
+   * Что между записями поменялось на машине.
+   *
+   * Главная часть сравнения, а не украшение: без неё человек видит разницу в
+   * числах и вспоминает по памяти, чем её вызвал. Пусто — либо ничего не
+   * меняли, либо записи сделаны до того, как мы стали это запоминать.
+   */
+  readonly changes: readonly PassportChange[];
   readonly verdict: Verdict;
   /** Итог одной фразой. */
   readonly summary: string;
@@ -205,6 +221,10 @@ export function compareSessions(
     metrics,
     comparable: scenes.comparable,
     bottleneckChanged: before.bottleneck !== after.bottleneck,
+    changes: diffPassports(
+      before.passport ?? EMPTY_PASSPORT,
+      after.passport ?? EMPTY_PASSPORT,
+    ),
     verdict,
     summary: scenes.comparable
       ? describe(verdict, metrics)

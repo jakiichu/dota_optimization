@@ -1219,6 +1219,31 @@ code {
   color: var(--text);
 }
 
+/* Нечистый опыт: вывод есть, но верить ему нельзя, и это надо видеть. */
+.unclean {
+  border-left: 2px solid var(--warning);
+  color: var(--warning);
+  font-size: 12.5px;
+  padding-left: 10px;
+}
+
+/* Что поменялось между записями — главная часть сравнения, а не примечание. */
+.changes {
+  display: grid;
+  gap: 4px;
+}
+
+.change {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.change-label {
+  min-width: 200px;
+}
+
 .hypothesis-settle {
   align-items: center;
   display: flex;

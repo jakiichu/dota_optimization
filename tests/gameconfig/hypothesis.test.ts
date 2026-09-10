@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { checkHypothesis, type Prediction } from '../../src/domain/gameconfig/hypothesis.ts';
+import { EMPTY_PASSPORT } from '../../src/domain/snapshot/machine-passport.ts';
+import {
+  checkHypothesis,
+  unexpectedChanges,
+  type Prediction,
+} from '../../src/domain/gameconfig/hypothesis.ts';
 import {
   compareSessions,
   type SessionSummary,
@@ -45,6 +50,7 @@ function session(id: string, numbers: Numbers = {}): SessionSummary {
     pacingTimeShare: numbers.pacing ?? 0.2,
     bottleneck: 'cpu',
     scene: numbers.scene ?? REPLAY,
+    passport: EMPTY_PASSPORT,
   };
 }
 
@@ -141,5 +147,47 @@ describe('checkHypothesis', () => {
     expect(found.outcome).toBe('confirmed');
     expect(found.paid).toBeNull();
     expect(found.summary).not.toContain('Цена');
+  });
+});
+
+describe('unexpectedChanges', () => {
+  const change = (key: string, label: string) => ({
+    key,
+    label,
+    before: '0',
+    after: '1',
+  });
+
+  it('пропускает то, что рекомендация и обещала поменять', () => {
+    const found = unexpectedChanges(['fps_max'], [change('cvar:fps_max', 'fps_max')]);
+
+    expect(found).toEqual([]);
+  });
+
+  it('ловит настройку, которую поменяли заодно', () => {
+    // Ровно ради этого паспорт и заводился: проверка предсказания строга к
+    // числам и слепа к условиям опыта — она скажет «подтвердилась» и тогда,
+    // когда вместе с предсказанным поменяли ещё пять настроек.
+    const found = unexpectedChanges(
+      ['fps_max'],
+      [change('cvar:fps_max', 'fps_max'), change('cvar:r_ssao', 'r_ssao')],
+    );
+
+    expect(found.map((entry) => entry.label)).toEqual(['r_ssao']);
+  });
+
+  it('ловит и то, что не относится к игре', () => {
+    const found = unexpectedChanges(
+      ['fps_max'],
+      [change('power.scheme', 'Схема электропитания')],
+    );
+
+    expect(found).toHaveLength(1);
+  });
+
+  it('сравнивает имена переменных без учёта регистра', () => {
+    const found = unexpectedChanges(['FPS_MAX'], [change('cvar:fps_max', 'fps_max')]);
+
+    expect(found).toEqual([]);
   });
 });

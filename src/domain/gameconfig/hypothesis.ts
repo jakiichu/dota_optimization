@@ -1,3 +1,4 @@
+import { cvarOf, type PassportChange } from '../snapshot/machine-passport.ts';
 import {
   DECIDING_METRICS,
   type MetricDelta,
@@ -125,6 +126,28 @@ export function checkHypothesis(
     betterOnPaper,
     regressed,
   };
+}
+
+/**
+ * Что поменялось между записями сверх обещанного.
+ *
+ * Проверка предсказания строга к числам и слепа к условиям опыта: она скажет
+ * «подтвердилась» и тогда, когда вместе с предсказанной настройкой человек
+ * поменял ещё пять. Вывод в таком случае может быть не про ту настройку вовсе,
+ * и промолчать об этом — значит выдать совпадение за доказательство.
+ *
+ * Настройки принимаются именами переменных: брать сюда саму рекомендацию
+ * нельзя, она сама зависит от этого модуля.
+ */
+export function unexpectedChanges(
+  expectedCvars: readonly string[],
+  changes: readonly PassportChange[],
+): readonly PassportChange[] {
+  const expected = new Set(expectedCvars.map((name) => name.toLowerCase()));
+  return changes.filter((change) => {
+    const cvar = cvarOf(change);
+    return cvar === null || !expected.has(cvar);
+  });
 }
 
 function find(comparison: SessionComparison, metric: MetricId): MetricDelta | null {

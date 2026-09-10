@@ -1,5 +1,10 @@
 import { compareScenes, UNKNOWN_SCENE } from '../../domain/telemetry/capture-scene.ts';
-import { checkHypothesis, type HypothesisCheck } from '../../domain/gameconfig/hypothesis.ts';
+import {
+  checkHypothesis,
+  unexpectedChanges,
+  type HypothesisCheck,
+} from '../../domain/gameconfig/hypothesis.ts';
+import type { PassportChange } from '../../domain/snapshot/machine-passport.ts';
 import type {
   Recommendation,
   RecommendationKind,
@@ -35,6 +40,12 @@ export interface HypothesisView {
   readonly after: SessionSummary | null;
   readonly comparison: SessionComparison | null;
   readonly check: HypothesisCheck | null;
+  /**
+   * Что поменялось между записями сверх обещанного рекомендацией.
+   *
+   * Не пусто — опыт был нечистым, и вывод может быть не про ту настройку.
+   */
+  readonly unexpected: readonly PassportChange[];
   /** Записи, которые годятся на роль «после». Пусто у проверенных. */
   readonly candidates: readonly HypothesisCandidate[];
 }
@@ -119,6 +130,13 @@ export class TrackHypotheses {
           comparison === null || prediction === null
             ? null
             : checkHypothesis(prediction, comparison),
+        unexpected:
+          comparison === null
+            ? []
+            : unexpectedChanges(
+                entry.recommendation.changes.map((change) => change.cvar),
+                comparison.changes,
+              ),
         candidates: after === null ? candidatesFor(before, sessions) : [],
       };
     });

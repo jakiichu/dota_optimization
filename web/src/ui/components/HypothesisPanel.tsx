@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useHypotheses, useHypothesisActions, useSessions } from '../../application/queries.ts';
 import { dateTime } from '../../domain/formatting.ts';
-import type { Hypothesis, SessionSummary } from '../../domain/models.ts';
+import type { Hypothesis, PassportChange, SessionSummary } from '../../domain/models.ts';
 import { OUTCOME_COLOR, OUTCOME_LABEL } from '../../domain/presentation.ts';
 
 /**
@@ -88,13 +88,19 @@ function HypothesisRow({
           }
         />
       ) : (
-        <div
-          className="hypothesis-verdict"
-          style={{ color: OUTCOME_COLOR[hypothesis.check.outcome] }}
-        >
-          <b>{OUTCOME_LABEL[hypothesis.check.outcome]}</b>
-          <span className="hypothesis-summary">{hypothesis.check.summary}</span>
-        </div>
+        <>
+          <div
+            className="hypothesis-verdict"
+            style={{ color: OUTCOME_COLOR[hypothesis.check.outcome] }}
+          >
+            <b>{OUTCOME_LABEL[hypothesis.check.outcome]}</b>
+            <span className="hypothesis-summary">{hypothesis.check.summary}</span>
+          </div>
+          {/* Проверка предсказания строга к числам и слепа к условиям опыта:
+              она скажет «подтвердилась» и тогда, когда поменяли ещё пять
+              настроек. Промолчать значило бы выдать совпадение за вывод. */}
+          <UncleanExperiment changes={hypothesis.unexpected} />
+        </>
       )}
 
       {settle.isError && <div className="notice error">{settle.error.message}</div>}
@@ -158,6 +164,23 @@ function Pending({
       >
         {pending ? 'Считаю…' : 'Проверить'}
       </button>
+    </div>
+  );
+}
+
+/** Между записями поменялось не только предсказанное. */
+function UncleanExperiment({
+  changes,
+}: {
+  changes: readonly PassportChange[];
+}): React.JSX.Element | null {
+  if (changes.length === 0) return null;
+
+  return (
+    <div className="unclean">
+      Между записями поменялось не только это:{' '}
+      {changes.map((change) => change.label).join(', ')}. Вывод может быть не про ту
+      настройку — чтобы проверить наверняка, меняйте по одной.
     </div>
   );
 }
