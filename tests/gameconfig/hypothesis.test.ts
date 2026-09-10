@@ -50,6 +50,8 @@ function session(id: string, numbers: Numbers = {}): SessionSummary {
     pacingTimeShare: numbers.pacing ?? 0.2,
     bottleneck: 'cpu',
     scene: numbers.scene ?? REPLAY,
+    causes: [],
+    networkSeverity: 'ok',
     passport: EMPTY_PASSPORT,
   };
 }

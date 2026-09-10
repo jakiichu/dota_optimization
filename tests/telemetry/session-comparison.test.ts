@@ -54,6 +54,8 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
     stuttersPerMinute: options.stuttersPerMinute ?? 10,
     bottleneck: options.bottleneck ?? 'gpu',
     scene: options.scene ?? SAME_REPLAY,
+    causes: [],
+    networkSeverity: 'ok',
     passport: EMPTY_PASSPORT,
   };
 }

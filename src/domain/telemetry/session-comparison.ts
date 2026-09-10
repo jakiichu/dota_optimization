@@ -6,6 +6,8 @@ import {
 } from '../snapshot/machine-passport.ts';
 import { compareScenes, describeScene, UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { BottleneckKind, Percentiles } from './frame-metrics.ts';
+import type { NetworkSeverity } from './network-quality.ts';
+import type { CauseTally } from './stutter-correlation.ts';
 
 /**
  * Сравнение двух записей.
@@ -52,6 +54,16 @@ export interface SessionSummary {
   /** Доля времени в кадрах, кратно длиннее базового интервала. */
   readonly pacingTimeShare: number;
   readonly bottleneck: BottleneckKind;
+  /**
+   * С чем совпали статтеры: вид улики и сколько их набралось.
+   *
+   * Лежит в сводке, чтобы аудит мог сверяться с записью, не читая мегабайты
+   * кадров: правило про MPO само по себе только пугает, а «и в записи четыре
+   * рывка совпали со сменой режима вывода» — уже измерено.
+   */
+  readonly causes: readonly CauseTally[];
+  /** Каким был канал за ту же запись. */
+  readonly networkSeverity: NetworkSeverity;
   /** Что записывали: без этого сравнение выдаёт разницу сцен за результат. */
   readonly scene: CaptureScene;
   /** Состояние машины на момент записи — чтобы видеть, что между записями поменяли. */

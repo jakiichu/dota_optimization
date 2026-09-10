@@ -35,8 +35,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 6 — по записи считаются рекомендации.
  * 7 — разбирается нагрузка на процессор: занятые потоки и сброс частот.
  * 8 — запись помнит состояние машины, и сравнение показывает, что менялось.
+ * 9 — сводка несёт улики: аудит сверяется с записью, не читая кадры.
  */
-export const METRICS_VERSION = 8;
+export const METRICS_VERSION = 9;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -108,10 +109,17 @@ export function summarize(
   label: string,
   capturedAt: string,
   capture: FrameCapture,
-  statistics: FrameStatistics,
+  /**
+   * Разбор целиком, а не одна статистика.
+   *
+   * Сводке нужны и улики, и сеть: иначе каждое новое поле в ней тянуло бы за
+   * собой новый параметр во все места, где сводка собирается.
+   */
+  analysis: CaptureAnalysis,
   scene: CaptureScene = UNKNOWN_SCENE,
   passport: MachinePassport = EMPTY_PASSPORT,
 ): SessionSummary {
+  const { statistics } = analysis;
   return {
     id,
     label: label.trim() === '' ? capture.applicationName : label.trim(),
@@ -126,6 +134,8 @@ export function summarize(
     stuttersPerMinute: statistics.stuttersPerMinute,
     pacingTimeShare: statistics.pacing.timeShareInLongFrames,
     bottleneck: statistics.bottleneck.kind,
+    causes: analysis.correlation.tally,
+    networkSeverity: analysis.network.severity,
     scene,
     passport,
   };

@@ -313,6 +313,25 @@ code {
   margin-top: 4px;
 }
 
+/* Подтверждено записью — не украшение: это разница между «так бывает плохо»
+   и «у вас это происходит, вот сколько раз». */
+.finding-measured {
+  border-left: 2px solid var(--line);
+  font-size: 12.5px;
+  margin-top: 6px;
+  padding-left: 10px;
+}
+
+.finding-measured.seen {
+  border-left-color: var(--critical);
+  color: var(--text);
+}
+
+.finding-measured.unseen {
+  border-left-color: var(--ok);
+  color: var(--muted);
+}
+
 .finding-body {
   border-top: 1px solid var(--line);
   display: grid;

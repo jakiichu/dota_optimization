@@ -19,6 +19,7 @@ import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
 import { TrackHypotheses } from '../application/use-cases/track-hypotheses.ts';
 import { FileHypothesisStore } from '../infrastructure/sessions/file-hypothesis.store.ts';
 import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
+import { corroborate } from '../domain/diagnostics/corroboration.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import {
   startLocalServer,
@@ -105,6 +106,13 @@ const healthRoute: JsonRoute = {
   handle: () => Promise.resolve({ app: APP_ID, pid: process.pid }),
 };
 
+/**
+ * Аудит, сверенный с последней записью.
+ *
+ * Правило про MPO само по себе только пугает; «и в записи четыре рывка совпали
+ * со сменой режима вывода» — уже измерено. Записей нет — сверять не с чем, и
+ * аудит остаётся таким, каким был.
+ */
 const auditRoute: JsonRoute = {
   path: '/api/audit',
   async handle() {
@@ -112,7 +120,9 @@ const auditRoute: JsonRoute = {
       new WindowsSnapshotCollector(),
       allAuditRules,
     ).execute();
-    return toAuditView(snapshot, report);
+
+    const latest = (await sessionStore.list().catch(() => []))[0] ?? null;
+    return toAuditView(snapshot, report, corroborate(report.findings, latest));
   },
 };
 

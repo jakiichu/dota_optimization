@@ -55,6 +55,14 @@ export function FindingCard({ finding }: { finding: Finding }): React.JSX.Elemen
       </div>
       <div className="finding-summary">{finding.summary}</div>
 
+      {/* Сверка с записью сразу под выводом: правило само по себе только
+          предупреждает, а числа из записи говорят, происходит ли это у вас. */}
+      {finding.corroboration !== null && (
+        <div className={`finding-measured ${finding.corroboration.confirmed ? 'seen' : 'unseen'}`}>
+          {finding.corroboration.detail}
+        </div>
+      )}
+
       {open && (
         <div className="finding-body">
           <dl className="kv">

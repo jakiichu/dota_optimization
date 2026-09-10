@@ -1,4 +1,5 @@
 import { analyzeCapture, summarize } from '../../domain/telemetry/capture-analysis.ts';
+import { EMPTY_PASSPORT } from '../../domain/snapshot/machine-passport.ts';
 import { UNKNOWN_SCENE } from '../../domain/telemetry/capture-scene.ts';
 import {
   compareSessions,
@@ -31,13 +32,13 @@ export class CompareSessions {
 }
 
 function summaryOf(record: SessionRecord): SessionSummary {
-  const { statistics } = analyzeCapture(record.capture, record.sensors);
   return summarize(
     record.id,
     record.label,
     record.capturedAt,
     record.capture,
-    statistics,
+    analyzeCapture(record.capture, record.sensors),
     record.scene ?? UNKNOWN_SCENE,
+    record.passport ?? EMPTY_PASSPORT,
   );
 }

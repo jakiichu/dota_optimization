@@ -8,6 +8,12 @@
 
 export type Severity = 'critical' | 'warning' | 'unknown' | 'info' | 'ok';
 
+/** Что об этой находке говорит запись кадров. */
+export interface Corroboration {
+  readonly confirmed: boolean;
+  readonly detail: string;
+}
+
 export interface Finding {
   readonly ruleId: string;
   readonly title: string;
@@ -17,6 +23,13 @@ export interface Finding {
   readonly expected: string;
   readonly impact: string;
   readonly remediation: readonly string[];
+  /**
+   * Сверка с записью. `null` — записей нет или связи для правила нет.
+   *
+   * Важность находки от неё не меняется: «не проявилось сегодня» и «не
+   * проблема» — разные утверждения.
+   */
+  readonly corroboration: Corroboration | null;
 }
 
 export interface Machine {
