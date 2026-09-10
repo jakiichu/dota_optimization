@@ -8,12 +8,16 @@ import { RunConfigurationAudit } from '../application/use-cases/run-configuratio
 import { createCaptureRoute } from './capture-route.ts';
 import { createBenchmarkRoutes } from './benchmark-routes.ts';
 import { createConfigRoutes } from './config-routes.ts';
+import { createHypothesisRoutes } from './hypothesis-routes.ts';
 import { createMachineContextSource } from './game-config-source.ts';
 import {
   createSessionAnalyzeRoute,
   createSessionCompareRoute,
   createSessionListRoute,
 } from './session-routes.ts';
+import { AnalyzeSession } from '../application/use-cases/analyze-session.ts';
+import { TrackHypotheses } from '../application/use-cases/track-hypotheses.ts';
+import { FileHypothesisStore } from '../infrastructure/sessions/file-hypothesis.store.ts';
 import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import {
@@ -74,6 +78,21 @@ const machineContext = createMachineContextSource();
  * Два экземпляра означали бы, что запись помечается сценой от другого прогона.
  */
 const replayRun = new StartReplayRun(new SteamGameLauncher());
+
+/**
+ * Проверка собственных рекомендаций.
+ *
+ * Рекомендации сюда не передаются с клиента, а считаются заново по записи:
+ * иначе можно было бы прислать предсказание, которого инструмент не делал, и
+ * получить на него «подтвердилась».
+ */
+const hypotheses = new TrackHypotheses(
+  new FileHypothesisStore(RESOURCES.sessionsRoot()),
+  sessionStore,
+  async (sessionId) =>
+    (await new AnalyzeSession(sessionStore, () => machineContext.get()).execute(sessionId))
+      .recommendations,
+);
 
 /**
  * Отметка «это мы».
@@ -189,6 +208,7 @@ async function startServer(
       auditRoute,
       createCaptureRoute(sensorStream, sessionStore, machineContext, replayRun),
       ...createBenchmarkRoutes(replayRun),
+      ...createHypothesisRoutes(hypotheses),
       createSessionListRoute(sessionStore),
       createSessionCompareRoute(sessionStore),
       createSessionAnalyzeRoute(sessionStore, machineContext),

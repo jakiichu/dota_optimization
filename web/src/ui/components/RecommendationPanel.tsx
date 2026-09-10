@@ -1,3 +1,4 @@
+import { useHypothesisActions } from '../../application/queries.ts';
 import type { ConfigChange, Recommendation } from '../../domain/models.ts';
 import { CONFIDENCE_LABEL } from '../../domain/presentation.ts';
 
@@ -6,22 +7,28 @@ import { CONFIDENCE_LABEL } from '../../domain/presentation.ts';
  *
  * Карточка устроена так, чтобы её нельзя было прочитать как совет из
  * интернета. Сверху повод с цифрами, ниже само изменение, а в конце —
- * предсказание: что должно сдвинуться, если гипотеза верна. Именно
- * предсказание делает рекомендацию опровержимой, и убирать его ради краткости
- * нельзя — без него остаётся обещание.
+ * предсказание: что должно сдвинуться, если гипотеза верна.
  *
- * Рядом всегда цена. Ограничение кадров стоит инпут-лага, снятие нагрузки —
- * качества картинки, и умолчать об этом значило бы продавать, а не измерять.
+ * И кнопка «Проверить» рядом с ним. Предсказание, которое никто не проверяет,
+ * ничем не отличается от обещания: до неё инструмент говорил «ожидаем, что
+ * ритм выровняется» и умолкал навсегда.
  */
 export function RecommendationPanel({
   recommendations,
+  sessionId,
   onOpenInConfig,
 }: {
   recommendations: readonly Recommendation[];
+  /** Запись, из которой рекомендации: она станет «до» у гипотезы. */
+  sessionId: string;
   /** Перейти в редактор конфига с уже подставленным изменением. */
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
 }): React.JSX.Element | null {
+  const { record } = useHypothesisActions();
+
   if (recommendations.length === 0) return null;
+
+  const trackedKind = record.isSuccess ? record.variables?.kind : undefined;
 
   return (
     <div className="card">
@@ -69,16 +76,37 @@ export function RecommendationPanel({
           )}
 
           {item.changes.length > 0 && (
-            <button
-              type="button"
-              className="button primary"
-              onClick={() => onOpenInConfig(item.changes)}
-            >
-              Открыть в конфиге
-            </button>
+            <div className="recommendation-actions">
+              <button
+                type="button"
+                className="button primary"
+                onClick={() => onOpenInConfig(item.changes)}
+              >
+                Открыть в конфиге
+              </button>
+
+              {item.prediction !== null &&
+                (trackedKind === item.kind ? (
+                  <span className="muted">
+                    Гипотеза заведена. Примените изменение, запишите ту же сцену ещё раз
+                    и проверьте её в разделе «Сравнение».
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={record.isPending}
+                    onClick={() => record.mutate({ sessionId, kind: item.kind })}
+                  >
+                    Проверить это
+                  </button>
+                ))}
+            </div>
           )}
         </div>
       ))}
+
+      {record.isError && <div className="notice error">{record.error.message}</div>}
     </div>
   );
 }

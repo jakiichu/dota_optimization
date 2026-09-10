@@ -7,6 +7,8 @@ import type {
   Comparison,
   ConfigEdit,
   GameConfig,
+  Hypothesis,
+  RecommendationKind,
   ReplayRun,
   ReplayRunState,
   SessionSummary,
@@ -31,6 +33,7 @@ export const queryKeys = {
   session: (id: string) => ['sessions', 'analysis', id] as const,
   config: ['config'] as const,
   benchmark: ['benchmark'] as const,
+  hypotheses: ['hypotheses'] as const,
 };
 
 /**
@@ -85,6 +88,58 @@ export function useSessionAnalysis(id: string | null): UseQueryResult<Capture> {
     enabled: id !== null && id !== '',
     staleTime: ANALYSIS_STALE_MS,
   });
+}
+
+/**
+ * Гипотезы.
+ *
+ * Приговор считается на сервере при каждом чтении, поэтому кешировать его
+ * надолго нельзя: новая запись может стать той самой «после», а пересчёт по
+ * новым метрикам — изменить вердикт.
+ */
+const HYPOTHESES_STALE_MS = 30 * 1000;
+
+export function useHypotheses(): UseQueryResult<readonly Hypothesis[]> {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.hypotheses,
+    queryFn: ({ signal }) => api.fetchHypotheses(signal),
+    staleTime: HYPOTHESES_STALE_MS,
+  });
+}
+
+export interface RecordHypothesis {
+  readonly sessionId: string;
+  readonly kind: RecommendationKind;
+}
+
+export function useHypothesisActions(): {
+  readonly record: UseMutationResult<Hypothesis, Error, RecordHypothesis>;
+  readonly settle: UseMutationResult<Hypothesis, Error, { id: string; afterSessionId: string }>;
+  readonly forget: UseMutationResult<readonly Hypothesis[], Error, string>;
+} {
+  const api = useApi();
+  const client = useQueryClient();
+  const refresh = (): void => {
+    void client.invalidateQueries({ queryKey: queryKeys.hypotheses });
+  };
+
+  return {
+    record: useMutation({
+      mutationFn: ({ sessionId, kind }: RecordHypothesis) =>
+        api.recordHypothesis(sessionId, kind),
+      onSuccess: refresh,
+    }),
+    settle: useMutation({
+      mutationFn: ({ id, afterSessionId }: { id: string; afterSessionId: string }) =>
+        api.settleHypothesis(id, afterSessionId),
+      onSuccess: refresh,
+    }),
+    forget: useMutation({
+      mutationFn: (id: string) => api.forgetHypothesis(id),
+      onSuccess: (hypotheses) => client.setQueryData(queryKeys.hypotheses, hypotheses),
+    }),
+  };
 }
 
 /**

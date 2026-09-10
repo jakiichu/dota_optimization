@@ -1064,6 +1064,82 @@ code {
   justify-self: start;
 }
 
+/* --- проверка гипотез --- */
+
+.hypothesis {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding: 14px 0 4px;
+}
+
+.hypothesis:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.hypothesis-head {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+}
+
+.hypothesis-title {
+  font-weight: 600;
+}
+
+.hypothesis-head .muted {
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.hypothesis-forget {
+  appearance: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.hypothesis-forget:hover {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+
+.hypothesis-expect {
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+}
+
+/* Приговор — самое заметное в строке: ради него всё и затевалось. */
+.hypothesis-verdict {
+  display: grid;
+  gap: 4px;
+}
+
+.hypothesis-summary {
+  color: var(--text);
+}
+
+.hypothesis-settle {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendation-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 /* --- узкие окна --- */
 
 @media (max-width: 720px) {

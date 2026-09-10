@@ -2,6 +2,7 @@ import type { FrameStatistics } from '../telemetry/frame-metrics.ts';
 import type { NetworkQuality } from '../telemetry/network-quality.ts';
 import type { CorrelationReport } from '../telemetry/stutter-correlation.ts';
 import { findSetting, type GameConfig } from './game-config.ts';
+import type { Prediction } from './hypothesis.ts';
 
 /**
  * Что попробовать поменять — исходя из того, что измерено.
@@ -48,6 +49,14 @@ export interface Recommendation {
   readonly changes: readonly ConfigChange[];
   /** Что должно измениться, если гипотеза верна. */
   readonly expect: string;
+  /**
+   * То же предсказание, но в числах — чтобы его можно было проверить.
+   *
+   * `null` там, где менять нечего: у рекомендаций вида «настройками это не
+   * лечится» проверять после правки просто нечего. Предсказание есть ровно у
+   * тех, у кого есть `changes`.
+   */
+  readonly prediction: Prediction | null;
   /** Чем за это платят. */
   readonly risk: string;
   readonly confidence: Confidence;
@@ -112,6 +121,8 @@ function frameCap(context: RecommendationContext): Recommendation[] {
         expect:
           'Посмотрите частоту экрана в разделе «Аудит», поставьте fps_max на единицу ' +
           'ниже неё и запишите ещё раз. Доля таких кадров должна упасть.',
+        // Проверять нечего: мы не назвали числа, которое надо поставить.
+        prediction: null,
         risk: '',
         confidence: 'likely',
       },
@@ -144,6 +155,7 @@ function frameCap(context: RecommendationContext): Recommendation[] {
       expect:
         'Запишите ещё раз в той же сцене: доля времени в рваном ритме должна упасть. ' +
         'Средний FPS при этом снизится — так и должно быть, это цена, а не провал.',
+      prediction: { metric: 'pacing', direction: 'down', cost: 'fps' },
       risk: 'Инпут-лаг может вырасти на несколько миллисекунд: кадр дольше ждёт своей очереди.',
       confidence: 'measured',
     },
@@ -171,6 +183,7 @@ function notConfigProblems(context: RecommendationContext): Recommendation[] {
       expect:
         'Смотреть надо в сторону охлаждения и ограничения кадров, а не качества ' +
         'картинки: снизив нагрузку, вы отодвинете перегрев, но не устраните его.',
+      prediction: null,
       risk: '',
       confidence: 'measured',
     });
@@ -185,6 +198,7 @@ function notConfigProblems(context: RecommendationContext): Recommendation[] {
       expect:
         'Проверять надо канал: провод вместо Wi-Fi, другой сервер, отключённый ' +
         'прокси. Настройки графики на это не влияют вовсе.',
+      prediction: null,
       risk: '',
       confidence: 'measured',
     });
@@ -238,6 +252,8 @@ function deviceRelief(context: RecommendationContext): Recommendation[] {
         expect:
           'Дальше помогает только меньшее разрешение, другое железо или ' +
           'ограничение кадров — но не настройки качества.',
+        // Менять нечего, значит и проверять нечего.
+        prediction: null,
         risk: '',
         confidence: 'measured',
       },
@@ -255,6 +271,8 @@ function deviceRelief(context: RecommendationContext): Recommendation[] {
           'короче, а доля процессора в кадре — упасть.'
         : 'Запишите ещё раз в той же сцене: самые долгие кадры (p99) должны стать ' +
           'короче, а доля видеокарты в кадре — упасть.',
+      // За снятие нагрузки платят качеством картинки, а его мы не меряем.
+      prediction: { metric: 'frameTimeP99', direction: 'down', cost: null },
       risk: onCpu
         ? 'Эффекты станут беднее: меньше частиц, неподвижное окружение.'
         : 'Картинка станет плоской: без теней, бликов и рельефа.',
@@ -283,6 +301,7 @@ function presentMode(context: RecommendationContext): Recommendation[] {
       expect:
         'Ищите в разделе «Аудит» пункты про MPO и оптимизации полноэкранного ' +
         'режима: лечится это настройками Windows, а не игры.',
+      prediction: null,
       risk: '',
       confidence: 'likely',
     },

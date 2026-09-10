@@ -9,6 +9,8 @@ import type {
   Comparison,
   ConfigEdit,
   GameConfig,
+  Hypothesis,
+  RecommendationKind,
   ReplayRun,
   ReplayRunState,
   SensorSample,
@@ -60,6 +62,24 @@ export class HttpFramelossApi implements FramelossApi {
 
   async launchReplayRun(run: ReplayRun): Promise<ReplayRunState> {
     return postJson<ReplayRunState>('/api/benchmark/launch', run);
+  }
+
+  async fetchHypotheses(signal: AbortSignal): Promise<readonly Hypothesis[]> {
+    const body = await getJson<{ hypotheses: Hypothesis[] }>('/api/hypotheses', signal);
+    return body.hypotheses;
+  }
+
+  async recordHypothesis(sessionId: string, kind: RecommendationKind): Promise<Hypothesis> {
+    return postJson<Hypothesis>('/api/hypotheses/record', { sessionId, kind });
+  }
+
+  async settleHypothesis(id: string, afterSessionId: string): Promise<Hypothesis> {
+    return postJson<Hypothesis>('/api/hypotheses/settle', { id, afterSessionId });
+  }
+
+  async forgetHypothesis(id: string): Promise<readonly Hypothesis[]> {
+    const body = await postJson<{ hypotheses: Hypothesis[] }>('/api/hypotheses/forget', { id });
+    return body.hypotheses;
   }
 
   async fetchConfig(signal: AbortSignal): Promise<GameConfig> {

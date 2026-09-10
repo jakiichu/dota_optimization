@@ -189,6 +189,13 @@ export interface ConfigChange {
  * гипотеза верна. Без последнего рекомендацию нельзя опровергнуть, и она ничем
  * не отличается от списка из интернета.
  */
+export interface Prediction {
+  readonly metric: MetricId;
+  readonly direction: 'down' | 'up';
+  /** Метрика, которой позволено ухудшиться, — объявленная цена. */
+  readonly cost: MetricId | null;
+}
+
 export interface Recommendation {
   readonly kind: RecommendationKind;
   readonly title: string;
@@ -197,6 +204,44 @@ export interface Recommendation {
   readonly expect: string;
   readonly risk: string;
   readonly confidence: Confidence;
+  /** То же предсказание в числах. `null` — проверять нечего. */
+  readonly prediction: Prediction | null;
+}
+
+// --- проверка гипотез -------------------------------------------------------
+
+export type HypothesisOutcome =
+  | 'confirmed'
+  | 'refuted'
+  | 'no-change'
+  | 'not-comparable'
+  | 'not-measured';
+
+export interface HypothesisCheck {
+  readonly outcome: HypothesisOutcome;
+  readonly summary: string;
+  readonly predicted: MetricDelta | null;
+  readonly paid: MetricDelta | null;
+  /** Предсказание сбылось, но просело что-то другое. */
+  readonly betterOnPaper: boolean;
+  /** Что именно просело, кроме объявленной цены. */
+  readonly regressed: readonly MetricDelta[];
+}
+
+export interface HypothesisCandidate {
+  readonly id: string;
+  readonly comparable: boolean;
+}
+
+export interface Hypothesis {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly recommendation: Recommendation;
+  readonly before: SessionSummary | null;
+  readonly after: SessionSummary | null;
+  readonly comparison: Comparison | null;
+  readonly check: HypothesisCheck | null;
+  readonly candidates: readonly HypothesisCandidate[];
 }
 
 // --- конфиг игры ------------------------------------------------------------
@@ -320,7 +365,17 @@ export interface SessionSummary {
 
 export type Verdict = 'better' | 'worse' | 'same';
 
+export type MetricId =
+  | 'fps'
+  | 'frameTimeP50'
+  | 'frameTimeP99'
+  | 'frameTimeP999'
+  | 'pacing'
+  | 'stutters'
+  | 'inputLatency';
+
 export interface MetricDelta {
+  readonly id: MetricId;
   readonly label: string;
   readonly unit: string;
   readonly before: number;

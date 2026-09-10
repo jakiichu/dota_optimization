@@ -52,7 +52,24 @@ export interface SessionSummary {
 
 export type Verdict = 'better' | 'worse' | 'same';
 
+/**
+ * Устойчивое имя метрики.
+ *
+ * Отдельно от ярлыка, потому что на метрику ссылаются снаружи: предсказание
+ * рекомендации называет ту, которая должна сдвинуться. По ярлыку такая ссылка
+ * ломалась бы от любой правки текста — молча и незаметно.
+ */
+export type MetricId =
+  | 'fps'
+  | 'frameTimeP50'
+  | 'frameTimeP99'
+  | 'frameTimeP999'
+  | 'pacing'
+  | 'stutters'
+  | 'inputLatency';
+
 export interface MetricDelta {
+  readonly id: MetricId;
   readonly label: string;
   readonly unit: string;
   readonly before: number;
@@ -84,6 +101,7 @@ export interface SessionComparison {
 }
 
 interface MetricSpec {
+  readonly id: MetricId;
   readonly label: string;
   readonly unit: string;
   readonly lowerIsBetter: boolean;
@@ -99,6 +117,7 @@ interface MetricSpec {
  */
 const METRICS: readonly MetricSpec[] = [
   {
+    id: 'fps',
     label: 'Средний FPS',
     unit: '',
     lowerIsBetter: false,
@@ -106,6 +125,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.averageFps,
   },
   {
+    id: 'frameTimeP50',
     label: 'Медиана кадра',
     unit: 'мс',
     lowerIsBetter: true,
@@ -113,6 +133,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.frameTime.p50,
   },
   {
+    id: 'frameTimeP99',
     label: 'p99 кадра',
     unit: 'мс',
     lowerIsBetter: true,
@@ -120,6 +141,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.frameTime.p99,
   },
   {
+    id: 'frameTimeP999',
     label: 'p99.9 кадра',
     unit: 'мс',
     lowerIsBetter: true,
@@ -127,6 +149,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.frameTime.p999,
   },
   {
+    id: 'pacing',
     label: 'Времени в рваном ритме',
     unit: '%',
     lowerIsBetter: true,
@@ -134,6 +157,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.pacingTimeShare * 100,
   },
   {
+    id: 'stutters',
     label: 'Статтеров в минуту',
     unit: '',
     lowerIsBetter: true,
@@ -141,6 +165,7 @@ const METRICS: readonly MetricSpec[] = [
     of: (session) => session.stuttersPerMinute,
   },
   {
+    id: 'inputLatency',
     label: 'Инпут-лаг p99',
     unit: 'мс',
     lowerIsBetter: true,
@@ -155,10 +180,10 @@ const METRICS: readonly MetricSpec[] = [
  * Средний FPS сюда не входит намеренно: ограничитель кадров опускает его и
  * одновременно выравнивает ритм, и по FPS такая правка выглядела бы провалом.
  */
-const DECIDING_METRICS = new Set([
-  'p99 кадра',
-  'Статтеров в минуту',
-  'Времени в рваном ритме',
+export const DECIDING_METRICS: ReadonlySet<MetricId> = new Set<MetricId>([
+  'frameTimeP99',
+  'stutters',
+  'pacing',
 ]);
 
 export function compareSessions(
@@ -203,6 +228,7 @@ function compareMetric(
   const share = from === 0 ? 0 : Math.abs(delta) / Math.abs(from);
 
   return {
+    id: spec.id,
     label: spec.label,
     unit: spec.unit,
     before: from,
@@ -222,7 +248,7 @@ function judge(delta: number, share: number, spec: MetricSpec): Verdict {
 }
 
 function overallVerdict(metrics: readonly MetricDelta[]): Verdict {
-  const deciding = metrics.filter((metric) => DECIDING_METRICS.has(metric.label));
+  const deciding = metrics.filter((metric) => DECIDING_METRICS.has(metric.id));
   const better = deciding.filter((metric) => metric.verdict === 'better').length;
   const worse = deciding.filter((metric) => metric.verdict === 'worse').length;
 
@@ -239,7 +265,7 @@ function overallVerdict(metrics: readonly MetricDelta[]): Verdict {
  * в пределах разброса.
  */
 function describe(verdict: Verdict, metrics: readonly MetricDelta[]): string {
-  const deciding = metrics.filter((metric) => DECIDING_METRICS.has(metric.label));
+  const deciding = metrics.filter((metric) => DECIDING_METRICS.has(metric.id));
   const moved = deciding.filter((metric) => metric.verdict !== 'same');
 
   if (moved.length === 0) {

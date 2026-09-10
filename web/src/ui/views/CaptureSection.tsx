@@ -191,6 +191,7 @@ function CaptureReport({
           порядок читается как советы, к которым для солидности приложили графики. */}
       <RecommendationPanel
         recommendations={capture.recommendations}
+        sessionId={capture.sessionId}
         onOpenInConfig={onOpenInConfig}
       />
     </>

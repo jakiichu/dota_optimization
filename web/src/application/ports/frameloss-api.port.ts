@@ -5,6 +5,8 @@ import type {
   Comparison,
   ConfigEdit,
   GameConfig,
+  Hypothesis,
+  RecommendationKind,
   ReplayRun,
   ReplayRunState,
   SensorSample,
@@ -39,6 +41,14 @@ export interface FramelossApi {
   fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions>;
   /** Запускает игру с выбранным повтором. */
   launchReplayRun(run: ReplayRun): Promise<ReplayRunState>;
+
+  /** Гипотезы: заведённые, проверенные и их приговоры. */
+  fetchHypotheses(signal: AbortSignal): Promise<readonly Hypothesis[]>;
+  /** Заводит гипотезу по рекомендации из записи. */
+  recordHypothesis(sessionId: string, kind: RecommendationKind): Promise<Hypothesis>;
+  /** Объявляет запись «после» и получает приговор. */
+  settleHypothesis(id: string, afterSessionId: string): Promise<Hypothesis>;
+  forgetHypothesis(id: string): Promise<readonly Hypothesis[]>;
 
   fetchConfig(signal: AbortSignal): Promise<GameConfig>;
   /** Точечные правки поверх текущего файла — так комментарии остаются на месте. */

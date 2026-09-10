@@ -3,6 +3,7 @@ import { useComparison, useSessions } from '../../application/queries.ts';
 import type { Comparison, SessionSummary } from '../../domain/models.ts';
 import { VERDICT_COLOR, VERDICT_LABEL } from '../../domain/presentation.ts';
 import { dateTime, seconds, signed, withUnit } from '../../domain/formatting.ts';
+import { HypothesisPanel } from '../components/HypothesisPanel.tsx';
 import {
   EmptyState,
   ErrorState,
@@ -39,6 +40,7 @@ export function CompareSection(): React.JSX.Element {
     return (
       <>
         <SectionHeader title="Сравнение" subtitle="до и после правки" />
+        <HypothesisPanel />
         <EmptyState>
           Нужны минимум две записи, сейчас {sessions.data.length}. Сделайте вторую в
           разделе «Запись кадров» — до и после изменения настройки.
@@ -54,6 +56,10 @@ export function CompareSection(): React.JSX.Element {
         subtitle="до и после правки"
         stale={comparison.isFetching}
       />
+
+      {/* Гипотезы первыми: это ответ на вопрос, который человек задал сам,
+          а всё, что ниже, — сравнение двух записей вообще. */}
+      <HypothesisPanel />
 
       <div className="capture-form">
         <label>

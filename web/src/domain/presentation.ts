@@ -3,6 +3,7 @@ import type {
   Confidence,
   CvarImpact,
   EvidenceKind,
+  HypothesisOutcome,
   NetworkSeverity,
   NoteSeverity,
   PacingSeverity,
@@ -190,6 +191,29 @@ export const NOTE_COLOR: Record<NoteSeverity, string> = {
   critical: 'var(--critical)',
   warning: 'var(--warning)',
   info: 'var(--info)',
+};
+
+/**
+ * Приговор гипотезе.
+ *
+ * «Не подтвердилась» и «опровергнута» — разные вещи, и сливать их нельзя.
+ * Первое значит «правка не сделала ничего», второе — «сделала хуже», и
+ * действия по ним тоже разные.
+ */
+export const OUTCOME_LABEL: Record<HypothesisOutcome, string> = {
+  confirmed: 'Подтвердилась',
+  refuted: 'Опровергнута',
+  'no-change': 'Не подтвердилась',
+  'not-comparable': 'Проверить нельзя',
+  'not-measured': 'Проверять нечем',
+};
+
+export const OUTCOME_COLOR: Record<HypothesisOutcome, string> = {
+  confirmed: 'var(--ok)',
+  refuted: 'var(--critical)',
+  'no-change': 'var(--warning)',
+  'not-comparable': 'var(--unknown)',
+  'not-measured': 'var(--unknown)',
 };
 
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {
