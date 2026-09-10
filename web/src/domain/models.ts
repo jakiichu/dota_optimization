@@ -357,9 +357,15 @@ export interface ReplayRun {
   readonly label: string;
 }
 
+export type ReplayRunStatus = 'idle' | 'starting' | 'running';
+
 export interface ReplayRunState {
-  /** Прогон, который идёт прямо сейчас. `null` — игру запускали не мы. */
+  /** `starting` — Steam попросили открыть игру, процесса ещё нет. */
+  readonly status: ReplayRunStatus;
+  /** Прогон, который идёт или запускается. `null` — запускали не мы. */
   readonly current: ReplayRun | null;
+  /** Сколько секунд ждём появления игры. */
+  readonly waitingSeconds: number | null;
   readonly configPath: string | null;
   readonly steps: readonly string[];
   /** Команда для консоли, если движок не остановился на тике. */

@@ -59,7 +59,11 @@ export function ReplayRunPanel(): React.JSX.Element {
       <div className="card-head">
         <span className="card-title">Эталонный прогон</span>
         <span className="card-note">
-          {options.state.gameRunning ? 'Dota запущена' : 'Dota закрыта'}
+          {options.state.status === 'starting'
+            ? 'запускаю Dota…'
+            : options.state.gameRunning
+              ? 'Dota запущена'
+              : 'Dota закрыта'}
         </span>
       </div>
 
@@ -239,8 +243,19 @@ function RunningNow({ options }: { options: BenchmarkOptions }): React.JSX.Eleme
   const run = options.state.current;
   if (run === null) return <></>;
 
+  const starting = options.state.status === 'starting';
+
   return (
     <div className="run-active">
+      {/* Steam поднимает игру десятки секунд. Молчать всё это время — значит
+          заставлять человека гадать, нажалась кнопка или нет. */}
+      {starting && (
+        <div className="run-starting">
+          Прошу Steam открыть Dota с этим повтором…
+          {options.state.waitingSeconds !== null && ` ${options.state.waitingSeconds} с`}
+        </div>
+      )}
+
       <div className="run-scene">
         Запись будет помечена сценой: повтор <code>{run.replayFile}</code>
         {run.startTick !== null && (

@@ -19,11 +19,31 @@ import type { GameLauncher } from '../ports/game-launcher.port.ts';
  * следующая запись снова будет «сценой не указана». Помечать живой матч как
  * повтор, потому что час назад запускали прогон, — ровно та ошибка, из-за
  * которой всё это и затевалось.
+ *
+ * Но «пока идёт игра» начинается не сразу. Steam поднимает Dota десятки секунд,
+ * и первая же проверка после запуска не находит процесса. Первая версия на этом
+ * и ломалась: она стирала только что заведённый прогон, интерфейс показывал
+ * пустоту, и человек справедливо решал, что кнопка не работает. Хуже того — к
+ * моменту появления игры прогон был уже забыт, и запись оставалась без сцены.
+ *
+ * Поэтому у прогона три состояния, а не два: пока игра не появилась, он
+ * «запускается», и забывается только если так и не появился.
  */
 
+export type ReplayRunStatus =
+  /** Ничего не запущено. */
+  | 'idle'
+  /** Steam попросили открыть игру, процесса ещё нет. */
+  | 'starting'
+  /** Игра идёт. */
+  | 'running';
+
 export interface ReplayRunState {
-  /** Прогон, который сейчас идёт. `null` — игра не запущена нами. */
+  readonly status: ReplayRunStatus;
+  /** Прогон, который сейчас идёт или запускается. `null` — запускали не мы. */
   readonly current: ReplayRun | null;
+  /** Сколько секунд ждём появления игры. `null` — не ждём. */
+  readonly waitingSeconds: number | null;
   /** Куда положен файл команд. */
   readonly configPath: string | null;
   /** Что человеку сделать руками. */
@@ -41,18 +61,33 @@ export interface ReplayRunOptions {
 }
 
 const NOTHING_RUNNING: ReplayRunState = {
+  status: 'idle',
   current: null,
+  waitingSeconds: null,
   configPath: null,
   steps: [],
   manualSeek: null,
   gameRunning: false,
 };
 
+/**
+ * Сколько ждём появления игры после просьбы к Steam.
+ *
+ * Три минуты: холодный запуск Steam с обновлением библиотеки и загрузкой Dota
+ * столько и занимает. Не дождавшись, честно говорим об этом — молча забыть
+ * прогон значит вернуть ту же пустоту, из-за которой кнопка казалась сломанной.
+ */
+const STARTUP_GRACE_MS = 3 * 60 * 1000;
+
 export class StartReplayRun {
   readonly #launcher: GameLauncher;
   #current: ReplayRun | null = null;
   #configPath: string | null = null;
   #steps: readonly string[] = [];
+  /** Когда попросили Steam открыть игру. */
+  #askedAt = 0;
+  /** Видели ли мы процесс игры после этой просьбы. */
+  #seenRunning = false;
 
   constructor(launcher: GameLauncher) {
     this.#launcher = launcher;
@@ -82,6 +117,8 @@ export class StartReplayRun {
     this.#configPath = await this.#launcher.launch(script.configLines, script.launchArgs);
     this.#current = run;
     this.#steps = script.steps;
+    this.#askedAt = Date.now();
+    this.#seenRunning = false;
 
     return this.state();
   }
@@ -89,7 +126,9 @@ export class StartReplayRun {
   /**
    * Сцена текущего прогона — то, чем помечать запись.
    *
-   * `null`, если игра закрыта: прогон закончился вместе с ней.
+   * `null`, если игра закрыта: прогон закончился вместе с ней. Пока игра только
+   * поднимается, сцена уже известна — записывать всё равно нечего, но и терять
+   * её незачем.
    */
   async currentRun(): Promise<ReplayRun | null> {
     return (await this.state()).current;
@@ -97,22 +136,38 @@ export class StartReplayRun {
 
   async state(): Promise<ReplayRunState> {
     const gameRunning = await this.#launcher.isGameRunning();
-    if (!gameRunning) {
-      this.#current = null;
-      this.#steps = [];
+    if (gameRunning) this.#seenRunning = true;
+
+    // Игру ещё не видели, и ждём мы недолго — значит она поднимается.
+    const waited = Date.now() - this.#askedAt;
+    const starting =
+      !gameRunning && this.#current !== null && !this.#seenRunning && waited < STARTUP_GRACE_MS;
+
+    if (!gameRunning && !starting) {
+      this.#forget();
       return NOTHING_RUNNING;
     }
+
     if (this.#current === null) {
       // Игра идёт, но запускали её не мы — сцену мы не знаем и врать не станем.
-      return { ...NOTHING_RUNNING, gameRunning: true };
+      return { ...NOTHING_RUNNING, status: 'running', gameRunning: true };
     }
 
     return {
+      status: starting ? 'starting' : 'running',
       current: this.#current,
+      waitingSeconds: starting ? Math.round(waited / 1000) : null,
       configPath: this.#configPath,
       steps: this.#steps,
       manualSeek: manualSeekCommand(this.#current),
-      gameRunning: true,
+      gameRunning,
     };
+  }
+
+  #forget(): void {
+    this.#current = null;
+    this.#steps = [];
+    this.#seenRunning = false;
+    this.#askedAt = 0;
   }
 }

@@ -31,9 +31,8 @@ class FakeLauncher implements GameLauncher {
 
   launch(configLines: readonly string[], launchArgs: readonly string[]): Promise<string> {
     this.launched = { lines: configLines, args: launchArgs };
-    // Steam открывает игру не мгновенно, но для сценария важно только то, что
-    // после запуска она считается идущей.
-    this.running = true;
+    // Steam открывает игру десятки секунд: сразу после запуска процесса ещё
+    // нет, и именно на этом ломалась первая версия.
     return Promise.resolve('C:/dota/cfg/frameloss-bench.cfg');
   }
 }
@@ -52,10 +51,38 @@ describe('StartReplayRun', () => {
     expect(launcher.launched).toBeNull();
   });
 
+  it('не забывает прогон, пока Steam поднимает игру', async () => {
+    // Первая версия стирала прогон первой же проверкой: процесса ещё нет,
+    // значит «ничего не запущено». Интерфейс показывал пустоту, человек решал,
+    // что кнопка не работает, а запись потом оставалась без сцены.
+    const launcher = new FakeLauncher();
+    const run = new StartReplayRun(launcher);
+
+    const state = await run.execute(RUN);
+
+    expect(state.status).toBe('starting');
+    expect(state.current).toEqual(RUN);
+    expect(await run.currentRun()).toEqual(RUN);
+  });
+
+  it('переходит в «идёт», когда игра появилась', async () => {
+    const launcher = new FakeLauncher();
+    const run = new StartReplayRun(launcher);
+    await run.execute(RUN);
+
+    launcher.running = true;
+
+    const state = await run.state();
+    expect(state.status).toBe('running');
+    expect(state.current).toEqual(RUN);
+  });
+
   it('после запуска знает сцену сам, без слов человека', async () => {
-    const run = new StartReplayRun(new FakeLauncher());
+    const launcher = new FakeLauncher();
+    const run = new StartReplayRun(launcher);
 
     await run.execute(RUN);
+    launcher.running = true;
 
     expect(await run.currentRun()).toEqual(RUN);
   });
@@ -67,6 +94,9 @@ describe('StartReplayRun', () => {
     const run = new StartReplayRun(launcher);
     await run.execute(RUN);
 
+    // Игра успела появиться и закрыться: это уже конец прогона, а не запуск.
+    launcher.running = true;
+    await run.state();
     launcher.running = false;
 
     expect(await run.currentRun()).toBeNull();
