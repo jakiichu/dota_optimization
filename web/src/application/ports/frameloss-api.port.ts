@@ -35,6 +35,13 @@ export interface CaptureRequest {
  * кнопки.
  */
 export interface FramelossApi {
+  /**
+   * Версия сборки.
+   *
+   * Отдельным запросом, а не полем в аудите: версия — свойство приложения, а не
+   * машины, и подмешивать её к снимку железа значило бы однажды искать её там.
+   */
+  fetchVersion(signal?: AbortSignal): Promise<string>;
   fetchAudit(signal: AbortSignal): Promise<Audit>;
   fetchSessions(signal: AbortSignal): Promise<readonly SessionSummary[]>;
   fetchComparison(

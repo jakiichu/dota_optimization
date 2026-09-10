@@ -27,6 +27,7 @@ import type { CaptureRequest } from './ports/frameloss-api.port.ts';
 
 /** Ключи кеша в одном месте: разъехавшиеся ключи — это молча протухший кеш. */
 export const queryKeys = {
+  version: ['version'] as const,
   audit: ['audit'] as const,
   sessions: ['sessions'] as const,
   comparison: (beforeId: string, afterId: string) =>
@@ -50,6 +51,16 @@ const SESSIONS_STALE_MS = 60 * 1000;
 
 /** Разбор сохранённой записи не меняется вовсе, пока не сменились метрики. */
 const ANALYSIS_STALE_MS = 10 * 60 * 1000;
+
+/** Версия сборки. За время работы приложения не меняется, поэтому не устаревает. */
+export function useVersion(): UseQueryResult<string> {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.version,
+    queryFn: ({ signal }) => api.fetchVersion(signal),
+    staleTime: Infinity,
+  });
+}
 
 export function useAudit(): UseQueryResult<Audit> {
   const api = useApi();

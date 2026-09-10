@@ -33,6 +33,7 @@ import {
 import { StartReplayRun } from '../application/use-cases/start-replay-run.ts';
 import { SteamGameLauncher } from '../infrastructure/game/steam-game.launcher.ts';
 import { RESOURCES } from '../infrastructure/paths/resources.ts';
+import { buildVersion } from '../infrastructure/paths/version.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -103,7 +104,9 @@ const hypotheses = new TrackHypotheses(
  */
 const healthRoute: JsonRoute = {
   path: HEALTH_PATH,
-  handle: () => Promise.resolve({ app: APP_ID, pid: process.pid }),
+  // Версия здесь же: по этому адресу приложение и так представляется, а
+  // «какая у тебя сборка» — первый вопрос при разборе чужого отчёта.
+  handle: () => Promise.resolve({ app: APP_ID, pid: process.pid, version: buildVersion() }),
 };
 
 /**

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useAudit, useSessions } from '../application/queries.ts';
+import { useAudit, useSessions, useVersion } from '../application/queries.ts';
 import { LoadingBar } from './layout/LoadingBar.tsx';
 import { Sidebar, type SectionId } from './layout/Sidebar.tsx';
 import type { ConfigChange } from '../domain/models.ts';
@@ -39,6 +39,7 @@ export function AppShell(): React.JSX.Element {
   // Оба запроса читаются из кеша: здесь они нужны только ради значков в меню и
   // сведений о машине, и своего сетевого обращения не добавляют.
   const audit = useAudit();
+  const version = useVersion();
   const sessions = useSessions();
 
   const actionable =
@@ -54,6 +55,7 @@ export function AppShell(): React.JSX.Element {
         active={section}
         onSelect={setSection}
         machine={audit.data?.machine}
+        version={version.data}
         badges={{
           audit: actionable !== undefined && actionable > 0 ? String(actionable) : undefined,
           compare: sessions.data === undefined ? undefined : String(sessions.data.length),

@@ -25,6 +25,11 @@ import type {
  * про это не знают вовсе — они видят только порт.
  */
 export class HttpFramelossApi implements FramelossApi {
+  async fetchVersion(signal: AbortSignal): Promise<string> {
+    const health = await getJson<{ version?: string }>('/api/health', signal);
+    return health.version ?? 'неизвестна';
+  }
+
   async fetchAudit(signal: AbortSignal): Promise<Audit> {
     return getJson<Audit>('/api/audit', signal);
   }

@@ -1100,6 +1100,15 @@ code {
   margin-top: 12px;
 }
 
+.sidebar-version {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .metric-note {
   display: block;
   color: var(--muted);

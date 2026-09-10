@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { ensurePresentMon } from './fetch-presentmon.mjs';
+import { buildVersion } from './version.mjs';
 
 /**
  * Собирает приложение в папку, которую можно скопировать на любую машину с
@@ -19,6 +21,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BUILD = join(ROOT, 'build');
 const OUT = join(ROOT, 'release');
 const EXE_NAME = 'frameloss.exe';
+const VERSION = buildVersion();
 
 /**
  * `shell: true` нужен только для npm и dotnet — это .cmd-обёртки, напрямую они
@@ -98,7 +101,10 @@ await build({
   legalComments: 'none',
   // Приложение узнаёт, что оно собрано, отсюда: ресурсы лежат рядом с exe, а
   // не в дереве исходников.
-  define: { FRAMELOSS_PACKAGED: 'true' },
+  define: {
+    FRAMELOSS_PACKAGED: 'true',
+    FRAMELOSS_VERSION: JSON.stringify(VERSION),
+  },
   // `import.meta` в CommonJS не существует — мы это знаем и обрабатываем.
   // Предупреждение об этом каждый раз выглядит как поломка сборки.
   logOverride: { 'empty-import-meta': 'silent' },
@@ -160,20 +166,27 @@ cpSync(
 );
 cpSync(join(sidecarOut, 'frameloss-sidecar.exe'), join(OUT, 'frameloss-sidecar.exe'));
 
-const presentMon = join(ROOT, 'tools', 'presentmon', 'PresentMon.exe');
-if (existsSync(presentMon)) {
+// Достаём сами, если его нет: единственный ручной шаг между «склонировал» и
+// «работает» был именно здесь, а шаг, о котором надо помнить, однажды забудут.
+const presentMon = await ensurePresentMon();
+if (presentMon !== null) {
   cpSync(presentMon, join(OUT, 'PresentMon.exe'));
 } else {
   process.stdout.write(
-    'PresentMon.exe не найден — запись кадров в сборке работать не будет.\n' +
-      'Как его получить: tools/presentmon/README.md\n',
+    'PresentMon получить не удалось — запись кадров в сборке работать не будет.\n' +
+      'Положите его руками: tools/presentmon/README.md\n',
   );
 }
 
 writeFileSync(join(OUT, 'ЧИТАЙ.txt'), readmeText(), 'utf8');
 
 step('Готово');
-process.stdout.write(`Папка со сборкой: ${OUT}\nЗапуск: ${EXE_NAME}\n`);
+process.stdout.write(
+  `Версия: ${VERSION}
+Папка со сборкой: ${OUT}
+Запуск: ${EXE_NAME}
+`,
+);
 
 /**
  * Очищает папку сборки.
@@ -203,9 +216,8 @@ function clearOutputFolder() {
 }
 
 function readmeText() {
-  const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
   return [
-    `frameloss ${version} — диагностика потерь кадров`,
+    `frameloss ${VERSION} — диагностика потерь кадров`,
     '',
     'Запуск: frameloss.exe (двойным щелчком). Откроется браузер.',
     '',

@@ -21,10 +21,13 @@ export function Sidebar({
   onSelect,
   machine,
   badges,
+  version,
 }: {
   active: SectionId;
   onSelect: (id: SectionId) => void;
   machine: Machine | undefined;
+  /** Версия сборки. `undefined` — ещё не спросили. */
+  version: string | undefined;
   /** Значок у раздела: число находок, число записей. */
   badges: Readonly<Partial<Record<SectionId, string | undefined>>>;
 }): React.JSX.Element {
@@ -66,6 +69,10 @@ export function Sidebar({
           )}
         </div>
       )}
+
+      {/* Версия внизу и всегда на виду: сборку раздают людям, и первый вопрос
+          к чужому отчёту — «а версия какая». */}
+      {version !== undefined && <div className="sidebar-version">frameloss {version}</div>}
     </aside>
   );
 }

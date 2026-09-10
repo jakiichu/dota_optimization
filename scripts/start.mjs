@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { ensurePresentMon } from './fetch-presentmon.mjs';
 
 /**
  * Единственная команда запуска: `npm start`.
@@ -54,6 +55,16 @@ for (const step of STEPS) {
     process.stderr.write(`Не удалось собрать ${step.what}.\n`);
     process.exit(1);
   }
+}
+
+// PresentMon достаём сами: без него запись кадров молча не работает, а
+// понимает это человек уже посреди игры. Не вышло — не беда: аудит,
+// показания и разбор сохранённых записей от него не зависят.
+if ((await ensurePresentMon()) === null) {
+  process.stdout.write(
+    'PresentMon получить не удалось — запись кадров будет недоступна.\n' +
+      'Положите его руками: tools/presentmon/README.md\n\n',
+  );
 }
 
 const server = spawn(process.execPath, [join(ROOT, 'src', 'main', 'server.ts'), '--open'], {
