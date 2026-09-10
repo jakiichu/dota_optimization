@@ -210,6 +210,7 @@ describe('recommend', () => {
         ],
         cpu: null,
         network: [],
+        processes: null,
         errors: [],
       },
     ];
@@ -244,6 +245,7 @@ describe('recommend', () => {
           status: null,
         },
       ],
+      processes: null,
       errors: [],
     }));
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Correlation } from '../../domain/models.ts';
+import type { BackgroundProcess, Correlation } from '../../domain/models.ts';
 import { EVIDENCE_COLOR } from '../../domain/presentation.ts';
 
 /**
@@ -13,10 +13,12 @@ export function CorrelationPanel({
   correlation,
   stutterCount,
   sensorSampleCount,
+  background,
 }: {
   correlation: Correlation;
   stutterCount: number;
   sensorSampleCount: number;
+  background: readonly BackgroundProcess[];
 }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
 
@@ -63,6 +65,28 @@ export function CorrelationPanel({
               <li key={limitation}>{limitation}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Обстановка, а не улика, и стоит она отдельно от списка причин.
+          Постоянная нагрузка одинакова в плохих кадрах и в хороших, а значит ни
+          одного из них не объясняет — но на вопрос «что вообще крутилось»
+          отвечает она, и молчать о шести процентах, съедаемых всю игру,
+          странно. */}
+      {background.length > 0 && (
+        <div className="background-load">
+          <div className="background-head">Занимали процессор всю запись</div>
+          {background.map((entry) => (
+            <div key={entry.name} className="background-row">
+              <span className="background-name">{entry.name}</span>
+              <span className="background-usual">{entry.usualPercent.toFixed(0)}%</span>
+              <span className="muted">в пике {entry.peakPercent.toFixed(0)}%</span>
+            </div>
+          ))}
+          <div className="muted">
+            Ровная нагрузка ни один рывок не объясняет — она одинакова и в
+            плохих кадрах, и в хороших. Но процессор она занимает.
+          </div>
         </div>
       )}
 

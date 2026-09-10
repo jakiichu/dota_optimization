@@ -1,3 +1,8 @@
+import {
+  buildProcessTimeline,
+  spikeNear,
+  type ProcessTimeline,
+} from './background-load.ts';
 import type { Stutter } from './frame-metrics.ts';
 import type { FrameSample } from './frame-sample.ts';
 import type { GpuReading, SensorSample } from './sensor-sample.ts';
@@ -30,6 +35,7 @@ const VRAM_GROWTH_MIB = 64;
 const NEIGHBOUR_FRAMES = 5;
 
 export type EvidenceKind =
+  | 'background-process'
   | 'gpu-work'
   | 'cpu-work'
   | 'waiting'
@@ -40,6 +46,7 @@ export type EvidenceKind =
   | 'throttling';
 
 export const EVIDENCE_LABEL: Record<EvidenceKind, string> = {
+  'background-process': 'Рядом работала посторонняя программа',
   'gpu-work': 'Кадр целиком занят работой GPU',
   'cpu-work': 'Кадр целиком занят работой CPU',
   waiting: 'Кадр ждал, а не работал',
@@ -67,15 +74,20 @@ export interface CorrelatedStutter {
  * Нужен там, где на статтер приходится одна пометка, а улик у него несколько:
  * на графике точку можно покрасить только в один цвет.
  *
- * Первым идёт «кадр ждал» — самая неприятная и самая полезная улика: её не
- * видно ни в одном счётчике загрузки, и без разбора кадра о ней не узнать
- * вовсе. Дальше то, о чём железо сообщило само. Замыкают обстоятельства вокруг
- * кадра: они сопутствуют, но ничего не объясняют.
+ * Первой идёт посторонняя программа: она единственная называет виновника по
+ * имени, а остальные улики называют симптом. «Кадр ждал» говорит, что работу
+ * делал кто-то другой, — «в ту же секунду антивирус занял треть процессора»
+ * говорит кто именно, и это разница между наблюдением и ответом.
+ *
+ * Следом «кадр ждал»: её не видно ни в одном счётчике загрузки, и без разбора
+ * кадра о ней не узнать вовсе. Дальше то, о чём железо сообщило само. Замыкают
+ * обстоятельства вокруг кадра: они сопутствуют, но ничего не объясняют.
  *
  * Полный список улик от этого никуда не девается — он показывается рядом.
  * Порядок решает только, какого цвета точка.
  */
 const EVIDENCE_PRIORITY: readonly EvidenceKind[] = [
+  'background-process',
   'waiting',
   'throttling',
   'present-mode',
@@ -114,18 +126,21 @@ export function correlateStutters(
   frames: readonly FrameSample[],
   stutters: readonly Stutter[],
   sensors: readonly SensorSample[],
+  /** Имя процесса игры: его собственная работа уже разобрана по кадру. */
+  gameProcess = '',
 ): CorrelationReport {
   const timeline = buildSensorTimeline(sensors);
+  const processes = buildProcessTimeline(sensors, gameProcess);
   const correlated = stutters.map((stutter) => ({
     stutter,
-    evidence: collectEvidence(frames, stutter, timeline),
+    evidence: collectEvidence(frames, stutter, timeline, processes),
   }));
 
   return {
     stutters: correlated,
     tally: tally(correlated),
     unexplained: correlated.filter((entry) => entry.evidence.length === 0).length,
-    limitations: describeLimitations(frames, timeline),
+    limitations: describeLimitations(frames, timeline, processes),
   };
 }
 
@@ -135,6 +150,7 @@ function collectEvidence(
   frames: readonly FrameSample[],
   stutter: Stutter,
   timeline: SensorTimeline | null,
+  processes: ProcessTimeline | null,
 ): Evidence[] {
   const frame = frames[stutter.frameIndex];
   if (frame === undefined) return [];
@@ -145,7 +161,42 @@ function collectEvidence(
   if (timeline !== null && frame.qpcMs !== null) {
     evidence.push(...fromSensors(timeline, frame.qpcMs));
   }
+  if (processes !== null && frame.qpcMs !== null) {
+    evidence.push(...fromProcesses(processes, frame.qpcMs));
+  }
   return evidence;
+}
+
+/**
+ * Кто ещё занимал процессор в ту же секунду.
+ *
+ * Формулировка осторожная намеренно: «рядом работала», а не «из-за неё». Мы
+ * видим совпадение по времени с точностью до секунды — вывод о причине из
+ * этого не следует, и делать его за человека мы не будем. Зато числа рядом:
+ * сколько программа заняла сейчас и сколько занимает обычно за эту же запись.
+ */
+function fromProcesses(processes: ProcessTimeline, frameQpcMs: number): Evidence[] {
+  const spike = spikeNear(processes, frameQpcMs);
+  if (spike === null) return [];
+
+  const many = spike.processCount > 1 ? ` (${processCountLabel(spike.processCount)})` : '';
+  return [
+    {
+      kind: 'background-process',
+      detail:
+        `В ту же секунду ${spike.name}${many} занимал ${spike.cpuPercent.toFixed(0)}% ` +
+        `процессора при обычных для него ${spike.usualPercent.toFixed(0)}%.`,
+    },
+  ];
+}
+
+/** «2 процесса», «5 процессов»: строка попадает человеку на глаза как есть. */
+function processCountLabel(count: number): string {
+  const tens = count % 100;
+  const ones = count % 10;
+  if (tens >= 11 && tens <= 14) return `${count} процессов`;
+  if (ones >= 2 && ones <= 4) return `${count} процесса`;
+  return `${count} процессов`;
 }
 
 /**
@@ -385,6 +436,7 @@ function tally(correlated: readonly CorrelatedStutter[]): CauseTally[] {
 function describeLimitations(
   frames: readonly FrameSample[],
   timeline: SensorTimeline | null,
+  processes: ProcessTimeline | null,
 ): string[] {
   const limitations: string[] = [];
   const first = frames[0];
@@ -403,6 +455,11 @@ function describeLimitations(
     limitations.push('Показания сенсоров за время записи не собраны.');
   } else if (timeline.medianUtilization === null) {
     limitations.push('Загрузка GPU не читалась — провалы загрузки не проверялись.');
+  }
+  if (processes === null) {
+    limitations.push(
+      'Список занятых процессов не собран — кто ещё занимал процессор, не проверялось.',
+    );
   }
 
   return limitations;

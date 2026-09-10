@@ -39,6 +39,7 @@ function toView(frames: FrameCapture, window?: { fromSeconds: number; toSeconds:
     network: analyzeNetworkQuality([]),
     cpuLoad: analyzeCpuLoad([], statistics.bottleneck),
     recommendations: [],
+    background: [],
     sensorSampleCount: 0,
     ...(window === undefined ? {} : { window }),
   });

@@ -55,5 +55,15 @@ public sealed record SensorSample
     /// <summary>Что делал процессор в тот же момент. <c>null</c> — не прочитали.</summary>
     public CpuSensorReading? Cpu { get; init; }
 
+    /// <summary>
+    /// Кто ещё занимал процессор.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> — в этот замер процессы не читались: у них своё разрешение,
+    /// примерно секунда, и сходиться с шагом остальных счётчиков они не обязаны.
+    /// Пустой список — читали, и никто не был занят. Это разные вещи.
+    /// </remarks>
+    public IReadOnlyList<ProcessSensorReading>? Processes { get; init; }
+
     public IReadOnlyList<string> Errors { get; init; } = [];
 }

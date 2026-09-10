@@ -22,6 +22,7 @@ function sample(reading: Reading): SensorSample {
       coreUtilizationPercent: new Array<number>(threads).fill(0),
     },
     network: [],
+    processes: null,
     errors: [],
   };
 }

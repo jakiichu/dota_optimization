@@ -75,6 +75,7 @@ export function createSessionAnalyzeRoute(
           cpuLoad: analyzed.cpuLoad,
           recommendations: analyzed.recommendations,
           sensorSampleCount: analyzed.sensorSampleCount,
+          background: analyzed.background,
           ...windowFrom(query),
         }),
         sessionId: analyzed.id,

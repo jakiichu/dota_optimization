@@ -6,6 +6,7 @@ import type {
   CpuReading,
   GpuReading,
   NetworkProbe,
+  ProcessReading,
   SensorSample,
 } from '../../domain/telemetry/sensor-sample.ts';
 import { RESOURCES } from '../paths/resources.ts';
@@ -60,6 +61,7 @@ export function toSensorSample(raw: unknown): SensorSample {
     gpus: asArray(root['gpus']).map(toGpuReading),
     cpu: toCpuReading(root['cpu']),
     network: asArray(root['network']).map(toNetworkProbe),
+    processes: toProcesses(root['processes']),
     errors: asArray(root['errors'])
       .map((entry) => asString(entry))
       .filter((entry): entry is string => entry !== null),
@@ -78,6 +80,25 @@ function toCpuReading(raw: unknown): CpuReading | null {
       .map((entry) => asNumber(entry))
       .filter((entry): entry is number => entry !== null),
   };
+}
+
+/**
+ * `null` — в этот замер процессы не читались.
+ *
+ * Отличать это от пустого списка обязательно: пустой значит «читали, никто не
+ * был занят», а `null` — «не смотрели». Поэтому здесь не `asArray`, который
+ * обе эти вещи превратил бы в `[]`.
+ */
+function toProcesses(raw: unknown): readonly ProcessReading[] | null {
+  if (!Array.isArray(raw)) return null;
+  return raw.map((entry) => {
+    const record = asRecord(entry) ?? {};
+    return {
+      name: asString(record['name']) ?? 'unknown',
+      cpuPercent: asNumber(record['cpuPercent']) ?? 0,
+      processCount: asNumber(record['processCount']) ?? 1,
+    };
+  });
 }
 
 function toNetworkProbe(raw: unknown): NetworkProbe {

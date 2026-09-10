@@ -17,6 +17,7 @@ public sealed class SensorProbe : IDisposable
     private readonly List<string> _errors = [];
     private NetworkProbeSource? _network;
     private CpuSensorSource? _cpu;
+    private ProcessSensorSource? _processes;
 
     public SensorProbe(IEnumerable<IGpuSensorSource> sources)
     {
@@ -44,6 +45,20 @@ public sealed class SensorProbe : IDisposable
         {
             _errors.Add($"{cpu.Name}: {cpuReason}");
             cpu.Dispose();
+        }
+
+        // Кто ещё занимал процессор. Тоже отдельно: у процессов своё разрешение
+        // — примерно секунда, — и подстраиваться под шаг остальных счётчиков им
+        // незачем.
+        var processes = new ProcessSensorSource();
+        if (processes.TryInitialize(out string? processReason))
+        {
+            _processes = processes;
+        }
+        else
+        {
+            _errors.Add($"{processes.Name}: {processReason}");
+            processes.Dispose();
         }
     }
 
@@ -101,6 +116,16 @@ public sealed class SensorProbe : IDisposable
             errors.Add($"cpu: {ex.Message}");
         }
 
+        IReadOnlyList<ProcessSensorReading>? processes = null;
+        try
+        {
+            processes = _processes?.Read();
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"processes: {ex.Message}");
+        }
+
         return new SensorSample
         {
             CapturedAt = DateTimeOffset.UtcNow.ToString("o"),
@@ -108,6 +133,7 @@ public sealed class SensorProbe : IDisposable
             QpcFrequency = Stopwatch.Frequency,
             Gpus = readings,
             Cpu = cpu,
+            Processes = processes,
             Errors = errors,
         };
     }
@@ -123,5 +149,7 @@ public sealed class SensorProbe : IDisposable
         _network = null;
         _cpu?.Dispose();
         _cpu = null;
+        _processes?.Dispose();
+        _processes = null;
     }
 }

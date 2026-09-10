@@ -102,6 +102,7 @@ export const NETWORK_COLOR: Record<NetworkSeverity, string> = {
  * работой GPU» не помещается, а смысл цвета передать надо.
  */
 export const EVIDENCE_SHORT: Record<EvidenceKind, string> = {
+  'background-process': 'мешала другая программа',
   'gpu-work': 'GPU занял кадр',
   'cpu-work': 'CPU занял кадр',
   waiting: 'кадр ждал',
@@ -113,6 +114,7 @@ export const EVIDENCE_SHORT: Record<EvidenceKind, string> = {
 };
 
 export const EVIDENCE_COLOR: Record<EvidenceKind, string> = {
+  'background-process': 'var(--critical)',
   'gpu-work': 'var(--ok)',
   'cpu-work': 'var(--warning)',
   waiting: 'var(--critical)',

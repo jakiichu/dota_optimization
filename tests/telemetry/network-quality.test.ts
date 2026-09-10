@@ -10,6 +10,7 @@ function sample(probes: readonly NetworkProbe[]): SensorSample {
     gpus: [],
     cpu: null,
     network: probes,
+    processes: null,
     errors: [],
   };
 }

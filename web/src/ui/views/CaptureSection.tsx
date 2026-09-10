@@ -306,11 +306,14 @@ function CaptureReport({
 
       <PacingPanel pacing={capture.pacing} />
 
-      {capture.stutterCount > 0 && (
+      {/* Постоянная нагрузка стоит показать и без единого рывка: она отвечает
+          на «что вообще крутилось», а не на «отчего дёрнулось». */}
+      {(capture.stutterCount > 0 || capture.background.length > 0) && (
         <CorrelationPanel
           correlation={capture.correlation}
           stutterCount={capture.stutterCount}
           sensorSampleCount={capture.sensorSampleCount}
+          background={capture.background}
         />
       )}
 

@@ -12,6 +12,7 @@ import {
 } from '../../domain/telemetry/frame-window.ts';
 import type { Recommendation } from '../../domain/gameconfig/recommendations.ts';
 import type { CpuLoadProfile } from '../../domain/telemetry/cpu-load.ts';
+import type { BackgroundProcess } from '../../domain/telemetry/background-load.ts';
 import type { NetworkQuality } from '../../domain/telemetry/network-quality.ts';
 import {
   EVIDENCE_LABEL,
@@ -87,6 +88,8 @@ export interface CaptureView {
   readonly cpuLoad: CpuLoadProfile;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
+  /** Кто занимал процессор всю запись. Не улика, а обстановка. */
+  readonly background: readonly BackgroundProcess[];
 }
 
 /**
@@ -104,6 +107,7 @@ export interface CaptureViewInput {
   readonly cpuLoad: CpuLoadProfile;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
+  readonly background: readonly BackgroundProcess[];
   /**
    * Какой кусок записи показать на графике.
    *
@@ -134,6 +138,7 @@ export function toCaptureView(input: CaptureViewInput): CaptureView {
     cpuLoad: input.cpuLoad,
     recommendations: input.recommendations,
     sensorSampleCount: input.sensorSampleCount,
+    background: input.background,
   };
 }
 

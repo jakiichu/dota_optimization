@@ -114,6 +114,9 @@ describe('FileSessionStore', () => {
   it('дополняет запись полями, которых не было в её версии', async () => {
     // Файл переживает несколько версий модели, а читается как обычный JSON без
     // проверок: замер без поля сети роняет разбор на первом же цикле по нему.
+    // С процессами то же самое, но дополнять их надо не пустым списком, а
+    // `null`: в старой записи их не собирали, и «никто не был занят» по ней
+    // сказать нельзя.
     const saved = await store.save('запись', SCENE, EMPTY_PASSPORT, capture(), []);
     const path = join(directory, `${saved.id}.json`);
 
@@ -127,7 +130,12 @@ describe('FileSessionStore', () => {
     const record = await store.load(saved.id);
 
     expect(record.sensors[0]?.network).toEqual([]);
+    expect(record.sensors[0]?.processes).toBeNull();
     expect(record.scene.kind).toBe('unknown');
+
+    // И весь путь чтения целиком: список пересчитывает сводку новыми метриками,
+    // то есть прогоняет старый замер через все нынешние детекторы.
+    await expect(store.list()).resolves.toHaveLength(1);
   });
 
   it('не даёт идентификатору увести запись в соседний каталог', async () => {

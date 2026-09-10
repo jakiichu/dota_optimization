@@ -1100,6 +1100,39 @@ code {
   margin-top: 12px;
 }
 
+/* --- кто занимал процессор всю запись ------------------------------------ */
+
+.background-load {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+
+.background-head {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.background-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.background-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.background-usual {
+  color: var(--warning);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- рекомендации --- */
 
 .recommendation {

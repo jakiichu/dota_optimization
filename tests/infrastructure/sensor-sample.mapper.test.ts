@@ -64,4 +64,21 @@ describe('toSensorSample', () => {
   it('отказывается разбирать не-объект', () => {
     expect(() => toSensorSample('нет')).toThrow(TypeError);
   });
+  it('отличает несделанный замер процессов от пустого', () => {
+    // `null` — процессы не читались, `[]` — читались, и никто не был занят.
+    // Слить их в пустой массив значило бы выдать «не смотрели» за «чисто».
+    expect(toSensorSample({ ...PDH_ONLY, processes: null }).processes).toBeNull();
+    expect(toSensorSample({ ...PDH_ONLY, processes: [] }).processes).toEqual([]);
+  });
+
+  it('разбирает занятые процессы, сложенные по имени', () => {
+    const sample = toSensorSample({
+      ...PDH_ONLY,
+      processes: [{ name: 'msedgewebview2', cpuPercent: 4.2, processCount: 3 }],
+    });
+
+    expect(sample.processes).toEqual([
+      { name: 'msedgewebview2', cpuPercent: 4.2, processCount: 3 },
+    ]);
+  });
 });

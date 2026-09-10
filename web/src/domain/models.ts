@@ -97,6 +97,7 @@ export interface FramePacing {
 }
 
 export type EvidenceKind =
+  | 'background-process'
   | 'gpu-work'
   | 'cpu-work'
   | 'waiting'
@@ -211,7 +212,21 @@ export interface Capture {
   readonly cpuLoad: CpuLoad;
   readonly recommendations: readonly Recommendation[];
   readonly sensorSampleCount: number;
+  /**
+   * Кто занимал процессор всю запись.
+   *
+   * Не улика: постоянная нагрузка одинакова в плохих кадрах и в хороших, а
+   * значит ни одного из них не выделяет. Но на вопрос «что вообще крутилось»
+   * отвечает она.
+   */
+  readonly background: readonly BackgroundProcess[];
   readonly sessionId: string;
+}
+
+export interface BackgroundProcess {
+  readonly name: string;
+  readonly usualPercent: number;
+  readonly peakPercent: number;
 }
 
 // --- рекомендации -----------------------------------------------------------

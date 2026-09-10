@@ -26,6 +26,17 @@ public static class Program
     /// </summary>
     private const int PrimingDelayMs = 300;
 
+    /// <summary>
+    /// Пауза перед одиночным замером.
+    /// </summary>
+    /// <remarks>
+    /// Дольше, чем в потоке: процессорное время процессов считается по разнице,
+    /// и на трёхстах миллисекундах она вырождается в шум — процесс, получивший
+    /// один квант, выглядит занявшим десятки процентов. У потока следующий
+    /// замер придёт через четверть секунды, а у одиночного второго шанса нет.
+    /// </remarks>
+    private const int ProbeDelayMs = 1000;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -72,7 +83,7 @@ public static class Program
 
         using SensorProbe probe = SensorProbe.CreateDefault();
         ConfigureNetwork(probe, args);
-        await Task.Delay(PrimingDelayMs);
+        await Task.Delay(ProbeDelayMs);
 
         string json = JsonSerializer.Serialize(await probe.SampleAsync(), JsonOptions);
         await File.WriteAllTextAsync(outputPath, json, new UTF8Encoding(false));

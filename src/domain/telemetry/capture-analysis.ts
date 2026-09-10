@@ -5,6 +5,11 @@ import type { FrameCapture } from './frame-sample.ts';
 import { parseGameConfig, type GameConfig } from '../gameconfig/game-config.ts';
 import { UNKNOWN_MACHINE, type MachineContext } from '../gameconfig/machine-context.ts';
 import { recommend, type Recommendation } from '../gameconfig/recommendations.ts';
+import {
+  buildProcessTimeline,
+  steadyLoad,
+  type BackgroundProcess,
+} from './background-load.ts';
 import { analyzeCpuLoad, type CpuLoadProfile } from './cpu-load.ts';
 import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
 import type { SensorSample } from './sensor-sample.ts';
@@ -36,8 +41,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  * 7 — разбирается нагрузка на процессор: занятые потоки и сброс частот.
  * 8 — запись помнит состояние машины, и сравнение показывает, что менялось.
  * 9 — сводка несёт улики: аудит сверяется с записью, не читая кадры.
+ * 10 — видно, кто ещё занимал процессор: улика «кадр ждал» получила имя.
  */
-export const METRICS_VERSION = 9;
+export const METRICS_VERSION = 10;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -65,6 +71,14 @@ export interface CaptureAnalysis {
    * которой она выведена, — обычный совет из интернета.
    */
   readonly recommendations: readonly Recommendation[];
+  /**
+   * Кто занимал процессор всю запись.
+   *
+   * Не улика и в список причин рывков не входит: постоянная нагрузка одинакова
+   * в плохих кадрах и в хороших, а значит ни одного из них не выделяет. Но на
+   * вопрос «что вообще крутилось» отвечает она, и это разная работа.
+   */
+  readonly background: readonly BackgroundProcess[];
 }
 
 export function analyzeCapture(
@@ -80,9 +94,15 @@ export function analyzeCapture(
   machine: MachineContext = UNKNOWN_MACHINE,
 ): CaptureAnalysis {
   const statistics = computeFrameStatistics(capture.frames);
-  const correlation = correlateStutters(capture.frames, statistics.stutters, sensors);
+  const correlation = correlateStutters(
+    capture.frames,
+    statistics.stutters,
+    sensors,
+    capture.applicationName,
+  );
   const network = analyzeNetworkQuality(sensors);
   const cpuLoad = analyzeCpuLoad(sensors, statistics.bottleneck);
+  const processes = buildProcessTimeline(sensors, capture.applicationName);
 
   return {
     statistics,
@@ -90,6 +110,7 @@ export function analyzeCapture(
     network,
     cpuLoad,
     recommendations: recommend({ statistics, correlation, network, cpuLoad, ...machine }),
+    background: processes === null ? [] : steadyLoad(processes),
   };
 }
 

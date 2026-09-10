@@ -74,6 +74,7 @@ function sensorSample(
     ],
     cpu: null,
     network: [],
+    processes: null,
     errors: [],
   };
 }

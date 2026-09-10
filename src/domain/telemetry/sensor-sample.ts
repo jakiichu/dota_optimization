@@ -66,6 +66,21 @@ export interface CpuReading {
   readonly coreUtilizationPercent: readonly number[];
 }
 
+/**
+ * Сколько процессора заняла одна программа за интервал замера.
+ *
+ * Именно программа, а не процесс: браузер с дюжиной вкладок — это дюжина
+ * процессов по три процента, и назвать виновником один из них неверно.
+ * Складывает их по имени сайдкар, до нас доходит уже сумма.
+ */
+export interface ProcessReading {
+  readonly name: string;
+  /** Доля всего процессора, 0…100. */
+  readonly cpuPercent: number;
+  /** Сколько процессов с этим именем сложилось в строку. */
+  readonly processCount: number;
+}
+
 export interface SensorSample {
   readonly capturedAt: string;
   readonly qpcTimestamp: number;
@@ -75,5 +90,13 @@ export interface SensorSample {
   readonly cpu: Maybe<CpuReading>;
   /** Замеры сети в тот же момент. Пусто — сеть не измерялась. */
   readonly network: readonly NetworkProbe[];
+  /**
+   * Кто ещё занимал процессор.
+   *
+   * `null` — в этот замер процессы не читались: у них своё разрешение, около
+   * секунды, и совпадать с шагом остальных счётчиков они не обязаны. Пустой
+   * список — читали, и никто не был занят. Разные вещи.
+   */
+  readonly processes: Maybe<readonly ProcessReading[]>;
   readonly errors: readonly string[];
 }
