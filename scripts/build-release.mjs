@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -180,13 +180,55 @@ if (presentMon !== null) {
 
 writeFileSync(join(OUT, 'ЧИТАЙ.txt'), readmeText(), 'utf8');
 
+step('Складываю архив для раздачи');
+const archive = packForSharing();
+
 step('Готово');
 process.stdout.write(
-  `Версия: ${VERSION}
-Папка со сборкой: ${OUT}
-Запуск: ${EXE_NAME}
-`,
+  [
+    `Версия: ${VERSION}`,
+    `Папка со сборкой: ${OUT}`,
+    archive === null ? null : `Архив для раздачи: ${archive}`,
+    `Запуск: ${EXE_NAME}`,
+    '',
+  ]
+    .filter((line) => line !== null)
+    .join('\n'),
 );
+
+/**
+ * Кладёт сборку в архив с версией в имени.
+ *
+ * Папку из шести файлов передать человеку нечем — её сначала надо чем-то
+ * упаковать, и каждый упакует по-своему. Архив с версией в имени решает сразу
+ * два вопроса: чем делиться и что именно тебе прислали.
+ *
+ * Настоящий одиночный exe был бы честнее по числу файлов, но он весит все 180
+ * МБ, не подписан и распаковывает рядом с собой чужие исполняемые файлы, —
+ * SmartScreen и антивирусы реагируют на такое заметно хуже, чем на архив.
+ *
+ * Не собрался — это не повод ронять сборку: папка на месте и работает.
+ */
+function packForSharing() {
+  const path = join(ROOT, `frameloss-${VERSION}.zip`);
+  rmSync(path, { force: true });
+
+  const result = spawnSync(
+    'powershell',
+    [
+      '-NoProfile',
+      '-Command',
+      `Compress-Archive -Path '${OUT}${sep}*' -DestinationPath '${path}' -CompressionLevel Optimal -Force`,
+    ],
+    { stdio: 'inherit' },
+  );
+
+  if (result.status !== 0 || !existsSync(path)) {
+    process.stderr.write('Архив собрать не удалось — раздавайте папку целиком.\n');
+    return null;
+  }
+  return path;
+}
 
 /**
  * Очищает папку сборки.
