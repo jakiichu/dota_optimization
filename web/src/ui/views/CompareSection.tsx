@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useComparison, useSessions } from '../../application/queries.ts';
-import type { Comparison, PassportChange, SessionSummary } from '../../domain/models.ts';
+import type {
+  Comparison,
+  PassportChange,
+  ProgramPresence,
+  SessionSummary,
+} from '../../domain/models.ts';
 import { VERDICT_COLOR, VERDICT_LABEL } from '../../domain/presentation.ts';
 import { dateTime, seconds, signed, withUnit } from '../../domain/formatting.ts';
 import { HypothesisPanel } from '../components/HypothesisPanel.tsx';
@@ -118,17 +123,45 @@ function SessionPicker({
  */
 function WhatChanged({
   changes,
+  appeared,
+  gone,
 }: {
   changes: readonly PassportChange[];
+  appeared: readonly ProgramPresence[];
+  gone: readonly ProgramPresence[];
 }): React.JSX.Element {
   return (
     <div className="card">
       <div className="card-head">
         <span className="card-title">Что изменилось между записями</span>
-        <span className="card-note">{changes.length}</span>
+        <span className="card-note">{changes.length + appeared.length + gone.length}</span>
       </div>
 
-      {changes.length === 0 ? (
+      {/* Программы стоят рядом с настройками намеренно: настройки объясняют
+          разницу ровно до тех пор, пока в фоне не появилось что-то новое. На
+          живой записи Discord занимал 2.5% процессора — величину, которую не
+          поймает ни один порог, — а кадры стали вдвое длиннее. Проценты тут
+          справка, а не повод: важен сам факт «его не было, а потом он был». */}
+      {(appeared.length > 0 || gone.length > 0) && (
+        <div className="changes" style={{ marginBottom: 12 }}>
+          {appeared.map((program) => (
+            <div key={`+${program.name}`} className="change">
+              <span className="change-label">Появилась программа</span>
+              <code>{program.name}</code>
+              <span className="muted">{program.usualPercent}% CPU</span>
+            </div>
+          ))}
+          {gone.map((program) => (
+            <div key={`-${program.name}`} className="change">
+              <span className="change-label">Больше не работала</span>
+              <code>{program.name}</code>
+              <span className="muted">было {program.usualPercent}% CPU</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {changes.length === 0 && appeared.length === 0 && gone.length === 0 ? (
         <div className="muted">
           Ничего не изменилось — либо настройки те же, либо записи сделаны до того,
           как приложение стало запоминать состояние машины. Во втором случае разницу
@@ -167,7 +200,11 @@ function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX
 
       {/* Что менялось — сразу за вердиктом: без этого человек видит разницу в
           числах и вспоминает по памяти, чем он её вызвал. */}
-      <WhatChanged changes={comparison.changes} />
+      <WhatChanged
+        changes={comparison.changes}
+        appeared={comparison.programsAppeared}
+        gone={comparison.programsGone}
+      />
 
       <div className="card">
       </div>

@@ -7,6 +7,7 @@ import {
 import { compareScenes, describeScene, UNKNOWN_SCENE, type CaptureScene } from './capture-scene.ts';
 import type { BottleneckKind, Percentiles } from './frame-metrics.ts';
 import type { NetworkSeverity } from './network-quality.ts';
+import type { ProgramPresence } from './background-load.ts';
 import type { CauseTally } from './stutter-correlation.ts';
 
 /**
@@ -64,6 +65,18 @@ export interface SessionSummary {
   readonly causes: readonly CauseTally[];
   /** Каким был канал за ту же запись. */
   readonly networkSeverity: NetworkSeverity;
+  /**
+   * Что было запущено во время записи.
+   *
+   * `null` — процессы не собирали, и «ничего не работало» отсюда не следует.
+   *
+   * Лежит рядом с настройками не случайно: настройки объясняют разницу между
+   * записями ровно до тех пор, пока в фоне не появилось что-то новое. На живой
+   * записи Discord занимал 2.5% процессора — величина, которую не поймает ни
+   * один порог, — а кадры стали вдвое длиннее. В процентах CPU этого не видно
+   * вовсе, зато видно в самом факте: его не было, а потом он был.
+   */
+  readonly programs: readonly ProgramPresence[] | null;
   /** Что записывали: без этого сравнение выдаёт разницу сцен за результат. */
   readonly scene: CaptureScene;
   /** Состояние машины на момент записи — чтобы видеть, что между записями поменяли. */
@@ -121,6 +134,10 @@ export interface SessionComparison {
    * меняли, либо записи сделаны до того, как мы стали это запоминать.
    */
   readonly changes: readonly PassportChange[];
+  /** Программы, которых во второй записи не было в первой. */
+  readonly programsAppeared: readonly ProgramPresence[];
+  /** Программы, работавшие в первой записи и не работавшие во второй. */
+  readonly programsGone: readonly ProgramPresence[];
   readonly verdict: Verdict;
   /** Итог одной фразой. */
   readonly summary: string;
@@ -237,6 +254,8 @@ export function compareSessions(
       before.passport ?? EMPTY_PASSPORT,
       after.passport ?? EMPTY_PASSPORT,
     ),
+    programsAppeared: newPrograms(after.programs, before.programs),
+    programsGone: newPrograms(before.programs, after.programs),
     verdict,
     summary: scenes.comparable
       ? describe(verdict, metrics)
@@ -329,6 +348,23 @@ function quote(metric: MetricDelta): string {
  * записей выглядит убедительнее, чем оно есть, и человек примет решение по
  * цифрам, которые ничего не значат.
  */
+/**
+ * Программы, которых нет во втором списке.
+ *
+ * `null` с любой стороны — процессы там не собирали, и разницы не существует:
+ * отсутствие данных нельзя выдавать за «программа не работала». Иначе старая
+ * запись рядом с новой выглядела бы полностью «очистившейся».
+ */
+function newPrograms(
+  from: readonly ProgramPresence[] | null,
+  against: readonly ProgramPresence[] | null,
+): readonly ProgramPresence[] {
+  if (from === null || against === null) return [];
+
+  const known = new Set(against.map((program) => program.name.toLowerCase()));
+  return from.filter((program) => !known.has(program.name.toLowerCase()));
+}
+
 function collectCaveats(before: SessionSummary, after: SessionSummary): string[] {
   const caveats: string[] = [];
 

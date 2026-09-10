@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildProcessTimeline,
+  programsIn,
   spikeNear,
   steadyLoad,
 } from '../../src/domain/telemetry/background-load.ts';
@@ -179,5 +180,51 @@ describe('steadyLoad', () => {
     );
 
     expect(steadyLoad(timeline!)).toEqual([]);
+  });
+});
+
+describe('programsIn', () => {
+  it('видит программу, которую не поймать ни одним порогом по процессору', () => {
+    // Ровно живой случай: Discord занимал 2.5% процессора — мимо всех порогов, —
+    // а кадры стали вдвое длиннее. На APU у него своя цена: общий бюджет питания
+    // и общая память, и в процентах CPU этого не видно вовсе.
+    const timeline = buildProcessTimeline(
+      [
+        sample(1, [process('Discord', 2.5), process('dwm', 2.3)]),
+        sample(2, [process('Discord', 2.4), process('dwm', 2.1)]),
+        sample(3, [process('Discord', 7.1), process('dwm', 2.9)]),
+      ],
+      'dota2.exe',
+    );
+
+    expect(programsIn(timeline!).map((p) => p.name)).toContain('Discord');
+    // При этом «занимали процессор всю запись» о нём молчит — и правильно:
+    // два процента это не нагрузка, а присутствие.
+    expect(steadyLoad(timeline!)).toEqual([]);
+  });
+
+  it('не считает работавшим того, кто мелькнул один раз', () => {
+    // Иначе сравнение двух записей выдавало бы «появился svchost» каждый раз и
+    // обесценило бы единственную настоящую строку.
+    const timeline = buildProcessTimeline(
+      [
+        sample(1, [process('svchost', 3)]),
+        sample(2, []),
+        sample(3, []),
+        sample(4, []),
+      ],
+      'dota2.exe',
+    );
+
+    expect(programsIn(timeline!)).toEqual([]);
+  });
+
+  it('не считает игру запущенной программой', () => {
+    const timeline = buildProcessTimeline(
+      [sample(1, [process('dota2', 60), process('Discord', 3)])],
+      'dota2.exe',
+    );
+
+    expect(programsIn(timeline!).map((p) => p.name)).toEqual(['Discord']);
   });
 });

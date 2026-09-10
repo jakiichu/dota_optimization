@@ -461,6 +461,11 @@ export interface MetricDelta {
 }
 
 /** Настройка машины появилась, исчезла или поменяла значение. */
+export interface ProgramPresence {
+  readonly name: string;
+  readonly usualPercent: number;
+}
+
 export interface PassportChange {
   readonly key: string;
   readonly label: string;
@@ -482,6 +487,10 @@ export interface Comparison {
    * это запоминать.
    */
   readonly changes: readonly PassportChange[];
+  /** Программы, которых во второй записи не было в первой. */
+  readonly programsAppeared: readonly ProgramPresence[];
+  /** Программы, работавшие в первой записи и не работавшие во второй. */
+  readonly programsGone: readonly ProgramPresence[];
   readonly verdict: Verdict;
   readonly summary: string;
   readonly caveats: readonly string[];

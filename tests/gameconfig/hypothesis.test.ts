@@ -52,6 +52,7 @@ function session(id: string, numbers: Numbers = {}): SessionSummary {
     scene: numbers.scene ?? REPLAY,
     causes: [],
     networkSeverity: 'ok',
+    programs: null,
     passport: EMPTY_PASSPORT,
   };
 }

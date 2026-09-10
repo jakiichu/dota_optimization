@@ -55,6 +55,16 @@ const STEADY_PERCENT = 5;
 /** Сколько постоянно занятых программ показываем. */
 const STEADY_SHOWN = 5;
 
+/**
+ * В какой доле замеров программа должна встретиться, чтобы считаться работавшей.
+ *
+ * Половина. Программа, мелькнувшая в одном замере из полусотни, — это не «что
+ * было запущено», а вспышка обновления или системная задача. Попади она в
+ * список, сравнение двух записей выдавало бы «появился svchost» при каждом
+ * прогоне и обесценило бы единственную настоящую строку.
+ */
+const PRESENT_IN_SHARE = 0.5;
+
 /** Всплеск чужой работы рядом с кадром. */
 export interface ProcessSpike {
   readonly name: string;
@@ -71,6 +81,25 @@ export interface BackgroundProcess {
   readonly name: string;
   readonly usualPercent: number;
   readonly peakPercent: number;
+}
+
+/**
+ * Программа, работавшая во время записи.
+ *
+ * Здесь важен сам факт, а не проценты. Discord на живой записи занимал 2.5%
+ * процессора — величина, по которой его не заподозришь ни одним порогом, — а
+ * кадры при этом стали вдвое длиннее. На APU у него своя цена: общий с
+ * процессором бюджет питания и общая с ним же память, и в процентах CPU этого
+ * не видно вовсе.
+ *
+ * Поэтому запись просто помнит, кто работал, а сравнение показывает разницу.
+ * Причин мы по-прежнему не называем: «во второй записи появился Discord» — это
+ * факт, а вывод из него делает человек.
+ */
+export interface ProgramPresence {
+  readonly name: string;
+  /** Сколько процессора занимала обычно — как справка, а не как повод. */
+  readonly usualPercent: number;
 }
 
 interface ProcessPoint {
@@ -161,6 +190,29 @@ export function steadyLoad(timeline: ProcessTimeline): readonly BackgroundProces
     .sort(([, left], [, right]) => right - left)
     .slice(0, STEADY_SHOWN)
     .map(([name, usual]) => ({ name, usualPercent: usual, peakPercent: peaks.get(name) ?? usual }));
+}
+
+/**
+ * Кто работал во время записи.
+ *
+ * Не «кто мешал» и не «кто много ел» — просто кто был. Для сравнения записей
+ * этого достаточно: разницу в списке человек прочитает сам.
+ */
+export function programsIn(timeline: ProcessTimeline): readonly ProgramPresence[] {
+  const total = timeline.points.length;
+  if (total === 0) return [];
+
+  const seen = new Map<string, number>();
+  for (const point of timeline.points) {
+    for (const name of point.byName.keys()) {
+      seen.set(name, (seen.get(name) ?? 0) + 1);
+    }
+  }
+
+  return [...seen.entries()]
+    .filter(([, count]) => count / total >= PRESENT_IN_SHARE)
+    .map(([name]) => ({ name, usualPercent: timeline.usual.get(name) ?? 0 }))
+    .sort((left, right) => right.usualPercent - left.usualPercent);
 }
 
 function isSpike(percent: number, usual: number): boolean {

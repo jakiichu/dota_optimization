@@ -7,8 +7,10 @@ import { UNKNOWN_MACHINE, type MachineContext } from '../gameconfig/machine-cont
 import { recommend, type Recommendation } from '../gameconfig/recommendations.ts';
 import {
   buildProcessTimeline,
+  programsIn,
   steadyLoad,
   type BackgroundProcess,
+  type ProgramPresence,
 } from './background-load.ts';
 import { analyzeCpuLoad, type CpuLoadProfile } from './cpu-load.ts';
 import { analyzeNetworkQuality, type NetworkQuality } from './network-quality.ts';
@@ -46,8 +48,9 @@ import { correlateStutters, type CorrelationReport } from './stutter-correlation
  *      вендорского источника, а не у счётчиков Windows, и это меняет улики.
  * 12 — инпут-лаг требует сотни кадров с вводом: перцентиль по дюжине значений
  *      это просто худшее из них.
+ * 13 — запись помнит, какие программы работали, и сравнение показывает разницу.
  */
-export const METRICS_VERSION = 12;
+export const METRICS_VERSION = 13;
 
 export interface CaptureAnalysis {
   readonly statistics: FrameStatistics;
@@ -83,6 +86,13 @@ export interface CaptureAnalysis {
    * вопрос «что вообще крутилось» отвечает она, и это разная работа.
    */
   readonly background: readonly BackgroundProcess[];
+  /**
+   * Что вообще было запущено.
+   *
+   * `null` — процессы не собирали. Нужно сравнению записей: настройки объясняют
+   * разницу ровно до тех пор, пока в фоне не появилось что-то новое.
+   */
+  readonly programs: readonly ProgramPresence[] | null;
 }
 
 export function analyzeCapture(
@@ -115,6 +125,7 @@ export function analyzeCapture(
     cpuLoad,
     recommendations: recommend({ statistics, correlation, network, cpuLoad, ...machine }),
     background: processes === null ? [] : steadyLoad(processes),
+    programs: processes === null ? null : programsIn(processes),
   };
 }
 
@@ -161,6 +172,7 @@ export function summarize(
     bottleneck: statistics.bottleneck.kind,
     causes: analysis.correlation.tally,
     networkSeverity: analysis.network.severity,
+    programs: analysis.programs,
     scene,
     passport,
   };

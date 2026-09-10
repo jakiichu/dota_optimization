@@ -30,6 +30,7 @@ function session(measured: Measured = {}): SessionSummary {
     bottleneck: 'cpu',
     causes: measured.causes ?? [],
     networkSeverity: measured.network ?? 'ok',
+    programs: null,
     scene: UNKNOWN_SCENE,
     passport: EMPTY_PASSPORT,
   };

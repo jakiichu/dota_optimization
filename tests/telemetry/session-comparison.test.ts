@@ -27,6 +27,7 @@ interface SessionOptions {
   readonly inputP99?: number;
   readonly pacingTimeShare?: number;
   readonly scene?: CaptureScene;
+  readonly programs?: SessionSummary['programs'];
 }
 
 function session(id: string, options: SessionOptions = {}): SessionSummary {
@@ -56,6 +57,7 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
     scene: options.scene ?? SAME_REPLAY,
     causes: [],
     networkSeverity: 'ok',
+    programs: options.programs ?? null,
     passport: EMPTY_PASSPORT,
   };
 }
@@ -260,5 +262,36 @@ describe('compareSessions', () => {
     );
 
     expect(comparison.verdict).toBe('same');
+  });
+});
+
+describe('что было запущено', () => {
+  it('показывает программу, появившуюся во второй записи', () => {
+    // Настройки объясняют разницу ровно до тех пор, пока в фоне не появилось
+    // что-то новое. Живой случай: настройки те же, а Discord — новый.
+    const before = session('до', { programs: [{ name: 'chrome', usualPercent: 2 }] });
+    const after = session('после', {
+      programs: [
+        { name: 'chrome', usualPercent: 2 },
+        { name: 'Discord', usualPercent: 2.5 },
+      ],
+    });
+
+    const found = compareSessions(before, after);
+
+    expect(found.programsAppeared.map((p) => p.name)).toEqual(['Discord']);
+    expect(found.programsGone).toEqual([]);
+  });
+
+  it('молчит, когда процессы собирали не везде', () => {
+    // Отсутствие данных нельзя выдавать за «программа не работала»: иначе
+    // старая запись рядом с новой выглядела бы полностью очистившейся.
+    const found = compareSessions(
+      session('до', { programs: null }),
+      session('после', { programs: [{ name: 'Discord', usualPercent: 2.5 }] }),
+    );
+
+    expect(found.programsAppeared).toEqual([]);
+    expect(found.programsGone).toEqual([]);
   });
 });
