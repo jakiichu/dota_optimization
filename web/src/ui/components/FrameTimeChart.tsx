@@ -54,15 +54,23 @@ interface Hovered {
 export function FrameTimeChart({
   series,
   onZoom,
+  selectedAtSeconds,
+  onStutterSelect,
 }: {
   series: CaptureSeries;
   /** Человек выделил участок: показать его кадр за кадром. */
   onZoom?: (fromSeconds: number, toSeconds: number) => void;
+  /** Выбранный рывок остаётся отмечен после движения мыши. */
+  selectedAtSeconds?: number | null;
+  onStutterSelect?: (mark: StutterMark) => void;
 }): React.JSX.Element {
   const container = useRef<HTMLDivElement>(null);
   // Через ref, чтобы смена обработчика не пересоздавала график целиком.
   const zoom = useRef(onZoom);
   zoom.current = onZoom;
+  const select = useRef(onStutterSelect);
+  select.current = onStutterSelect;
+  const hoveredMark = useRef<StutterMark | null>(null);
 
   const [hovered, setHovered] = useState<Hovered | null>(null);
 
@@ -73,7 +81,10 @@ export function FrameTimeChart({
     const groups = groupMarks(series);
 
     const chart = new uPlot(
-      buildOptions(series, groups, element.clientWidth, zoom, setHovered),
+      buildOptions(series, groups, element.clientWidth, zoom, (value) => {
+        hoveredMark.current = value?.mark ?? null;
+        setHovered(value);
+      }, selectedAtSeconds ?? null),
       buildData(series, groups),
       element,
     );
@@ -82,13 +93,18 @@ export function FrameTimeChart({
       chart.setSize({ width: element.clientWidth, height: CHART_HEIGHT });
     });
     observer.observe(element);
+    const chooseHovered = (): void => {
+      if (hoveredMark.current !== null) select.current?.(hoveredMark.current);
+    };
+    element.addEventListener('click', chooseHovered);
 
     return () => {
       observer.disconnect();
+      element.removeEventListener('click', chooseHovered);
       chart.destroy();
       setHovered(null);
     };
-  }, [series]);
+  }, [series, selectedAtSeconds]);
 
   return (
     <div className="frame-chart-wrap">
@@ -177,6 +193,7 @@ function buildOptions(
   width: number,
   zoom: { current: ((from: number, to: number) => void) | undefined },
   onHover: (hovered: Hovered | null) => void,
+  selectedAtSeconds: number | null,
 ): uPlot.Options {
   const lines: uPlot.Series[] = [
     { label: 'кадр', stroke: FRAME_COLOR, width: 1, points: { show: false } },
@@ -209,6 +226,21 @@ function buildOptions(
     cursor: { y: false },
     scales: { x: { time: false } },
     hooks: {
+      draw: selectedAtSeconds === null ? [] : [
+        (self) => {
+          const x = self.valToPos(selectedAtSeconds, 'x', true);
+          const { top, height } = self.bbox;
+          self.ctx.save();
+          self.ctx.strokeStyle = '#ffffff';
+          self.ctx.lineWidth = 2;
+          self.ctx.setLineDash([6, 5]);
+          self.ctx.beginPath();
+          self.ctx.moveTo(x, top);
+          self.ctx.lineTo(x, top + height);
+          self.ctx.stroke();
+          self.ctx.restore();
+        },
+      ],
       setCursor: [
         (self) => {
           const { left } = self.cursor;

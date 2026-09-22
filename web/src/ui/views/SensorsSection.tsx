@@ -31,15 +31,15 @@ export function SensorsSection(): React.JSX.Element {
   if (latest === null) {
     return (
       <>
-        <SectionHeader title="Сенсоры" subtitle="живые показания" />
-        <EmptyState>Жду первых замеров от сайдкара…</EmptyState>
+        <SectionHeader title="Мониторинг" subtitle="Нагрузка, частоты и температура компьютера в реальном времени." />
+        <EmptyState>Получаю первые показания датчиков…</EmptyState>
       </>
     );
   }
 
   return (
     <>
-      <SectionHeader title="Сенсоры" subtitle="живые показания" />
+      <SectionHeader title="Мониторинг" subtitle="Нагрузка, частоты и температура компьютера в реальном времени." />
 
       {error !== null && <EmptyState>{error}</EmptyState>}
 

@@ -1,4 +1,4 @@
-import { ok, type Finding } from '../diagnostics/finding.ts';
+import { ok, unknown, type Finding } from '../diagnostics/finding.ts';
 import type { SystemSnapshot } from '../snapshot/system-snapshot.ts';
 import type { AuditRule } from './audit-rule.ts';
 
@@ -16,12 +16,13 @@ export const memoryIntegrityRule: AuditRule = {
   title: TITLE,
   evaluate(snapshot: SystemSnapshot): Finding | null {
     const hvci = snapshot.security.hypervisorEnforcedCodeIntegrityEnabled;
-    if (hvci === null || hvci === 0) {
+    if (hvci === null) return unknown(ID, TITLE, 'Состояние целостности памяти не удалось прочитать.');
+    if (hvci === 0) {
       return ok(
         ID,
         TITLE,
         `HypervisorEnforcedCodeIntegrity = ${hvci === null ? 'не задан' : '0'}`,
-        'HVCI не включён — накладных расходов нет.',
+        'В прочитанной настройке HVCI отключён.',
       );
     }
 
@@ -29,16 +30,13 @@ export const memoryIntegrityRule: AuditRule = {
       ruleId: ID,
       title: TITLE,
       severity: 'info',
-      summary: 'HVCI включён — это стоит процессорного времени.',
+      summary: 'В настройке HVCI включена защита целостности памяти.',
       observed: 'HypervisorEnforcedCodeIntegrity\\Enabled = 1',
-      expected: 'Решение за вами: защита против нескольких процентов кадров',
-      impact:
-        'Виртуализация проверок целостности кода добавляет накладные расходы на ' +
-        'системные вызовы и работу драйверов. На CPU-bound сцене это видно как ' +
-        'ровное снижение кадров, а не как статтеры.',
+      expected: 'Сохранять защиту включённой; влияние оценивать по измерениям',
+      impact: 'Влияние защиты на производительность зависит от оборудования и нагрузки. Этот снимок не измеряет потери FPS и не подтверждает фактическое состояние после перезагрузки.',
       remediation: [
-        'Безопасность Windows → Безопасность устройства → Изоляция ядра → Целостность памяти.',
-        'Выключать только если замер до и после действительно показал разницу.',
+        'Проверить состояние: Безопасность Windows → Безопасность устройства → Изоляция ядра → Целостность памяти.',
+        'Для поиска причин рывков сначала запишите игру. Отключение защиты не является рекомендацией этой проверки.',
       ],
     };
   },

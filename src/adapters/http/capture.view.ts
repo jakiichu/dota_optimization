@@ -33,6 +33,8 @@ const WORST_STUTTERS_SHOWN = 12;
 export interface StutterMark {
   /** Номер точки в отданных сериях — по нему интерфейс её и находит. */
   readonly index: number;
+  /** Номер кадра во всей записи, устойчивый при увеличении графика. */
+  readonly frameIndex: number;
   readonly atSeconds: number;
   readonly frameTimeMs: number;
   /** Главная улика: ею красится точка. `null` — улик не нашлось. */
@@ -174,6 +176,7 @@ function toSeries(
   }));
   const selection = selectFramesForChart(frames, shifted);
   const stutterSeconds = new Set(inWindow.map((stutter) => stutter.atSeconds));
+  const stutterByTime = new Map(inWindow.map((stutter) => [stutter.atSeconds, stutter]));
 
   // Улики лежат отдельно от статтеров, и связывает их время кадра: оно
   // уникально в пределах записи и переживает и окно, и выбор точек.
@@ -194,13 +197,17 @@ function toSeries(
 
     if (stutterSeconds.has(frame.startSeconds)) {
       const evidence = explained.get(frame.startSeconds) ?? [];
-      marks.push({
-        index: time.length,
-        atSeconds: frame.startSeconds,
-        frameTimeMs: frame.frameTimeMs,
-        kind: primaryEvidence(evidence),
-        evidence: evidence.map((item) => `${EVIDENCE_LABEL[item.kind]}: ${item.detail}`),
-      });
+      const stutter = stutterByTime.get(frame.startSeconds);
+      if (stutter !== undefined) {
+        marks.push({
+          index: time.length,
+          frameIndex: stutter.frameIndex,
+          atSeconds: frame.startSeconds,
+          frameTimeMs: frame.frameTimeMs,
+          kind: primaryEvidence(evidence),
+          evidence: evidence.map((item) => `${EVIDENCE_LABEL[item.kind]}: ${item.detail}`),
+        });
+      }
     }
 
     time.push(frame.startSeconds);

@@ -1,8 +1,12 @@
 import type {
   Audit,
+  AccountControls,
   BenchmarkOptions,
   Capture,
+  CaptureStatus,
   Comparison,
+  ControlTransferResult,
+  RepeatedComparison,
   ConfigEdit,
   FrameWindow,
   GameConfig,
@@ -35,6 +39,8 @@ export interface CaptureRequest {
  * кнопки.
  */
 export interface KadroskopApi {
+  /** Сохранить локально сформированный HTML-отчёт на рабочий стол. */
+  exportReport(html: string): Promise<string>;
   /**
    * Версия сборки.
    *
@@ -49,9 +55,11 @@ export interface KadroskopApi {
     afterId: string,
     signal: AbortSignal,
   ): Promise<Comparison>;
+  fetchRepeatedComparison(beforeIds: readonly string[], afterIds: readonly string[], signal: AbortSignal): Promise<RepeatedComparison>;
   /** `window` задаёт кусок для графика; метрики от него не зависят. */
   analyzeSession(id: string, signal: AbortSignal, window?: FrameWindow): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
+  fetchCaptureStatus(signal: AbortSignal): Promise<CaptureStatus>;
   /** Прекратить идущую запись досрочно. */
   stopCapture(): Promise<void>;
 
@@ -76,6 +84,11 @@ export interface KadroskopApi {
   removeConfig(): Promise<GameConfig>;
   /** Кладёт копию на рабочий стол и возвращает путь к ней. */
   exportConfig(): Promise<string>;
+
+  /** Локальные Steam-профили и наличие персональной раскладки Dota. */
+  fetchAccountControls(signal: AbortSignal): Promise<AccountControls>;
+  /** Копирует раскладку с обязательной резервной копией существующего файла. */
+  transferAccountControls(sourceId: string, targetId: string): Promise<ControlTransferResult>;
 
   /**
    * Поток живых замеров.

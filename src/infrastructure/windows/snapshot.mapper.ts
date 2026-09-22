@@ -11,6 +11,7 @@ import type {
   NetworkAdapterInfo,
   OsInfo,
   ReplayFile,
+  ResourceUsage,
   PowerInfo,
   SecurityInfo,
   SystemSnapshot,
@@ -31,6 +32,7 @@ export function toSystemSnapshot(raw: unknown): SystemSnapshot {
 
   return {
     schemaVersion: 1,
+    resources: toResources(root['resources']),
     capturedAt: asString(root['capturedAt']) ?? new Date().toISOString(),
     machineName: asString(root['machineName']) ?? 'unknown',
     collectedAsAdmin: root['collectedAsAdmin'] === true,
@@ -213,4 +215,24 @@ function asNumber(value: unknown): Maybe<number> {
 
 function asBoolean(value: unknown): Maybe<boolean> {
   return typeof value === 'boolean' ? value : null;
+}
+
+function toResources(raw: unknown): ResourceUsage {
+  const record = asRecord(raw) ?? {};
+  const memory = asRecord(record['memory']) ?? {};
+  const nonnegative = (value: unknown) => { const n = asNumber(value); return n !== null && n >= 0 ? n : null; };
+  return {
+    memory: { totalBytes: nonnegative(memory['totalBytes']), availableBytes: nonnegative(memory['availableBytes']) },
+    sampleSeconds: nonnegative(record['sampleSeconds']),
+    disks: record['disks'] == null ? null : asArray(record['disks']).map(rawDisk => {
+      const disk = asRecord(rawDisk) ?? {};
+      return { name: asString(disk['name']) ?? '?', totalBytes: nonnegative(disk['totalBytes']), freeBytes: nonnegative(disk['freeBytes']), system: disk['system'] === true };
+    }),
+    processes: record['processes'] == null ? null : asArray(record['processes']).flatMap(rawProcess => {
+      const process = asRecord(rawProcess) ?? {};
+      const cpu = nonnegative(process['cpuPercent']); const memory = nonnegative(process['memoryBytes']);
+      if (cpu === null || cpu > 100 || memory === null) return [];
+      return [{ name: asString(process['name']) ?? '?', cpuPercent: cpu, memoryBytes: memory }];
+    }),
+  };
 }

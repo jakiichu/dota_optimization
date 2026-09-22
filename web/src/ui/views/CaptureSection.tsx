@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import type { CaptureController } from '../../application/use-capture-controller.ts';
+import { useEffect, useState } from 'react';
 import {
   useBenchmark,
-  useRunCapture,
   useSessionAnalysis,
   useSessions,
   useSessionWindow,
-  useStopCapture,
 } from '../../application/queries.ts';
 import type { Capture, ConfigChange, CpuLoad, FrameWindow } from '../../domain/models.ts';
 import { BOTTLENECK_COLOR, BOTTLENECK_LABEL } from '../../domain/presentation.ts';
@@ -14,6 +13,9 @@ import { CorrelationPanel } from '../components/CorrelationPanel.tsx';
 import { FrameTimeChart } from '../components/FrameTimeChart.tsx';
 import { PacingPanel } from '../components/PacingPanel.tsx';
 import { RecommendationPanel } from '../components/RecommendationPanel.tsx';
+import { ReportExportPanel } from '../components/ReportExportPanel.tsx';
+import { StutterInspector } from '../components/StutterInspector.tsx';
+import { inspectableStutters, type StutterInspection } from '../../domain/stutter-inspection.ts';
 import { ReplayRunPanel } from '../components/ReplayRunPanel.tsx';
 import {
   EmptyState,
@@ -36,19 +38,11 @@ const DURATIONS = [30, 60, 120, 300, 600] as const;
 /** Значение в списке, означающее «пиши, пока идёт игра». */
 const WHOLE_GAME = 0;
 
-/**
- * Сколько ждём после нажатия, прежде чем начать писать.
- *
- * Не украшение. Нажимают кнопку в этом окне, а мерить надо игру — и в
- * полноэкранной Dota «переключиться в окно» значит «свернуть игру». Свёрнутая
- * Dota рисует иначе, а само переключение туда-сюда даёт всплески времени кадра,
- * которые запись честно зачтёт в статтеры. Пять секунд — чтобы успеть вернуться.
- */
-const RECORDING_STARTS_IN = 5;
-
 export function CaptureSection({
+  recorder,
   onOpenInConfig,
 }: {
+  recorder: CaptureController;
   /** Уйти в редактор конфига с подставленным изменением из рекомендации. */
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
 }): React.JSX.Element {
@@ -57,137 +51,112 @@ export function CaptureSection({
   // Подпись нужна, чтобы через полчаса отличить «до HAGS» от «после».
   const [label, setLabel] = useState('');
 
-  const capture = useRunCapture();
-  const stop = useStopCapture();
+  const { capture, recording, startsIn } = recorder;
   const benchmark = useBenchmark();
   const runActive = benchmark.data?.state.current != null;
   // Сохранённая запись, которую открыли посмотреть. Новая запись эту замену
   // отменяет: смотреть старую, когда только что сделали свежую, незачем.
-  const [openedId, setOpenedId] = useState<string | null>(null);
+  const [openedId, setOpenedId] = useState<string | null>(recorder.status.data?.sessionId ?? null);
+  useEffect(() => {
+    if (recorder.status.data?.sessionId) setOpenedId(recorder.status.data.sessionId);
+  }, [recorder.status.data?.sessionId]);
   const opened = useSessionAnalysis(openedId);
-  const shownCapture = capture.data ?? opened.data;
+  const shownCapture = capture.data !== undefined &&
+    (openedId === null || openedId === capture.data.sessionId) ? capture.data : opened.data;
   const wholeGame = durationSeconds === WHOLE_GAME;
-  // Обратный отсчёт врал бы при записи целой игры: её длину мы не знаем.
-  const remaining = useCountdown(capture.isPending && !wholeGame ? durationSeconds : null);
-  const delayed = useDelayedStart(() =>
-    capture.mutate({
-      processName,
-      seconds: wholeGame ? 0 : durationSeconds,
-      label,
-      wholeGame,
-    }),
-  );
+  const begin = (): void => recorder.begin({
+    processName, seconds: wholeGame ? 0 : durationSeconds, label, wholeGame,
+  });
 
   return (
     <>
       <SectionHeader
-        title="Запись кадров"
-        subtitle="сколько длится каждый кадр и почему иногда дольше обычного"
+        title="Запись и разбор"
+        subtitle="Запишите игру, чтобы увидеть просадки плавности и возможные причины."
       />
 
-      {/* Сцена задаётся до записи, а не описывается после: порядок на экране
-          повторяет порядок действий. */}
-      <ReplayRunPanel
-        recorder={{
-          recording: capture.isPending,
-          startsIn: delayed.startsIn,
-          onRecord: delayed.begin,
-        }}
-      />
-
-      <div className="capture-form">
+      <div className="card capture-setup">
+        <div className="card-head"><span className="card-title">Новая запись</span><span className="card-note">Старт через 5 секунд после нажатия</span></div>
+        <p className="setup-description">Запустите Dota 2, выберите длительность и нажмите «Начать запись». Затем вернитесь в игру.</p>
+        <div className="capture-form">
         <label>
-          <span className="metric-label">процесс</span>
-          <input
-            className="input"
-            value={processName}
-            onChange={(event) => setProcessName(event.target.value)}
-            disabled={capture.isPending}
-          />
-        </label>
-        <label>
-          <span className="metric-label">длительность</span>
+          <span className="metric-label">Длительность</span>
           <select
             className="input"
             value={durationSeconds}
             onChange={(event) => setDurationSeconds(Number(event.target.value))}
-            disabled={capture.isPending}
+            disabled={recorder.blocked}
           >
             {DURATIONS.map((value) => (
               <option key={value} value={value}>
-                {value} с
+                {value < 60 ? `${value} секунд` : `${value / 60} мин`}
               </option>
             ))}
-            <option value={WHOLE_GAME}>вся игра</option>
+            <option value={WHOLE_GAME}>До выхода из игры</option>
           </select>
         </label>
         <label>
-          <span className="metric-label">подпись</span>
+          <span className="metric-label">Название <span className="optional-label">необязательно</span></span>
           <input
             className="input"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
-            placeholder="например, до отключения MPO"
-            disabled={capture.isPending}
+            placeholder="Например, до изменения настроек"
+            disabled={recorder.blocked}
           />
         </label>
         <button
           type="button"
-          className="button"
-          disabled={capture.isPending || delayed.startsIn !== null}
-          onClick={delayed.begin}
+          className="button primary"
+          disabled={recorder.blocked}
+          onClick={begin}
         >
-          {delayed.startsIn !== null
-            ? `Вернитесь в игру… ${delayed.startsIn}`
-            : capture.isPending
-              ? wholeGame
-                ? 'Пишу, пока идёт игра…'
-                : `Записываю… ${Math.max(remaining ?? 0, 0)} с`
+          {startsIn !== null
+            ? `Вернитесь в игру… ${startsIn}`
+            : recording
+              ? 'Запись идёт…'
               : runActive
                 ? 'Записать прогон'
-                : 'Записать'}
+                : 'Начать запись'}
         </button>
 
-        {capture.isPending && (
-          <button
-            type="button"
-            className="button"
-            disabled={stop.isPending || stop.isSuccess}
-            onClick={() => stop.mutate()}
-          >
-            {stop.isSuccess ? 'Останавливаю…' : 'Остановить'}
-          </button>
-        )}
+        <details className="advanced-options">
+          <summary>Дополнительно: процесс для записи</summary>
+          <label><span className="metric-label">Имя процесса</span>
+            <input className="input" value={processName} onChange={(event) => setProcessName(event.target.value)} disabled={recorder.blocked} />
+          </label>
+          <p className="muted">Для Dota 2 оставьте dota2.exe.</p>
+        </details>
+        </div>
       </div>
+
+      <details className="replay-disclosure" open={runActive || undefined}>
+        <summary><span><strong>Повтор для точного сравнения</strong><span className="muted">Одинаковая сцена до и после изменения настройки</span></span></summary>
+        <ReplayRunPanel recorder={{ recording, startsIn, onRecord: begin }} />
+      </details>
 
       {/* Молча ждать пять секунд нельзя: человек решит, что кнопка не нажалась,
           и нажмёт ещё раз. */}
-      {delayed.startsIn !== null && (
+      {startsIn !== null && (
         <EmptyState>
-          Запись начнётся через {delayed.startsIn} с — переключитесь в игру. В
-          полноэкранной Dota это окно поверх неё значит, что игра свёрнута, а
-          свёрнутая игра рисует иначе: и кадры другие, и переключение туда-сюда само
-          по себе даст всплески, которые запись зачтёт в статтеры.
+          Запись начнётся через {startsIn} с. Переключитесь в игру и не сворачивайте её во время замера — это влияет на результат.
         </EmptyState>
       )}
 
-      {capture.isPending && (
+      {recording && (
         <EmptyState>
-          Игра должна быть запущена и рисовать. PresentMon требует прав администратора —
-          если появился запрос UAC, подтвердите его.
-          {wholeGame && ' Запись остановится сама, когда вы выйдете из игры.'}
-          {' Остановка вручную попросит права ещё раз: своего процесса у записи нет,'}
-          {' и погасить её может только второй экземпляр с теми же правами.'}
+          Если Windows запросит права администратора, подтвердите запуск записи.
+          {recorder.status.data?.wholeGame && ' Запись закончится при выходе из игры.'}
+          {' Остановить раньше можно в панели сверху. Windows может повторно запросить права.'}
         </EmptyState>
       )}
-      {stop.isError && <ErrorState message={stop.error.message} />}
 
       {capture.isError && <ErrorState message={capture.error.message} />}
 
       <SavedCaptures
         openedId={openedId}
         onOpen={(id) => {
-          capture.reset();
+          if (!recording) capture.reset();
           setOpenedId(id);
         }}
       />
@@ -217,7 +186,9 @@ function SavedCaptures({
   onOpen: (id: string) => void;
 }): React.JSX.Element | null {
   const sessions = useSessions();
-  if (sessions.data === undefined || sessions.data.length === 0) return null;
+  if (sessions.isError) return <ErrorState message={sessions.error.message} onRetry={() => void sessions.refetch()} />;
+  if (sessions.data === undefined) return null;
+  if (sessions.data.length === 0) return <div className="card"><div className="card-title">Здесь будут ваши записи</div><p className="muted">После первого замера появятся график плавности, разбор рывков и рекомендации. Запись сохранится автоматически.</p></div>;
 
   return (
     <div className="card">
@@ -246,64 +217,6 @@ function SavedCaptures({
   );
 }
 
-/**
- * Обратный отсчёт до конца записи.
- *
- * Чисто клиентский: PresentMon о прогрессе не сообщает, но длительность мы
- * задали сами, так что показать её честно можно.
- */
-/**
- * Отложенный старт: нажали — досчитали — начали.
- *
- * Отсчёт живёт здесь, а не в кнопке, потому что кнопок две: одна в форме, вторая
- * в панели прогона. Обе показывают один и тот же отсчёт и одну и ту же запись —
- * иначе человек нажмёт в одном месте, а «Записываю…» зажжётся в другом.
- */
-function useDelayedStart(begin: () => void): {
-  readonly startsIn: number | null;
-  readonly begin: () => void;
-} {
-  const [startsIn, setStartsIn] = useState<number | null>(null);
-  // Ссылка, а не значение: таймер заводится один раз, а `begin` пересоздаётся
-  // на каждом рендере вместе с полями формы.
-  const latest = useRef(begin);
-  latest.current = begin;
-
-  useEffect(() => {
-    if (startsIn === null) return undefined;
-    if (startsIn === 0) {
-      setStartsIn(null);
-      latest.current();
-      return undefined;
-    }
-    const timer = setTimeout(() => setStartsIn((value) => (value ?? 1) - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [startsIn]);
-
-  return {
-    startsIn,
-    begin: () => setStartsIn((running) => (running === null ? RECORDING_STARTS_IN : running)),
-  };
-}
-
-function useCountdown(totalSeconds: number | null): number | null {
-  const [remaining, setRemaining] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (totalSeconds === null) {
-      setRemaining(null);
-      return undefined;
-    }
-    setRemaining(totalSeconds);
-    const timer = setInterval(() => {
-      setRemaining((value) => (value === null ? null : Math.max(value - 1, 0)));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [totalSeconds]);
-
-  return remaining;
-}
-
 function CaptureReport({
   capture,
   onOpenInConfig,
@@ -315,8 +228,21 @@ function CaptureReport({
   // кадр за кадром, а не ту же огибающую крупнее. Кадры за окном лежат на
   // сервере — держать сотню мегабайт в браузере ради этого нельзя.
   const [window, setWindow] = useState<FrameWindow | null>(null);
+  const [selectedFrameIndex, setSelectedFrameIndex] = useState<number | null>(null);
   const zoomed = useSessionWindow(capture.sessionId, window);
   const shown = zoomed.data?.series ?? capture.series;
+  const stutters = inspectableStutters(capture);
+  const selected = stutters.find((entry) => entry.stutter.frameIndex === selectedFrameIndex)
+    ?? stutters[0]
+    ?? null;
+  const inspect = (entry: StutterInspection): void => {
+    setSelectedFrameIndex(entry.stutter.frameIndex);
+    const padding = 1.5;
+    setWindow({
+      fromSeconds: Math.max(0, entry.stutter.atSeconds - padding),
+      toSeconds: Math.min(capture.durationSeconds, entry.stutter.atSeconds + padding),
+    });
+  };
 
   if (capture.frameCount === 0) {
     return (
@@ -328,6 +254,7 @@ function CaptureReport({
 
   return (
     <>
+      <ReportExportPanel capture={capture} />
       <div className="card">
         <div className="card-head">
           <span className="card-title">{capture.application}</span>
@@ -338,6 +265,11 @@ function CaptureReport({
         <FrameTimeChart
           series={shown}
           onZoom={(fromSeconds, toSeconds) => setWindow({ fromSeconds, toSeconds })}
+          selectedAtSeconds={selected?.stutter.atSeconds ?? null}
+          onStutterSelect={(mark) => {
+            const entry = stutters.find((item) => item.stutter.frameIndex === mark.frameIndex);
+            if (entry !== undefined) inspect(entry);
+          }}
         />
         <ChartNote
           series={shown}
@@ -347,13 +279,15 @@ function CaptureReport({
         />
       </div>
 
+      <StutterInspector stutters={stutters} selectedFrameIndex={selectedFrameIndex} onSelect={inspect} />
+
       <div className="card">
         <div className="metrics">
-          <Metric label="средний FPS" value={capture.averageFps.toFixed(1)} />
-          <Metric label="медиана" value={ms(capture.frameTime.p50)} />
-          <Metric label="p95" value={ms(capture.frameTime.p95)} />
-          <Metric label="p99" value={ms(capture.frameTime.p99)} />
-          <Metric label="p99.9" value={ms(capture.frameTime.p999)} />
+          <Metric label="Средний FPS" note="Кадров в секунду · больше — лучше" value={capture.averageFps.toFixed(1)} />
+          <Metric label="Обычный кадр" note="Медиана · меньше — лучше" value={ms(capture.frameTime.p50)} />
+          <Metric label="95% кадров · p95" value={ms(capture.frameTime.p95)} />
+          <Metric label="Долгие кадры · p99" note="99% кадров укладываются в это время" value={ms(capture.frameTime.p99)} />
+          <Metric label="Редкие задержки · p99.9" value={ms(capture.frameTime.p999)} note="99,9% кадров укладываются в это время" />
           {capture.inputLatency !== null && (
             <Metric
               label="инпут-лаг p99"
@@ -362,7 +296,8 @@ function CaptureReport({
             />
           )}
           <Metric
-            label="статтеры"
+            label="Рывки (статтеры)"
+            note="Резкие скачки времени кадра"
             value={`${capture.stutterCount} (${capture.stuttersPerMinute.toFixed(1)}/мин)`}
           />
         </div>

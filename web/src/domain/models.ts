@@ -159,6 +159,8 @@ export interface NetworkQuality {
 export interface StutterMark {
   /** Номер точки в сериях. */
   readonly index: number;
+  /** Номер кадра во всей записи, устойчивый при увеличении. */
+  readonly frameIndex: number;
   readonly atSeconds: number;
   readonly frameTimeMs: number;
   /** Главная улика: ею красится точка. `null` — улик не нашлось. */
@@ -419,9 +421,37 @@ export interface ConfigEdit {
   readonly value: string | null;
 }
 
+// --- управление разных Steam-аккаунтов ------------------------------------
+
+export interface SteamControlProfile {
+  readonly id: string;
+  readonly label: string;
+  readonly mostRecent: boolean;
+  readonly hasControls: boolean;
+  readonly sizeBytes: number | null;
+  readonly modifiedAt: string | null;
+}
+
+export interface AccountControls {
+  readonly profiles: readonly SteamControlProfile[];
+}
+
+export interface ControlTransferResult {
+  readonly source: SteamControlProfile;
+  readonly target: SteamControlProfile;
+  readonly backupPath: string | null;
+  readonly transferredBytes: number;
+}
+
 // --- записи и сравнение -----------------------------------------------------
 
 export interface SessionSummary {
+  readonly scene?: {
+    readonly kind: 'unknown' | 'match' | 'hero-demo' | 'replay';
+    readonly replayFile: string | null;
+    readonly startTick: number | null;
+    readonly note: string | null;
+  };
   readonly id: string;
   readonly label: string;
   readonly application: string;
@@ -437,7 +467,8 @@ export interface SessionSummary {
   readonly bottleneck: BottleneckKind;
 }
 
-export type Verdict = 'better' | 'worse' | 'same';
+export type MetricVerdict = 'better' | 'worse' | 'same';
+export type Verdict = MetricVerdict | 'mixed';
 
 export type MetricId =
   | 'fps'
@@ -455,8 +486,8 @@ export interface MetricDelta {
   readonly before: number;
   readonly after: number;
   readonly delta: number;
-  readonly share: number;
-  readonly verdict: Verdict;
+  readonly share: number | null;
+  readonly verdict: MetricVerdict;
   readonly lowerIsBetter: boolean;
 }
 
@@ -476,6 +507,7 @@ export interface PassportChange {
 }
 
 export interface Comparison {
+  readonly comparable: boolean;
   readonly before: SessionSummary;
   readonly after: SessionSummary;
   readonly metrics: readonly MetricDelta[];
@@ -493,6 +525,21 @@ export interface Comparison {
   readonly programsGone: readonly ProgramPresence[];
   readonly verdict: Verdict;
   readonly summary: string;
+  readonly caveats: readonly string[];
+}
+
+export interface RepeatedComparison {
+  readonly status: 'better' | 'worse' | 'mixed' | 'inconclusive' | 'not-comparable';
+  readonly summary: string;
+  readonly pairs: readonly Comparison[];
+  readonly metrics: readonly {
+    readonly id: MetricId;
+    readonly label: string;
+    readonly unit: string;
+    readonly before: { readonly min: number; readonly median: number; readonly max: number };
+    readonly after: { readonly min: number; readonly median: number; readonly max: number };
+    readonly direction: 'better' | 'worse' | 'overlap';
+  }[];
   readonly caveats: readonly string[];
 }
 
@@ -551,4 +598,14 @@ export interface CpuLoad {
   readonly throttleTimeShare: number | null;
   readonly singleThreadBound: boolean;
   readonly summary: string;
+}
+export interface CaptureStatus {
+  readonly phase: 'idle' | 'recording' | 'stopping' | 'saving' | 'completed' | 'failed';
+  readonly startedAt: string | null;
+  readonly processName: string;
+  readonly label: string;
+  readonly seconds: number;
+  readonly wholeGame: boolean;
+  readonly sessionId: string | null;
+  readonly error: string | null;
 }

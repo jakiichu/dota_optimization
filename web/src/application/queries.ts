@@ -2,9 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type {
   Audit,
+  AccountControls,
   BenchmarkOptions,
   Capture,
   Comparison,
+  ControlTransferResult,
+  RepeatedComparison,
   ConfigEdit,
   FrameWindow,
   GameConfig,
@@ -38,6 +41,7 @@ export const queryKeys = {
   config: ['config'] as const,
   benchmark: ['benchmark'] as const,
   hypotheses: ['hypotheses'] as const,
+  accountControls: ['account-controls'] as const,
 };
 
 /**
@@ -90,6 +94,18 @@ export function useComparison(
     queryFn: ({ signal }) => api.fetchComparison(beforeId, afterId, signal),
     // Пока не выбраны обе записи, спрашивать нечего.
     enabled: beforeId !== '' && afterId !== '' && beforeId !== afterId,
+    staleTime: ANALYSIS_STALE_MS,
+  });
+}
+
+export function useRepeatedComparison(before: readonly string[], after: readonly string[]): UseQueryResult<RepeatedComparison> {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['repeated-comparison', before, after],
+    queryFn: ({ signal }) => api.fetchRepeatedComparison(before, after, signal),
+    enabled: before.length >= 3 && before.length === after.length &&
+      [...before, ...after].every((id) => id !== '') &&
+      new Set([...before, ...after]).size === before.length + after.length,
     staleTime: ANALYSIS_STALE_MS,
   });
 }
@@ -248,6 +264,25 @@ export function useConfigMutations(): {
   return { apply, replace, remove, exportToDesktop };
 }
 
+export function useAccountControls(): {
+  readonly profiles: UseQueryResult<AccountControls>;
+  readonly transfer: UseMutationResult<ControlTransferResult, Error, { sourceId: string; targetId: string }>;
+} {
+  const api = useApi();
+  const client = useQueryClient();
+  const profiles = useQuery({
+    queryKey: queryKeys.accountControls,
+    queryFn: ({ signal }) => api.fetchAccountControls(signal),
+    staleTime: 60 * 1000,
+  });
+  const transfer = useMutation({
+    mutationFn: ({ sourceId, targetId }: { sourceId: string; targetId: string }) =>
+      api.transferAccountControls(sourceId, targetId),
+    onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.accountControls }),
+  });
+  return { profiles, transfer };
+}
+
 /**
  * Запись кадров.
  *
@@ -291,6 +326,7 @@ export function useRunCapture(): UseMutationResult<Capture, Error, CaptureReques
       // кладём сразу, чтобы открытие записи не стоило ещё одного запроса.
       void client.invalidateQueries({ queryKey: queryKeys.sessions });
       client.setQueryData(queryKeys.session(capture.sessionId), capture);
+      void client.invalidateQueries({ queryKey: queryKeys.hypotheses });
     },
   });
 }

@@ -8,6 +8,9 @@ import { CaptureSection } from './views/CaptureSection.tsx';
 import { ConfigSection } from './views/ConfigSection.tsx';
 import { CompareSection } from './views/CompareSection.tsx';
 import { SensorsSection } from './views/SensorsSection.tsx';
+import { ExperimentGuide } from './components/ExperimentGuide.tsx';
+import { useCaptureController } from '../application/use-capture-controller.ts';
+import { CaptureStatusBar } from './components/CaptureStatusBar.tsx';
 
 /**
  * Оболочка приложения.
@@ -19,6 +22,7 @@ import { SensorsSection } from './views/SensorsSection.tsx';
  */
 export function AppShell(): React.JSX.Element {
   const [section, setSection] = useState<SectionId>('audit');
+  const recorder = useCaptureController();
 
   /**
    * Изменение, с которым пришли из рекомендации.
@@ -28,6 +32,7 @@ export function AppShell(): React.JSX.Element {
    * переключение и потому годится в посредники.
    */
   const [proposed, setProposed] = useState<readonly ConfigChange[]>([]);
+  const [configDraft, setConfigDraft] = useState<Record<string, string | null>>({});
 
   const openInConfig = useCallback((changes: readonly ConfigChange[]): void => {
     setProposed(changes);
@@ -63,12 +68,16 @@ export function AppShell(): React.JSX.Element {
       />
 
       <main className="content">
-        {section === 'audit' && <AuditSection />}
-        {section === 'capture' && <CaptureSection onOpenInConfig={openInConfig} />}
+        <div className="workspace-topbar"><span>ДИАГНОСТИКА ПРОИЗВОДИТЕЛЬНОСТИ</span><span className="game-tag">Dota 2 <span className="muted">/ Windows</span></span></div>
+        <CaptureStatusBar recorder={recorder} onOpen={() => setSection('capture')} />
+        <ExperimentGuide onNavigate={setSection} onOpenInConfig={openInConfig} />
+        {section === 'audit' && <AuditSection onNavigate={setSection} />}
+        {section === 'capture' && <CaptureSection recorder={recorder} onOpenInConfig={openInConfig} />}
         {section === 'config' && (
-          <ConfigSection proposed={proposed} onProposalTaken={forgetProposal} />
+          <ConfigSection proposed={proposed} onProposalTaken={forgetProposal}
+            draft={configDraft} setDraft={setConfigDraft} />
         )}
-        {section === 'compare' && <CompareSection />}
+        {section === 'compare' && <CompareSection onCapture={() => setSection('capture')} />}
         {section === 'sensors' && <SensorsSection />}
       </main>
     </div>

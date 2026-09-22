@@ -129,12 +129,14 @@ export const VERDICT_COLOR: Record<Verdict, string> = {
   better: 'var(--ok)',
   worse: 'var(--critical)',
   same: 'var(--muted)',
+  mixed: 'var(--warning)',
 };
 
 export const VERDICT_LABEL: Record<Verdict, string> = {
   better: 'лучше',
   worse: 'хуже',
-  same: 'без изменений',
+  same: 'без заметных изменений',
+  mixed: 'смешанный эффект',
 };
 
 // --- конфиг игры ------------------------------------------------------------

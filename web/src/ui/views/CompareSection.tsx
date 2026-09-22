@@ -6,9 +6,10 @@ import type {
   ProgramPresence,
   SessionSummary,
 } from '../../domain/models.ts';
-import { VERDICT_COLOR, VERDICT_LABEL } from '../../domain/presentation.ts';
+import { BOTTLENECK_LABEL, VERDICT_COLOR, VERDICT_LABEL } from '../../domain/presentation.ts';
 import { dateTime, seconds, signed, withUnit } from '../../domain/formatting.ts';
 import { HypothesisPanel } from '../components/HypothesisPanel.tsx';
+import { RepeatedComparisonPanel } from '../components/RepeatedComparisonPanel.tsx';
 import {
   EmptyState,
   ErrorState,
@@ -16,10 +17,11 @@ import {
   SectionHeader,
 } from '../components/States.tsx';
 
-export function CompareSection(): React.JSX.Element {
+export function CompareSection({ onCapture }: { onCapture: () => void }): React.JSX.Element {
   const sessions = useSessions();
   const [beforeId, setBeforeId] = useState('');
   const [afterId, setAfterId] = useState('');
+  const [mode, setMode] = useState<'pair' | 'repeated'>('pair');
 
   // По умолчанию сравниваем две последние: обычно именно их и делают до и после
   // правки настройки.
@@ -44,12 +46,15 @@ export function CompareSection(): React.JSX.Element {
   if (sessions.data.length < 2) {
     return (
       <>
-        <SectionHeader title="Сравнение" subtitle="до и после правки" />
+        <SectionHeader title="Сравнение" subtitle="Узнайте, стала ли игра плавнее после изменения одной настройки." />
         <HypothesisPanel />
-        <EmptyState>
-          Нужны минимум две записи, сейчас {sessions.data.length}. Сделайте вторую в
-          разделе «Запись кадров» — до и после изменения настройки.
-        </EmptyState>
+        <div className="card empty-guide">
+          <span className="empty-guide-symbol" aria-hidden="true">⇄</span>
+          <h2>Сначала — две записи</h2>
+          <p>Сделайте замер до изменения настройки, затем повторите ту же сцену после. Здесь появится сравнение плавности.</p>
+          <span className="muted">Готово записей: {sessions.data.length} из 2 необходимых</span>
+          <button className="button primary" onClick={onCapture}>Перейти к записи</button>
+        </div>
       </>
     );
   }
@@ -58,7 +63,7 @@ export function CompareSection(): React.JSX.Element {
     <>
       <SectionHeader
         title="Сравнение"
-        subtitle="до и после правки"
+        subtitle="Узнайте, стала ли игра плавнее после изменения одной настройки."
         stale={comparison.isFetching}
       />
 
@@ -67,12 +72,18 @@ export function CompareSection(): React.JSX.Element {
       <HypothesisPanel />
 
       <div className="capture-form">
+        <button type="button" className={`button ${mode === 'pair' ? 'primary' : ''}`} aria-pressed={mode === 'pair'} onClick={() => setMode('pair')}>Две записи</button>
+        <button type="button" className={`button ${mode === 'repeated' ? 'primary' : ''}`} aria-pressed={mode === 'repeated'} onClick={() => setMode('repeated')}>Повторные замеры</button>
+      </div>
+      <div hidden={mode !== 'repeated'}><RepeatedComparisonPanel sessions={sessions.data} /></div>
+      <div hidden={mode !== 'pair'}>
+      <div className="capture-form">
         <label>
-          <span className="metric-label">до</span>
+          <span className="metric-label">До изменения</span>
           <SessionPicker sessions={sessions.data} value={beforeId} onChange={setBeforeId} />
         </label>
         <label>
-          <span className="metric-label">после</span>
+          <span className="metric-label">После изменения</span>
           <SessionPicker sessions={sessions.data} value={afterId} onChange={setAfterId} />
         </label>
       </div>
@@ -85,6 +96,7 @@ export function CompareSection(): React.JSX.Element {
       )}
       {comparison.isError && <ErrorState message={comparison.error.message} />}
       {comparison.data !== undefined && <ComparisonReport comparison={comparison.data} />}
+      </div>
     </>
   );
 }
@@ -103,7 +115,7 @@ function SessionPicker({
       className="input"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      style={{ minWidth: 280 }}
+      style={{ minWidth: 0, width: '100%' }}
     >
       {sessions.map((session) => (
         <option key={session.id} value={session.id}>
@@ -192,8 +204,8 @@ function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX
         </div>
         {comparison.bottleneckChanged && (
           <div className="muted">
-            Узкое место сменилось: {comparison.before.bottleneck} →{' '}
-            {comparison.after.bottleneck}
+            Ограничение производительности изменилось: {BOTTLENECK_LABEL[comparison.before.bottleneck]} →{' '}
+            {BOTTLENECK_LABEL[comparison.after.bottleneck]}
           </div>
         )}
       </div>
@@ -205,9 +217,6 @@ function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX
         appeared={comparison.programsAppeared}
         gone={comparison.programsGone}
       />
-
-      <div className="card">
-      </div>
 
       <div className="card">
         <table className="table">

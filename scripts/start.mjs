@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { ensurePresentMon } from './fetch-presentmon.mjs';
+import { createRequire } from 'node:module';
 
 /**
  * Единственная команда запуска: `npm start`.
@@ -67,9 +68,15 @@ if ((await ensurePresentMon()) === null) {
   );
 }
 
-const server = spawn(process.execPath, [join(ROOT, 'src', 'main', 'server.ts'), '--open'], {
+await import('./build-desktop.mjs');
+const electron = createRequire(import.meta.url)('electron');
+const electronEnv = { ...process.env };
+delete electronEnv.ELECTRON_RUN_AS_NODE;
+const server = spawn(electron, [join(ROOT, 'build', 'desktop')], {
   cwd: ROOT,
-  stdio: 'inherit',
+  stdio: 'ignore',
+  windowsHide: true,
+  env: electronEnv,
 });
 
 server.on('exit', (code) => process.exit(code ?? 0));

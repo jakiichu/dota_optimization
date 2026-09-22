@@ -69,8 +69,9 @@ export function startLocalServer(options: LocalServerOptions): Promise<RunningSe
     server.once('error', rejectPromise);
     server.listen(options.port, LOOPBACK, () => {
       server.removeListener('error', rejectPromise);
+      const address = server.address();
       resolvePromise({
-        url: `http://${LOOPBACK}:${options.port}`,
+        url: `http://${LOOPBACK}:${typeof address === 'object' && address !== null ? address.port : options.port}`,
         close: () => closeServer(server),
       });
     });

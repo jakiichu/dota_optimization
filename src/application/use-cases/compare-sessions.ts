@@ -7,6 +7,7 @@ import {
   type SessionSummary,
 } from '../../domain/telemetry/session-comparison.ts';
 import type { SessionRecord, SessionStore } from '../ports/session-store.port.ts';
+import { compareRepeatedSessions, validateRepeatedIds, type RepeatedComparison } from '../../domain/telemetry/repeated-comparison.ts';
 
 /**
  * Сравнить две сохранённые записи.
@@ -28,6 +29,16 @@ export class CompareSessions {
       this.#store.load(afterId),
     ]);
     return compareSessions(summaryOf(before), summaryOf(after));
+  }
+
+  async executeRepeated(beforeIds: readonly string[], afterIds: readonly string[]): Promise<RepeatedComparison> {
+    validateRepeatedIds(beforeIds, afterIds);
+    // Полные записи могут весить сотни мегабайт. Держим в памяти одну за раз.
+    const summaries: SessionSummary[] = [];
+    for (const id of [...beforeIds, ...afterIds]) {
+      summaries.push(summaryOf(await this.#store.load(id)));
+    }
+    return compareRepeatedSessions(summaries.slice(0, beforeIds.length), summaries.slice(beforeIds.length));
   }
 }
 

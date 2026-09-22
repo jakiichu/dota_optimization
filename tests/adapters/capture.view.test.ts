@@ -120,6 +120,7 @@ describe('отметки статтеров', () => {
     const view = toView(frames);
 
     expect(view.series.stutterMarks).toHaveLength(1);
+    expect(view.series.stutterMarks[0]?.frameIndex).toBe(30);
     expect(view.series.stutterMarks[0]?.frameTimeMs).toBe(60);
     expect(view.series.stutterMarks[0]?.evidence.join(' ')).toContain('ждал');
   });

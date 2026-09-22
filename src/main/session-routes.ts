@@ -21,6 +21,9 @@ export function createSessionCompareRoute(store: SessionStore): JsonRoute {
   return {
     path: '/api/sessions/compare',
     async handle(query) {
+      if (query.get('mode') === 'repeated') {
+        return comparison.executeRepeated(query.getAll('before'), query.getAll('after'));
+      }
       const before = query.get('before');
       const after = query.get('after');
       if (before === null || after === null) {

@@ -93,7 +93,7 @@ describe('checkHypothesis', () => {
     );
 
     expect(found.outcome).toBe('no-change');
-    expect(found.summary).toContain('разброс');
+    expect(found.summary).toContain('выбранные пороги');
   });
 
   it('опровергает предсказание и велит вернуть настройку', () => {

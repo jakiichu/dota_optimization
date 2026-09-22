@@ -36,11 +36,22 @@ export function createCaptureRoutes(
   sensors: SensorStream,
   store: SessionStore,
   machine: MachineContextSource,
-  replayRun: StartReplayRun,
+  replayRun: Pick<StartReplayRun, 'currentRun'>,
 ): readonly JsonRoute[] {
   const frames = new PresentMonCapture();
   const session = new CaptureFrameSession(frames, sensors, () => machine.get());
   let inFlight: Promise<unknown> | null = null;
+  let state: {
+    phase: 'idle' | 'recording' | 'stopping' | 'saving' | 'completed' | 'failed';
+    startedAt: string | null;
+    processName: string;
+    label: string;
+    seconds: number;
+    wholeGame: boolean;
+    sessionId: string | null;
+    error: string | null;
+  } = { phase: 'idle', startedAt: null, processName: '', label: '', seconds: 0,
+    wholeGame: false, sessionId: null, error: null };
 
   const capture: JsonRoute = {
     path: '/api/capture',
@@ -57,10 +68,14 @@ export function createCaptureRoutes(
         seconds: wholeGame ? MAX_SECONDS : clampSeconds(query.get('seconds')),
         stopWhenGameExits: wholeGame,
       };
+      state = { phase: 'recording', startedAt: new Date().toISOString(),
+        processName: request.processName, label: query.get('label') ?? '',
+        seconds: request.seconds, wholeGame, sessionId: null, error: null };
 
       // Сохраняем всё, что записали: сравнение «до и после» разделено
       // перезагрузкой, и запись, оставшаяся только в памяти, для него бесполезна.
       const running = session.execute(request).then(async (result) => {
+        state = { ...state, phase: 'saving' };
         const summary = await store.save(
           query.get('label') ?? '',
           await sceneOf(replayRun, query),
@@ -68,12 +83,17 @@ export function createCaptureRoutes(
           result.capture,
           result.sensorSamples,
         );
-        return { ...toCaptureView(result), sessionId: summary.id };
+        const view = { ...toCaptureView(result), sessionId: summary.id };
+        state = { ...state, phase: 'completed', sessionId: summary.id };
+        return view;
       });
       inFlight = running;
 
       try {
         return await running;
+      } catch (error) {
+        state = { ...state, phase: 'failed', error: error instanceof Error ? error.message : String(error) };
+        throw error;
       } finally {
         inFlight = null;
       }
@@ -95,12 +115,24 @@ export function createCaptureRoutes(
       if (inFlight === null) {
         throw new Error('Останавливать нечего: запись не идёт.');
       }
-      await frames.stop();
+      if (state.phase !== 'recording') return { stopping: true };
+      const current = state;
+      state = { ...state, phase: 'stopping' };
+      try {
+        await frames.stop();
+      } catch (error) {
+        if (state.phase === 'stopping' && state.startedAt === current.startedAt) state = current;
+        throw error;
+      }
       return { stopping: true };
     },
   };
 
-  return [capture, stop];
+  const status: JsonRoute = {
+    path: '/api/capture/status',
+    async handle() { return state; },
+  };
+  return [capture, stop, status];
 }
 
 /**
@@ -113,7 +145,7 @@ export function createCaptureRoutes(
  * Прогона нет — возвращаемся к тому, что сказали в запросе.
  */
 async function sceneOf(
-  replayRun: StartReplayRun,
+  replayRun: Pick<StartReplayRun, 'currentRun'>,
   query: URLSearchParams,
 ): Promise<CaptureScene> {
   const running = await replayRun.currentRun();

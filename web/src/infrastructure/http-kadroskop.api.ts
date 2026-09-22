@@ -4,9 +4,13 @@ import type {
 } from '../application/ports/kadroskop-api.port.ts';
 import type {
   Audit,
+  AccountControls,
   BenchmarkOptions,
   Capture,
+  CaptureStatus,
   Comparison,
+  ControlTransferResult,
+  RepeatedComparison,
   ConfigEdit,
   FrameWindow,
   GameConfig,
@@ -25,6 +29,10 @@ import type {
  * про это не знают вовсе — они видят только порт.
  */
 export class HttpKadroskopApi implements KadroskopApi {
+  async exportReport(html: string): Promise<string> {
+    const result = await postJson<{ path: string }>('/api/reports/export', { html });
+    return result.path;
+  }
   async fetchVersion(signal: AbortSignal): Promise<string> {
     const health = await getJson<{ version?: string }>('/api/health', signal);
     return health.version ?? 'неизвестна';
@@ -46,6 +54,13 @@ export class HttpKadroskopApi implements KadroskopApi {
   ): Promise<Comparison> {
     const query = new URLSearchParams({ before: beforeId, after: afterId });
     return getJson<Comparison>(`/api/sessions/compare?${query.toString()}`, signal);
+  }
+
+  async fetchRepeatedComparison(beforeIds: readonly string[], afterIds: readonly string[], signal: AbortSignal): Promise<RepeatedComparison> {
+    const query = new URLSearchParams({ mode: 'repeated' });
+    beforeIds.forEach((id) => query.append('before', id));
+    afterIds.forEach((id) => query.append('after', id));
+    return getJson<RepeatedComparison>(`/api/sessions/compare?${query.toString()}`, signal);
   }
 
   async analyzeSession(
@@ -73,6 +88,10 @@ export class HttpKadroskopApi implements KadroskopApi {
 
   async stopCapture(): Promise<void> {
     await postJson<{ stopping: boolean }>('/api/capture/stop', {});
+  }
+
+  async fetchCaptureStatus(signal: AbortSignal): Promise<CaptureStatus> {
+    return getJson<CaptureStatus>('/api/capture/status', signal);
   }
 
   async fetchBenchmark(signal: AbortSignal): Promise<BenchmarkOptions> {
@@ -120,6 +139,20 @@ export class HttpKadroskopApi implements KadroskopApi {
   async exportConfig(): Promise<string> {
     const body = await postJson<{ path: string }>('/api/config/export', {});
     return body.path;
+  }
+
+  async fetchAccountControls(signal: AbortSignal): Promise<AccountControls> {
+    return getJson<AccountControls>('/api/account-controls', signal);
+  }
+
+  async transferAccountControls(
+    sourceId: string,
+    targetId: string,
+  ): Promise<ControlTransferResult> {
+    return postJson<ControlTransferResult>('/api/account-controls/transfer', {
+      sourceId,
+      targetId,
+    });
   }
 
   /**

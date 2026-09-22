@@ -49,6 +49,17 @@ function Get-GpuVendor {
     return 'unknown'
 }
 
+# Два среза CPU: доля от всей мощности процессора, а не время с запуска.
+$processBaseline = @{}
+$sampleClock = [Diagnostics.Stopwatch]::StartNew()
+Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
+    try {
+        if ($null -ne $_.CPU) {
+            $processBaseline[$_.Id] = @{ cpu = [double]$_.CPU; start = $_.StartTime.Ticks }
+        }
+    } catch { }
+}
+
 # --- Права ------------------------------------------------------------------
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -390,9 +401,42 @@ try {
     Add-CollectionError 'UserGpuPreferences' $_
 }
 
+# --- Память, локальные диски и нагрузка за интервал --------------------------
+$memory = @{ totalBytes = $null; availableBytes = $null }
+try {
+    $memoryOs = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $memory = @{ totalBytes = [double]$memoryOs.TotalVisibleMemorySize * 1024; availableBytes = [double]$memoryOs.FreePhysicalMemory * 1024 }
+} catch { Add-CollectionError 'Память' $_ }
+$disks = $null
+try {
+    $disks = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType = 3' -ErrorAction Stop | ForEach-Object {
+        @{ name = [string]$_.DeviceID; totalBytes = $(if ($null -ne $_.Size) { [double]$_.Size } else { $null }); freeBytes = $(if ($null -ne $_.FreeSpace) { [double]$_.FreeSpace } else { $null }); system = ($_.DeviceID -eq $env:SystemDrive) }
+    })
+} catch { Add-CollectionError 'Диски' $_ }
+$remainingMs = 15000 - $sampleClock.ElapsedMilliseconds
+if ($remainingMs -gt 0) { Start-Sleep -Milliseconds $remainingMs }
+$sampleSeconds = $sampleClock.Elapsed.TotalSeconds
+$processes = $null
+try {
+    $logicalCores = [Environment]::ProcessorCount
+    $processes = @(Get-Process -ErrorAction Stop | ForEach-Object {
+        try {
+            $previous = $processBaseline[$_.Id]
+            if ($_.Id -gt 4 -and $_.Id -ne $PID -and $null -ne $previous -and $null -ne $_.CPU -and $_.StartTime.Ticks -eq $previous.start) {
+                $usage = ([double]$_.CPU - $previous.cpu) / $sampleSeconds / $logicalCores * 100
+                if ($usage -ge 0) {
+                    @{ name = [string]$_.ProcessName; cpuPercent = [Math]::Round([Math]::Min(100, $usage), 1); memoryBytes = [double]$_.WorkingSet64 }
+                }
+            }
+        } catch { }
+    })
+} catch { Add-CollectionError 'Нагрузка процессов' $_ }
+$resources = @{ memory = $memory; disks = $disks; processes = $processes; sampleSeconds = $sampleSeconds }
+
 # --- Сборка результата ------------------------------------------------------
 
 $snapshot = [ordered]@{
+    resources         = $resources
     schemaVersion     = 1
     capturedAt        = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     machineName       = $env:COMPUTERNAME

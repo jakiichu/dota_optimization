@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SensorSample } from '../domain/models.ts';
 import { useApi } from './api-context.ts';
+import { usePageVisible } from './use-page-visible.ts';
 
 /** Сколько замеров держим в графике: при 250 мс это две минуты истории. */
 const HISTORY_LENGTH = 480;
@@ -31,12 +32,15 @@ function emptyHistory(): SensorHistory {
  * пересоздавать массивы в сотни точек четыре раза в секунду — нет.
  */
 export function useSensorStream(): SensorStreamState {
+  const visible = usePageVisible();
   const api = useApi();
   const historyRef = useRef<SensorHistory>(emptyHistory());
   const [latest, setLatest] = useState<SensorSample | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!visible) return undefined;
+    historyRef.current = emptyHistory();
     const unsubscribe = api.subscribeToSensors(
       (sample) => {
         appendSample(historyRef.current, sample);
@@ -46,7 +50,7 @@ export function useSensorStream(): SensorStreamState {
       (message) => setError(message),
     );
     return unsubscribe;
-  }, [api]);
+  }, [api, visible]);
 
   return { latest, history: historyRef.current, error };
 }

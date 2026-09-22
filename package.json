@@ -10,6 +10,9 @@
   "scripts": {
     "start": "node scripts/start.mjs",
     "release": "node scripts/build-release.mjs",
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "desktop:release": "node scripts/release-desktop.mjs",
+    "start:web": "node src/main/server.ts --open",
     "audit": "node src/main/cli.ts audit",
     "sensors": "node src/main/cli.ts sensors",
     "capture": "node src/main/cli.ts capture",
@@ -37,6 +40,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^5.2.0",
     "dependency-cruiser": "^16.10.0",
+    "electron": "44.4.3",
     "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6",
     "typescript": "^5.9.0",

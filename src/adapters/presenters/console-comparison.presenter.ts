@@ -12,12 +12,14 @@ const VERDICT_COLOR: Record<Verdict, string> = {
   better: '\u001b[32m',
   worse: '\u001b[31m',
   same: '\u001b[2m',
+  mixed: '\u001b[33m',
 };
 
 const VERDICT_LABEL: Record<Verdict, string> = {
   better: 'лучше',
   worse: 'хуже',
-  same: 'без изменений',
+  same: 'без заметных изменений',
+  mixed: 'смешанный эффект',
 };
 
 const LABEL_WIDTH = 22;

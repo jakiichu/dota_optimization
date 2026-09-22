@@ -15,10 +15,10 @@ function withMinCores(percent: number | null) {
 }
 
 describe('coreParkingRule', () => {
-  it('предупреждает, когда часть ядер может парковаться', () => {
+  it('не считает разрешённую парковку доказанной проблемой', () => {
     const finding = coreParkingRule.evaluate(withMinCores(50));
 
-    expect(finding?.severity).toBe('warning');
+    expect(finding?.severity).toBe('info');
     expect(finding?.summary).toContain('50%');
   });
 

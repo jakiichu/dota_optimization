@@ -137,7 +137,16 @@ export interface ReplayFile {
   readonly durationSeconds: Maybe<number>;
 }
 
+export interface ResourceUsage {
+  readonly memory: { readonly totalBytes: Maybe<number>; readonly availableBytes: Maybe<number> };
+  readonly disks: readonly { readonly name: string; readonly totalBytes: Maybe<number>; readonly freeBytes: Maybe<number>; readonly system: boolean }[] | null;
+  readonly processes: readonly { readonly name: string; readonly cpuPercent: number; readonly memoryBytes: number }[] | null;
+  readonly sampleSeconds: Maybe<number>;
+}
+
 export interface SystemSnapshot {
+  /** Отсутствует в снимках старых версий. */
+  readonly resources?: ResourceUsage;
   readonly schemaVersion: 1;
   readonly capturedAt: string;
   readonly machineName: string;

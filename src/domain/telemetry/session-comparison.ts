@@ -18,11 +18,11 @@ import type { CauseTally } from './stutter-correlation.ts';
  * не может, а «вроде плавнее стало» — не результат.
  *
  * Главная опасность здесь — объявить улучшением случайный разброс. Две записи
- * одной и той же конфигурации всегда различаются, поэтому изменение считается
- * настоящим только если оно больше и относительного, и абсолютного порога.
+ * одной и той же конфигурации различаются. Фиксированные пороги ниже — фильтр
+ * малых изменений, а не измеренный разброс и не статистическая проверка.
  */
 
-/** Относительное изменение, ниже которого разницу считаем разбросом. */
+/** Относительный порог для ненулевого исходного значения. */
 const NOISE_SHARE = 0.05;
 
 /** Абсолютный порог для времён, мс: доли миллисекунды человек не замечает. */
@@ -83,7 +83,8 @@ export interface SessionSummary {
   readonly passport: MachinePassport;
 }
 
-export type Verdict = 'better' | 'worse' | 'same';
+export type MetricVerdict = 'better' | 'worse' | 'same';
+export type Verdict = MetricVerdict | 'mixed';
 
 /**
  * Устойчивое имя метрики.
@@ -108,9 +109,9 @@ export interface MetricDelta {
   readonly before: number;
   readonly after: number;
   readonly delta: number;
-  /** Доля изменения к исходному значению; 0, если сравнивать не с чем. */
-  readonly share: number;
-  readonly verdict: Verdict;
+  /** Доля изменения; при переходе от нуля к ненулевому значению не определена. */
+  readonly share: number | null;
+  readonly verdict: MetricVerdict;
   readonly lowerIsBetter: boolean;
 }
 
@@ -276,7 +277,7 @@ function compareMetric(
   if (from === null || to === null) return null;
 
   const delta = to - from;
-  const share = from === 0 ? 0 : Math.abs(delta) / Math.abs(from);
+  const share = from === 0 ? (delta === 0 ? 0 : null) : Math.abs(delta) / Math.abs(from);
 
   return {
     id: spec.id,
@@ -291,9 +292,9 @@ function compareMetric(
   };
 }
 
-/** Изменение считается настоящим, только если прошло оба порога. */
-function judge(delta: number, share: number, spec: MetricSpec): Verdict {
-  if (Math.abs(delta) < spec.noise || share < NOISE_SHARE) return 'same';
+/** При исходном нуле применяем только абсолютный порог: проценты не определены. */
+function judge(delta: number, share: number | null, spec: MetricSpec): MetricVerdict {
+  if (Math.abs(delta) < spec.noise || (share !== null && share < NOISE_SHARE)) return 'same';
   const improved = spec.lowerIsBetter ? delta < 0 : delta > 0;
   return improved ? 'better' : 'worse';
 }
@@ -305,6 +306,7 @@ function overallVerdict(metrics: readonly MetricDelta[]): Verdict {
 
   if (better > 0 && worse === 0) return 'better';
   if (worse > 0 && better === 0) return 'worse';
+  if (better > 0 && worse > 0) return 'mixed';
   return 'same';
 }
 
@@ -321,14 +323,20 @@ function describe(verdict: Verdict, metrics: readonly MetricDelta[]): string {
 
   if (moved.length === 0) {
     const listed = deciding.map(quote).join(', ');
-    return `Разницы нет: ${listed} — в пределах разброса.`;
+    return `Заметных изменений по выбранным порогам нет: ${listed}.`;
   }
 
   const listed = moved.map(quote).join(', ');
   const unchanged = deciding
     .filter((metric) => metric.verdict === 'same')
     .map((metric) => metric.label.toLowerCase());
-  const tail = unchanged.length === 0 ? '' : ` Без изменений: ${unchanged.join(', ')}.`;
+  const tail = unchanged.length === 0 ? '' : ` Без заметных изменений: ${unchanged.join(', ')}.`;
+
+  if (verdict === 'mixed') {
+    const better = moved.filter((metric) => metric.verdict === 'better').map(quote).join(', ');
+    const worse = moved.filter((metric) => metric.verdict === 'worse').map(quote).join(', ');
+    return `Смешанный эффект. Улучшилось: ${better}. Ухудшилось: ${worse}.${tail}`;
+  }
 
   return `${verdict === 'better' ? 'Стало лучше' : 'Стало хуже'}: ${listed}.${tail}`;
 }
@@ -366,7 +374,10 @@ function newPrograms(
 }
 
 function collectCaveats(before: SessionSummary, after: SessionSummary): string[] {
-  const caveats: string[] = [];
+  const caveats: string[] = [
+    'Это сравнение двух записей по фиксированным порогам. Обычный разброс не измерен; ' +
+      'повторите замеры в тех же условиях, чтобы проверить устойчивость результата.',
+  ];
 
   if (before.application !== after.application) {
     caveats.push(

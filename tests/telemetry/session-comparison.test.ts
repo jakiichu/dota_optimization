@@ -67,6 +67,42 @@ function metric(comparison: ReturnType<typeof compareSessions>, label: string) {
 }
 
 describe('compareSessions', () => {
+  it('замечает появление статтеров после записи без статтеров', () => {
+    const comparison = compareSessions(
+      session('до', { stutterCount: 0, stuttersPerMinute: 0 }),
+      session('после', { stutterCount: 10, stuttersPerMinute: 10 }),
+    );
+    expect(comparison.verdict).toBe('worse');
+    expect(metric(comparison, 'Статтеров в минуту')?.share).toBeNull();
+    expect(JSON.parse(JSON.stringify(comparison)).metrics.find((m: { id: string }) => m.id === 'stutters').share).toBeNull();
+  });
+
+  it('учитывает абсолютный порог при переходе от нуля', () => {
+    const before = session('до', { pacingTimeShare: 0, stuttersPerMinute: 0 });
+    const small = compareSessions(before, session('после', { pacingTimeShare: 0.009, stuttersPerMinute: 0.4 }));
+    expect(small.verdict).toBe('same');
+    const boundary = compareSessions(before, session('после', { pacingTimeShare: 0.01, stuttersPerMinute: 0.5 }));
+    expect(metric(boundary, 'Времени в рваном ритме')?.verdict).toBe('worse');
+    expect(metric(boundary, 'Статтеров в минуту')?.verdict).toBe('worse');
+  });
+
+  it('различает ноль без изменений и улучшение до нуля', () => {
+    const zero = session('ноль', { stuttersPerMinute: 0 });
+    expect(metric(compareSessions(zero, zero), 'Статтеров в минуту')?.share).toBe(0);
+    expect(metric(compareSessions(session('до'), zero), 'Статтеров в минуту')?.verdict).toBe('better');
+  });
+
+  it('не выдаёт смешанный эффект за ухудшение или отсутствие изменений', () => {
+    const comparison = compareSessions(
+      session('до', { p99: 20, pacingTimeShare: 0.1 }),
+      session('после', { p99: 10, pacingTimeShare: 0.2 }),
+    );
+    expect(comparison.verdict).toBe('mixed');
+    expect(comparison.summary).toContain('Смешанный эффект');
+    expect(comparison.summary).toContain('Улучшилось: p99 кадра');
+    expect(comparison.summary).toContain('Ухудшилось: времени в рваном ритме');
+  });
+
   it('видит настоящее улучшение по p99 и статтерам', () => {
     const comparison = compareSessions(
       session('до', { p99: 40, stuttersPerMinute: 12, stutterCount: 12 }),
@@ -99,7 +135,7 @@ describe('compareSessions', () => {
     expect(comparison.verdict).toBe('better');
     expect(comparison.summary).toContain('статтеров в минуту 5.0 → 2.0');
     expect(comparison.summary).not.toContain('35.7 → 36.1');
-    expect(comparison.summary).toContain('Без изменений');
+    expect(comparison.summary).toContain('Без заметных изменений');
   });
 
   it('сравнивает ровность ритма — её ограничитель кадров и меняет', () => {
@@ -133,7 +169,8 @@ describe('compareSessions', () => {
     );
 
     expect(comparison.verdict).toBe('same');
-    expect(comparison.summary).toContain('в пределах разброса');
+    expect(comparison.summary).toContain('по выбранным порогам');
+    expect(comparison.caveats.join(' ')).toContain('Обычный разброс не измерен');
   });
 
   it('требует и относительного, и абсолютного порога', () => {
@@ -261,7 +298,7 @@ describe('compareSessions', () => {
       session('после', { p99: 20, stuttersPerMinute: 12, stutterCount: 12 }),
     );
 
-    expect(comparison.verdict).toBe('same');
+    expect(comparison.verdict).toBe('mixed');
   });
 });
 

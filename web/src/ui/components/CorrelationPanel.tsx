@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { BackgroundProcess, Correlation } from '../../domain/models.ts';
 import { EVIDENCE_COLOR } from '../../domain/presentation.ts';
 
@@ -6,9 +5,6 @@ import { EVIDENCE_COLOR } from '../../domain/presentation.ts';
  * Цвет причины несёт смысл: красное — работа устройства заняла кадр целиком,
  * жёлтое — кадр ждал чего-то снаружи, синее — обстоятельства вокруг.
  */
-/** Сколько разобранных статтеров показываем: остальные видны в сводке. */
-const DETAILED_STUTTERS = 8;
-
 export function CorrelationPanel({
   correlation,
   stutterCount,
@@ -20,11 +16,6 @@ export function CorrelationPanel({
   sensorSampleCount: number;
   background: readonly BackgroundProcess[];
 }): React.JSX.Element {
-  const [expanded, setExpanded] = useState(false);
-
-  const explained = correlation.stutters.filter((entry) => entry.evidence.length > 0);
-  const shown = expanded ? explained : explained.slice(0, DETAILED_STUTTERS);
-
   return (
     <div className="gpu-card" style={{ marginBottom: 12 }}>
       <div className="gpu-head">
@@ -90,44 +81,6 @@ export function CorrelationPanel({
         </div>
       )}
 
-      {shown.length > 0 && (
-        <table className="stutters" style={{ marginTop: 16 }}>
-          <thead>
-            <tr>
-              <th>когда</th>
-              <th>кадр</th>
-              <th>что происходило рядом</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((entry) => (
-              <tr key={entry.stutter.frameIndex}>
-                <td>{entry.stutter.atSeconds.toFixed(2)} с</td>
-                <td>{entry.stutter.frameTimeMs.toFixed(1)} мс</td>
-                <td>
-                  {entry.evidence.map((item) => (
-                    <div key={item.kind} className="evidence">
-                      <span className="dot" style={{ background: EVIDENCE_COLOR[item.kind] }} />
-                      {item.detail}
-                    </div>
-                  ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {explained.length > DETAILED_STUTTERS && (
-        <button
-          type="button"
-          className="button"
-          style={{ marginTop: 12 }}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? 'Свернуть' : `Показать все ${explained.length}`}
-        </button>
-      )}
     </div>
   );
 }

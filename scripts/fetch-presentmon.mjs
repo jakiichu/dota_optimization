@@ -121,6 +121,14 @@ function verify(path, { quiet }) {
 function authenticodeSigner(path) {
   if (process.platform !== 'win32') return null;
 
+  // PowerShell 7 передаёт свои каталоги модулей Windows PowerShell 5.1 через
+  // Node. Модуль Security тогда не загружается, что выглядело как плохая подпись.
+  // Без унаследованного пути Windows PowerShell использует собственные модули.
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'psmodulepath') delete env[key];
+  }
+
   const result = spawnSync(
     'powershell',
     [
@@ -130,7 +138,7 @@ function authenticodeSigner(path) {
         'if ($s.Status -ne "Valid") { exit 1 };' +
         '$s.SignerCertificate.Subject',
     ],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', env, windowsHide: true },
   );
 
   if (result.status !== 0) return result.status === 1 ? 'подпись недействительна' : null;

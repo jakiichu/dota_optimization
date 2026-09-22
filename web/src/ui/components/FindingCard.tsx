@@ -38,21 +38,19 @@ export function FindingCard({ finding }: { finding: Finding }): React.JSX.Elemen
 
   return (
     <article className="finding" data-severity={finding.severity}>
-      <div
+      <button
+        type="button"
         className="finding-head"
         onClick={() => setOpen(!open)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') setOpen(!open);
-        }}
+        aria-expanded={open}
       >
         <span className="dot" style={{ background: SEVERITY_COLOR[finding.severity] }} />
         <span className="finding-title">{finding.title}</span>
         <span className="finding-id">
-          {SEVERITY_LABEL[finding.severity]} · {finding.ruleId}
+          {SEVERITY_LABEL[finding.severity]}
         </span>
-      </div>
+        <span className="finding-toggle" aria-hidden="true">{open ? '−' : '+'}</span>
+      </button>
       <div className="finding-summary">{finding.summary}</div>
 
       {/* Сверка с записью сразу под выводом: правило само по себе только

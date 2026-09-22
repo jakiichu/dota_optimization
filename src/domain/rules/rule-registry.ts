@@ -1,3 +1,4 @@
+import { memoryUsageRule, diskSpaceRule, backgroundUsageRule } from './resource-usage.rule.ts';
 import type { AuditRule } from './audit-rule.ts';
 import { displayRefreshRateRule } from './display-refresh-rate.rule.ts';
 import { driverFreshnessRule } from './driver-freshness.rule.ts';
@@ -19,6 +20,9 @@ import { wirelessLinkRule } from './wireless-link.rule.ts';
  * предметное знание, а не деталь запуска.
  */
 export const allAuditRules: readonly AuditRule[] = [
+  memoryUsageRule,
+  diskSpaceRule,
+  backgroundUsageRule,
   displayRefreshRateRule,
   gameGpuPreferenceRule,
   coreParkingRule,

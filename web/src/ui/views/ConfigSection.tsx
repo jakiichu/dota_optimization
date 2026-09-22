@@ -10,6 +10,7 @@ import {
   type ImpactGroup,
 } from '../../domain/presentation.ts';
 import { SettingRow } from '../components/SettingRow.tsx';
+import { AccountControlsTransfer } from '../components/AccountControlsTransfer.tsx';
 import { EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/States.tsx';
 
 /**
@@ -29,15 +30,18 @@ const CONFIG_LOCATION = 'game\\dota\\cfg\\autoexec.cfg';
 export function ConfigSection({
   proposed,
   onProposalTaken,
+  draft,
+  setDraft,
 }: {
   /** Правки, ради которых сюда пришли из рекомендации. */
   proposed: readonly ConfigChange[];
   onProposalTaken: () => void;
+  draft: Record<string, string | null>;
+  setDraft: React.Dispatch<React.SetStateAction<Record<string, string | null>>>;
 }): React.JSX.Element {
   const config = useGameConfig();
   const { apply, replace, remove, exportToDesktop } = useConfigMutations();
 
-  const [draft, setDraft] = useState<Record<string, string | null>>({});
   const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   // Рекомендация привела сюда с готовым изменением — кладём его в черновик,
@@ -49,7 +53,7 @@ export function ConfigSection({
       ...Object.fromEntries(proposed.map((change) => [change.cvar, change.value])),
     }));
     onProposalTaken();
-  }, [proposed, onProposalTaken]);
+  }, [proposed, onProposalTaken, setDraft]);
 
   if (config.isPending) return <LoadingState what="Ищу конфиг игры…" />;
   if (config.isError) {
@@ -63,11 +67,11 @@ export function ConfigSection({
   return (
     <>
       <SectionHeader
-        title="Конфиг игры"
+        title="Настройки Dota"
         subtitle={
           data.path === null
             ? 'Игра не найдена — редактировать нечего.'
-            : `Команды, которые игра выполняет при каждом запуске: ${data.path}`
+            : 'Измените настройки запуска игры. Перед сохранением создаётся резервная копия.'
         }
         stale={config.isFetching}
       >
@@ -77,7 +81,7 @@ export function ConfigSection({
           disabled={!data.exists || exportToDesktop.isPending}
           onClick={() => exportToDesktop.mutate()}
         >
-          Скачать на рабочий стол
+          Экспорт конфига
         </button>
         {data.exists &&
           (confirmingRemove ? (
@@ -105,6 +109,7 @@ export function ConfigSection({
             </button>
           ))}
       </SectionHeader>
+      {data.path !== null && <details className="file-location"><summary>Где находится файл настроек</summary><code>{data.path}</code></details>}
 
       <Outcomes
         exportedPath={exportToDesktop.data}
@@ -127,16 +132,16 @@ export function ConfigSection({
             </EmptyState>
           )}
 
+          <DraftBar
+            edits={edits}
+            pending={apply.isPending}
+            onDiscard={() => setDraft({})}
+            onWrite={() => apply.mutate(edits, { onSuccess: () => setDraft({}) })}
+          />
           {data.exists && (
             <>
               <Composition config={data} />
               <Notes config={data} />
-              <DraftBar
-                edits={edits}
-                pending={apply.isPending}
-                onDiscard={() => setDraft({})}
-                onWrite={() => apply.mutate(edits, { onSuccess: () => setDraft({}) })}
-              />
               <Groups
                 config={data}
                 draft={draft}
@@ -156,6 +161,7 @@ export function ConfigSection({
           />
         </>
       )}
+      <AccountControlsTransfer />
     </>
   );
 }

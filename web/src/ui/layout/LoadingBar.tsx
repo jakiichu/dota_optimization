@@ -8,7 +8,8 @@ import { useIsFetching, useIsMutating } from '@tanstack/react-query';
  * данные и правда перезапрашиваются.
  */
 export function LoadingBar(): React.JSX.Element | null {
-  const fetching = useIsFetching();
+  // Фоновый опрос статуса не должен мигать полосой каждую секунду.
+  const fetching = useIsFetching({ predicate: (query) => query.queryKey[0] !== 'capture-status' });
   const mutating = useIsMutating();
 
   if (fetching + mutating === 0) return null;

@@ -1,6 +1,7 @@
-import { useHypothesisActions } from '../../application/queries.ts';
+import { useHypotheses, useHypothesisActions } from '../../application/queries.ts';
 import type { ConfigChange, Recommendation } from '../../domain/models.ts';
 import { CONFIDENCE_LABEL } from '../../domain/presentation.ts';
+import { recommendationAnchor } from '../../domain/stutter-inspection.ts';
 
 /**
  * Что попробовать поменять — по числам из этой записи.
@@ -25,10 +26,13 @@ export function RecommendationPanel({
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
 }): React.JSX.Element | null {
   const { record } = useHypothesisActions();
+  const hypotheses = useHypotheses();
 
   if (recommendations.length === 0) return null;
 
-  const trackedKind = record.isSuccess ? record.variables?.kind : undefined;
+  const trackedKinds = new Set(hypotheses.data?.filter((h) => h.before?.id === sessionId && h.check === null)
+    .map((h) => h.recommendation.kind));
+  if (record.isSuccess && record.variables.sessionId === sessionId) trackedKinds.add(record.variables.kind);
 
   return (
     <div className="card">
@@ -37,8 +41,8 @@ export function RecommendationPanel({
         <span className="card-note">выводы из этой записи, а не советы вообще</span>
       </div>
 
-      {recommendations.map((item) => (
-        <div key={item.title} className="recommendation">
+      {recommendations.map((item, index) => (
+        <div key={item.title} className="recommendation" id={recommendationAnchor(index)}>
           <div className="recommendation-head">
             <span className="recommendation-title">{item.title}</span>
             <span className="recommendation-confidence">{CONFIDENCE_LABEL[item.confidence]}</span>
@@ -86,19 +90,20 @@ export function RecommendationPanel({
               </button>
 
               {item.prediction !== null &&
-                (trackedKind === item.kind ? (
+                (trackedKinds.has(item.kind) ? (
                   <span className="muted">
-                    Гипотеза заведена. Примените изменение, запишите ту же сцену ещё раз
-                    и проверьте её в разделе «Сравнение».
+                    Проверка сохранена. Дальнейшие шаги — в панели «Проверка настройки» над разделом.
                   </span>
                 ) : (
                   <button
                     type="button"
                     className="button"
-                    disabled={record.isPending}
-                    onClick={() => record.mutate({ sessionId, kind: item.kind })}
+                    disabled={record.isPending || hypotheses.isPending || hypotheses.isError}
+                    onClick={() => record.mutate({ sessionId, kind: item.kind }, {
+                      onSuccess: () => onOpenInConfig(item.changes),
+                    })}
                   >
-                    Проверить это
+                    Проверить по шагам
                   </button>
                 ))}
             </div>
@@ -107,6 +112,9 @@ export function RecommendationPanel({
       ))}
 
       {record.isError && <div className="notice error">{record.error.message}</div>}
+      {hypotheses.isError && <div className="notice error">Не удалось загрузить сохранённые проверки.
+        <button type="button" className="button" onClick={() => void hypotheses.refetch()}>Повторить</button>
+      </div>}
     </div>
   );
 }

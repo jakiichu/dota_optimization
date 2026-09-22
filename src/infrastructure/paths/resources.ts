@@ -42,7 +42,7 @@ const SOURCE_ROOT = PACKAGED
   : // Этот файл лежит в src/infrastructure/paths — отсюда три уровня вверх.
     resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
-const ROOT = PACKAGED ? dirname(process.execPath) : SOURCE_ROOT;
+const ROOT = process.env['KADROSKOP_RESOURCES'] ?? (PACKAGED ? dirname(process.execPath) : SOURCE_ROOT);
 
 /** Абсолютный путь к ресурсу приложения. */
 export function resourcePath(...segments: readonly string[]): string {
@@ -79,5 +79,5 @@ export const RESOURCES = {
       : resourcePath('src', 'infrastructure', 'windows', 'collect-snapshot.ps1'),
   webRoot: (): string => (PACKAGED ? resourcePath('web') : resourcePath('web', 'dist')),
   /** Записи кладём рядом с приложением, а не в профиль: папку носят целиком. */
-  sessionsRoot: (): string => resourcePath('sessions'),
+  sessionsRoot: (): string => process.env['KADROSKOP_SESSIONS'] ?? resourcePath('sessions'),
 } as const;
