@@ -1,25 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useAccountControls } from '../../application/queries.ts';
-import type { SteamControlProfile } from '../../domain/models.ts';
+import type { SettingsTransferMode, SteamControlProfile } from '../../domain/models.ts';
 
 export function AccountControlsTransfer(): React.JSX.Element {
   const { profiles, transfer } = useAccountControls();
   const [sourceChoice, setSourceChoice] = useState('');
   const [targetChoice, setTargetChoice] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [mode, setMode] = useState<SettingsTransferMode>('all');
   const available = profiles.data?.profiles ?? [];
   const sourceId = sourceChoice || suggestedSource(available)?.id || '';
   const targetId = targetChoice || available.find((profile) => profile.id !== sourceId)?.id || '';
   const source = available.find((profile) => profile.id === sourceId) ?? null;
   const target = available.find((profile) => profile.id === targetId) ?? null;
 
-  useEffect(() => setConfirming(false), [sourceId, targetId]);
-  const canTransfer = source !== null && source.hasControls && target !== null && source.id !== target.id;
+  useEffect(() => setConfirming(false), [sourceId, targetId, mode]);
+  const files = (source?.settingsFiles ?? []).filter(file => mode === 'all' || file.path.toLowerCase() === 'remote/cfg/dotakeys_personal.lst');
+  const canTransfer = source !== null && files.length > 0 && target !== null && source.id !== target.id;
 
   return <div className="card account-transfer">
     <div className="card-head">
-      <span className="card-title">Перенос управления между аккаунтами</span>
-      <span className="card-note">только клавиши и быстрые команды Dota</span>
+      <span className="card-title">Перенос настроек между аккаунтами</span>
+      <span className="card-note">звук, управление, видео и игровые предпочтения</span>
     </div>
 
     {profiles.isPending && <div className="muted">Ищу локальные аккаунты Steam…</div>}
@@ -31,6 +33,13 @@ export function AccountControlsTransfer(): React.JSX.Element {
     </div>}
 
     {available.length >= 2 && <>
+      <label className="field"><span>Что перенести</span>
+        <select value={mode} disabled={transfer.isPending} onChange={(event) => { setMode(event.target.value as SettingsTransferMode); transfer.reset(); }}>
+          <option value="all">Все доступные настройки</option>
+          <option value="controls">Только персональная раскладка клавиш</option>
+        </select>
+      </label>
+      <fieldset disabled={transfer.isPending} style={{ border: 0, padding: 0, margin: 0 }}>
       <div className="account-transfer-grid">
         <AccountSelect label="Откуда" value={sourceId} profiles={available}
           onChange={(value) => { setSourceChoice(value); transfer.reset(); }} />
@@ -39,24 +48,27 @@ export function AccountControlsTransfer(): React.JSX.Element {
           onChange={(value) => { setTargetChoice(value); transfer.reset(); }} />
       </div>
 
-      {source !== null && !source.hasControls && <div className="notice error">
-        У аккаунта «{source.label}» пока нет сохранённой раскладки Dota.
+      </fieldset>
+      {source !== null && files.length === 0 && <div className="notice error">
+        У аккаунта «{source.label}» нет файлов для выбранного режима переноса.
       </div>}
 
       {!confirming ? <button type="button" className="button"
-        disabled={!canTransfer} onClick={() => setConfirming(true)}>
+        disabled={!canTransfer || transfer.isPending || profiles.isFetching} onClick={() => { void profiles.refetch().then(result => { if (!result.isError) setConfirming(true); }); }}>
         Проверить перенос
       </button> : <div className="account-transfer-confirm">
         <strong>{source?.label} → {target?.label}</strong>
-        <span>Будет заменён только файл персональной раскладки клавиш.</span>
-        <span>{target?.hasControls
-          ? 'Текущая раскладка получателя сохранится рядом в резервной копии.'
-          : 'У получателя ещё нет раскладки — резервная копия не требуется.'}</span>
-        <span className="muted">Закройте Dota перед переносом, чтобы Steam Cloud не вернул старый файл при выходе из игры.</span>
+        <span>Будут перенесены файлы источника ({files.length}). Остальные файлы получателя сохранятся.</span>
+        <details open><summary>Состав переноса</summary><ul>{files.map(file => <li key={file.path}>
+          <code>{file.path}</code> · {target?.settingsFiles?.some(candidate => candidate.path.toLowerCase() === file.path.toLowerCase()) ? 'замена с резервной копией' : 'новый файл'}
+        </li>)}</ul></details>
+        <span>Перед заменой сохраняется резервная копия. При ошибке приложение попробует отменить изменения.</span>
+        <span className="muted">Закройте Dota и полностью завершите Steam перед переносом. После запуска Steam проверьте настройки: облачная синхронизация может вернуть свою версию.</span>
+        {mode === 'all' && <span className="muted">Переносятся доступные локальные настройки, включая звук, видео, сетки героев и сборки. Инвентарь, рейтинг, история матчей, данные входа и параметры запуска Steam не переносятся.</span>}
         <div className="recommendation-actions">
-          <button type="button" className="button primary" disabled={transfer.isPending}
-            onClick={() => transfer.mutate({ sourceId, targetId }, { onSuccess: () => setConfirming(false) })}>
-            {transfer.isPending ? 'Переношу…' : 'Перенести управление'}
+          <button type="button" className="button primary" disabled={transfer.isPending || !canTransfer}
+            onClick={() => transfer.mutate({ sourceId, targetId, mode }, { onSuccess: () => setConfirming(false) })}>
+            {transfer.isPending ? 'Переношу…' : 'Перенести настройки'}
           </button>
           <button type="button" className="button" disabled={transfer.isPending}
             onClick={() => setConfirming(false)}>Отмена</button>
@@ -66,8 +78,8 @@ export function AccountControlsTransfer(): React.JSX.Element {
 
     {transfer.isError && <div className="notice error">{transfer.error.message}</div>}
     {transfer.data !== undefined && <div className="notice">
-      Управление перенесено: {transfer.data.source.label} → {transfer.data.target.label}.
-      {transfer.data.backupPath !== null && <> Прежняя раскладка сохранена: <code>{transfer.data.backupPath}</code>.</>}
+      Настройки перенесены: {transfer.data.source.label} → {transfer.data.target.label}.
+      {transfer.data.backupPath !== null && <> Резервная копия: <code>{transfer.data.backupPath}</code>.</>}
     </div>}
   </div>;
 }
@@ -82,14 +94,14 @@ function AccountSelect({ label, value, profiles, onChange }: {
     <span>{label}</span>
     <select value={value} onChange={(event) => onChange(event.target.value)}>
       {profiles.map((profile) => <option key={profile.id} value={profile.id}>
-        {profile.label}{profile.mostRecent ? ' · последний вход' : ''}{profile.hasControls ? '' : ' · нет раскладки'}
+        {profile.label}{profile.mostRecent ? ' · последний вход' : ''}{profile.settingsFiles?.length ? '' : ' · нет настроек'}
       </option>)}
     </select>
   </label>;
 }
 
 function suggestedSource(profiles: readonly SteamControlProfile[]): SteamControlProfile | null {
-  return profiles.find((profile) => profile.mostRecent && profile.hasControls)
-    ?? profiles.find((profile) => profile.hasControls)
+  return profiles.find((profile) => profile.mostRecent && profile.settingsFiles?.length)
+    ?? profiles.find((profile) => profile.settingsFiles?.length)
     ?? null;
 }

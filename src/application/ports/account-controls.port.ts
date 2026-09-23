@@ -1,4 +1,10 @@
+export type SettingsTransferMode = 'controls' | 'all';
+export interface TransferSettingsFile {
+  readonly path: string;
+  readonly sizeBytes: number;
+}
 export interface SteamControlProfile {
+  readonly settingsFiles?: readonly TransferSettingsFile[];
   /** Локальный Steam AccountID; наружу путь к userdata не отдаём. */
   readonly id: string;
   readonly label: string;
@@ -9,6 +15,7 @@ export interface SteamControlProfile {
 }
 
 export interface ControlTransferResult {
+  readonly transferredFiles?: readonly string[];
   readonly source: SteamControlProfile;
   readonly target: SteamControlProfile;
   readonly backupPath: string | null;
@@ -17,5 +24,5 @@ export interface ControlTransferResult {
 
 export interface AccountControlsStore {
   list(): Promise<readonly SteamControlProfile[]>;
-  transfer(sourceId: string, targetId: string): Promise<ControlTransferResult>;
+  transfer(sourceId: string, targetId: string, mode?: SettingsTransferMode): Promise<ControlTransferResult>;
 }

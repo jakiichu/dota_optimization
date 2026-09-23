@@ -16,20 +16,21 @@ export function createAccountControlsRoutes(
       path: '/api/account-controls/transfer',
       method: 'POST',
       async handle(_query, body) {
-        const { sourceId, targetId } = requestFrom(body);
-        return controls.transfer(sourceId, targetId);
+        const { sourceId, targetId, mode } = requestFrom(body);
+        return controls.transfer(sourceId, targetId, mode);
       },
     },
   ];
 }
 
-function requestFrom(body: string): { sourceId: string; targetId: string } {
+function requestFrom(body: string): { sourceId: string; targetId: string; mode?: 'controls' | 'all' } {
   let parsed: unknown;
   try { parsed = JSON.parse(body); } catch { throw new Error('Тело запроса — не JSON.'); }
   if (typeof parsed !== 'object' || parsed === null) throw new Error('Ожидался объект переноса.');
-  const { sourceId, targetId } = parsed as { sourceId?: unknown; targetId?: unknown };
+  const { sourceId, targetId, mode } = parsed as { sourceId?: unknown; targetId?: unknown; mode?: unknown };
   if (typeof sourceId !== 'string' || typeof targetId !== 'string') {
     throw new Error('Нужно выбрать аккаунт-источник и аккаунт-получатель.');
   }
-  return { sourceId, targetId };
+  if (mode !== undefined && mode !== 'controls' && mode !== 'all') throw new Error('Неизвестный режим переноса.');
+  return { sourceId, targetId, ...(mode === undefined ? {} : { mode }) };
 }

@@ -31,6 +31,14 @@ describe('маршруты переноса управления', () => {
     expect(transfer).toHaveBeenCalledWith('101', '202');
   });
 
+  it('передаёт полный режим и отклоняет неизвестный', async () => {
+    const transfer = vi.fn(async () => ({ source: profile, target: profile, backupPath: null, transferredBytes: 0 }));
+    const route = createAccountControlsRoutes({ list: async () => [], transfer }).find(item => item.path.endsWith('/transfer'))!;
+    await route.handle(new URLSearchParams(), JSON.stringify({ sourceId: '101', targetId: '202', mode: 'all' }));
+    expect(transfer).toHaveBeenCalledWith('101', '202', 'all');
+    await expect(route.handle(new URLSearchParams(), JSON.stringify({ sourceId: '101', targetId: '202', mode: 'invalid' }))).rejects.toThrow('Неизвестный');
+  });
+
   it('отклоняют неполный запрос', async () => {
     const store: AccountControlsStore = {
       list: async () => [], transfer: async () => { throw new Error('не вызывается'); },

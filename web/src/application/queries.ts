@@ -7,6 +7,7 @@ import type {
   Capture,
   Comparison,
   ControlTransferResult,
+  SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
   FrameWindow,
@@ -266,7 +267,7 @@ export function useConfigMutations(): {
 
 export function useAccountControls(): {
   readonly profiles: UseQueryResult<AccountControls>;
-  readonly transfer: UseMutationResult<ControlTransferResult, Error, { sourceId: string; targetId: string }>;
+  readonly transfer: UseMutationResult<ControlTransferResult, Error, { sourceId: string; targetId: string; mode: SettingsTransferMode }>;
 } {
   const api = useApi();
   const client = useQueryClient();
@@ -276,8 +277,8 @@ export function useAccountControls(): {
     staleTime: 60 * 1000,
   });
   const transfer = useMutation({
-    mutationFn: ({ sourceId, targetId }: { sourceId: string; targetId: string }) =>
-      api.transferAccountControls(sourceId, targetId),
+    mutationFn: ({ sourceId, targetId, mode }: { sourceId: string; targetId: string; mode: SettingsTransferMode }) =>
+      api.transferAccountControls(sourceId, targetId, mode),
     onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.accountControls }),
   });
   return { profiles, transfer };

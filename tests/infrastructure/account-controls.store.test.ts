@@ -23,7 +23,7 @@ describe('SteamAccountControlsStore', () => {
       ['303', 'Без Dota', false],
     ]);
 
-    const profiles = await new SteamAccountControlsStore(root).list();
+    const profiles = await new SteamAccountControlsStore(root, async () => {}).list();
 
     expect(profiles.map((item) => item.label)).toEqual(['Основной', 'Второй']);
     expect(profiles.map((item) => item.hasControls)).toEqual([true, false]);
@@ -35,30 +35,70 @@ describe('SteamAccountControlsStore', () => {
     const targetPath = await profile(root, '202', 'target controls');
     await loginUsers(root, [['101', 'Источник', true], ['202', 'Получатель', false]]);
 
-    const result = await new SteamAccountControlsStore(root).transfer('101', '202');
+    const result = await new SteamAccountControlsStore(root, async () => {}).transfer('101', '202');
 
     expect(await readFile(targetPath, 'utf8')).toBe(await readFile(sourcePath, 'utf8'));
     expect(result.transferredBytes).toBe(Buffer.byteLength('source controls'));
     expect(result.backupPath).not.toBeNull();
-    expect(await readFile(result.backupPath!, 'utf8')).toBe('target controls');
+    expect(await readFile(join(result.backupPath!, 'remote/cfg/dotakeys_personal.lst'), 'utf8')).toBe('target controls');
   });
 
-  it('создаёт раскладку получателю без файла и не выдумывает резервную копию', async () => {
+  it('создаёт раскладку и записывает в манифест отсутствие прежнего файла', async () => {
     const root = await fixture();
     await profile(root, '101', 'source controls');
     const targetPath = await profile(root, '202', null);
 
-    const result = await new SteamAccountControlsStore(root).transfer('101', '202');
+    const result = await new SteamAccountControlsStore(root, async () => {}).transfer('101', '202');
 
     expect(await readFile(targetPath, 'utf8')).toBe('source controls');
-    expect(result.backupPath).toBeNull();
+    const manifest = JSON.parse(await readFile(join(result.backupPath!, 'manifest.json'), 'utf8'));
+    expect(manifest.files[0].existed).toBe(false);
+  });
+
+  it('переносит звук, видео, новые бинды и сетки, сохраняя служебные файлы получателя', async () => {
+    const root = await fixture();
+    await profile(root, '101', 'source'); await profile(root, '202', 'target');
+    const source = join(root, 'userdata/101/570'); const target = join(root, 'userdata/202/570');
+    const settings = ['local/cfg/machine_convars.vcfg', 'local/cfg/video.txt', 'local/cfg/user_convars_0_slot0.vcfg', 'remote/user_convars.vcfg', 'remote/cfg/hero_grid_config.json', 'remote/scripts/control_groups.txt', 'remote/guides/hero.build'];
+    for (const name of [...settings, 'remotecache.vdf', 'remote/cfg/stats.dat', 'local/cfg/trustedlaunch.cfg', 'local/cfg/user_convars_0_slot0.vcfg_lastclouded']) {
+      const { dirname } = await import('node:path');
+      await mkdir(dirname(join(source, name)), { recursive: true });
+      await mkdir(dirname(join(target, name)), { recursive: true });
+      await writeFile(join(source, name), 'source data'); await writeFile(join(target, name), 'target data');
+    }
+    const store = new SteamAccountControlsStore(root, async () => {});
+    const profiles = await store.list();
+    expect(profiles[0]?.settingsFiles?.length).toBe(8);
+    const result = await store.transfer('101', '202', 'all');
+    expect(result.transferredFiles).toHaveLength(8);
+    for (const name of settings) {
+      expect(await readFile(join(target, name), 'utf8')).toBe('source data');
+      expect(await readFile(join(result.backupPath!, name), 'utf8')).toBe('target data');
+    }
+    for (const name of ['remotecache.vdf', 'remote/cfg/stats.dat', 'local/cfg/trustedlaunch.cfg', 'local/cfg/user_convars_0_slot0.vcfg_lastclouded']) {
+      expect(await readFile(join(target, name), 'utf8')).toBe('target data');
+    }
+  });
+
+  it('переносит общие настройки даже без старого файла раскладки', async () => {
+    const root = await fixture(); await profile(root, '101', null); await profile(root, '202', null);
+    await writeFile(join(root, 'userdata/101/570/remote/user_convars.vcfg'), 'sound settings');
+    const result = await new SteamAccountControlsStore(root, async () => {}).transfer('101', '202', 'all');
+    expect(result.transferredFiles).toEqual(['remote/user_convars.vcfg']);
+  });
+
+  it('при запущенной игре не меняет файлы', async () => {
+    const root = await fixture(); await profile(root, '101', 'source'); const target = await profile(root, '202', 'target');
+    const store = new SteamAccountControlsStore(root, async () => { throw new Error('Закройте Dota'); });
+    await expect(store.transfer('101', '202', 'all')).rejects.toThrow('Закройте Dota');
+    expect(await readFile(target, 'utf8')).toBe('target');
   });
 
   it('не переносит отсутствующую раскладку', async () => {
     const root = await fixture();
     await profile(root, '101', null);
     await profile(root, '202', 'target');
-    const store = new SteamAccountControlsStore(root);
+    const store = new SteamAccountControlsStore(root, async () => {});
 
     await expect(store.transfer('101', '202')).rejects.toThrow('нет сохранённой раскладки');
   });

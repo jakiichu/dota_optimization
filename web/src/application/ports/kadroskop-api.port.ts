@@ -6,6 +6,7 @@ import type {
   CaptureStatus,
   Comparison,
   ControlTransferResult,
+  SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
   FrameWindow,
@@ -88,7 +89,7 @@ export interface KadroskopApi {
   /** Локальные Steam-профили и наличие персональной раскладки Dota. */
   fetchAccountControls(signal: AbortSignal): Promise<AccountControls>;
   /** Копирует раскладку с обязательной резервной копией существующего файла. */
-  transferAccountControls(sourceId: string, targetId: string): Promise<ControlTransferResult>;
+  transferAccountControls(sourceId: string, targetId: string, mode?: SettingsTransferMode): Promise<ControlTransferResult>;
 
   /**
    * Поток живых замеров.

@@ -10,6 +10,7 @@ import type {
   CaptureStatus,
   Comparison,
   ControlTransferResult,
+  SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
   FrameWindow,
@@ -148,10 +149,12 @@ export class HttpKadroskopApi implements KadroskopApi {
   async transferAccountControls(
     sourceId: string,
     targetId: string,
+    mode: SettingsTransferMode = 'controls',
   ): Promise<ControlTransferResult> {
     return postJson<ControlTransferResult>('/api/account-controls/transfer', {
       sourceId,
       targetId,
+      mode,
     });
   }
 

@@ -423,7 +423,13 @@ export interface ConfigEdit {
 
 // --- управление разных Steam-аккаунтов ------------------------------------
 
+export type SettingsTransferMode = 'controls' | 'all';
+export interface TransferSettingsFile {
+  readonly path: string;
+  readonly sizeBytes: number;
+}
 export interface SteamControlProfile {
+  readonly settingsFiles?: readonly TransferSettingsFile[];
   readonly id: string;
   readonly label: string;
   readonly mostRecent: boolean;
@@ -437,6 +443,7 @@ export interface AccountControls {
 }
 
 export interface ControlTransferResult {
+  readonly transferredFiles?: readonly string[];
   readonly source: SteamControlProfile;
   readonly target: SteamControlProfile;
   readonly backupPath: string | null;

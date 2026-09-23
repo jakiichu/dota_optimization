@@ -1,10 +1,11 @@
 import type {
   AccountControlsStore,
+  SettingsTransferMode,
   ControlTransferResult,
   SteamControlProfile,
 } from '../ports/account-controls.port.ts';
 
-/** Переносит только персональную раскладку Dota между локальными Steam-профилями. */
+/** Перенос локальных настроек Dota с выбранным объёмом копирования. */
 export class TransferAccountControls {
   readonly #store: AccountControlsStore;
 
@@ -16,13 +17,14 @@ export class TransferAccountControls {
     return this.#store.list();
   }
 
-  async transfer(sourceId: string, targetId: string): Promise<ControlTransferResult> {
+  async transfer(sourceId: string, targetId: string, mode?: SettingsTransferMode): Promise<ControlTransferResult> {
     if (!/^\d+$/.test(sourceId) || !/^\d+$/.test(targetId)) {
       throw new Error('Профиль Steam указан неверно.');
     }
     if (sourceId === targetId) {
       throw new Error('Источник и получатель должны быть разными аккаунтами.');
     }
-    return this.#store.transfer(sourceId, targetId);
+    if (mode !== undefined && mode !== 'controls' && mode !== 'all') throw new Error('Неизвестный режим переноса.');
+    return mode === undefined ? this.#store.transfer(sourceId, targetId) : this.#store.transfer(sourceId, targetId, mode);
   }
 }
