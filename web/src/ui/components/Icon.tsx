@@ -1,4 +1,5 @@
-export type IconName = 'overview' | 'capture' | 'settings' | 'compare' | 'activity' | 'arrow' | 'check' | 'chevron';
+export type IconName =
+  'overview' | 'capture' | 'settings' | 'compare' | 'activity' | 'arrow' | 'check' | 'chevron';
 
 const PATHS: Record<IconName, string> = {
   overview: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -11,6 +12,27 @@ const PATHS: Record<IconName, string> = {
   chevron: 'm9 5 7 7-7 7',
 };
 
-export function Icon({ name, className = '' }: { name: IconName; className?: string }): React.JSX.Element {
-  return <svg className={`icon ${className}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={PATHS[name]} /></svg>;
+export function Icon({
+  name,
+  className = '',
+}: {
+  name: IconName;
+  className?: string;
+}): React.JSX.Element {
+  return (
+    <svg
+      className={`icon ${className}`}
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={PATHS[name]} />
+    </svg>
+  );
 }

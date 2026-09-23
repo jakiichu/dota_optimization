@@ -90,10 +90,7 @@ describe('corroborate', () => {
   });
 
   it('не сверяет то, что и так в порядке', () => {
-    const found = corroborate(
-      [finding('graphics.mpo', 'ok')],
-      session({ causes: [PRESENT_MODE] }),
-    );
+    const found = corroborate([finding('graphics.mpo', 'ok')], session({ causes: [PRESENT_MODE] }));
 
     expect(found).toEqual([]);
   });

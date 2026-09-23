@@ -1,4 +1,5 @@
 export interface RecordingState {
+  startedAt?: string | null;
   phase: 'idle' | 'recording' | 'stopping' | 'saving' | 'completed' | 'failed';
   sessionId?: string | null;
   error?: string | null;
@@ -23,5 +24,7 @@ export async function finishRecording(
     if (!isRecording(state)) return;
     await pause();
   }
-  throw new Error('Сохранение ещё не завершено. Приложение остаётся открытым — попробуйте выйти позже.');
+  throw new Error(
+    'Сохранение ещё не завершено. Приложение остаётся открытым — попробуйте выйти позже.',
+  );
 }

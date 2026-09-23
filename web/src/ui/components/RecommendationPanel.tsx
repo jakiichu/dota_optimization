@@ -30,9 +30,13 @@ export function RecommendationPanel({
 
   if (recommendations.length === 0) return null;
 
-  const trackedKinds = new Set(hypotheses.data?.filter((h) => h.before?.id === sessionId && h.check === null)
-    .map((h) => h.recommendation.kind));
-  if (record.isSuccess && record.variables.sessionId === sessionId) trackedKinds.add(record.variables.kind);
+  const trackedKinds = new Set(
+    hypotheses.data
+      ?.filter((h) => h.before?.id === sessionId && h.check === null)
+      .map((h) => h.recommendation.kind),
+  );
+  if (record.isSuccess && record.variables.sessionId === sessionId)
+    trackedKinds.add(record.variables.kind);
 
   return (
     <div className="card">
@@ -92,16 +96,22 @@ export function RecommendationPanel({
               {item.prediction !== null &&
                 (trackedKinds.has(item.kind) ? (
                   <span className="muted">
-                    Проверка сохранена. Дальнейшие шаги — в панели «Проверка настройки» над разделом.
+                    Проверка сохранена. Дальнейшие шаги — в панели «Проверка настройки» над
+                    разделом.
                   </span>
                 ) : (
                   <button
                     type="button"
                     className="button"
                     disabled={record.isPending || hypotheses.isPending || hypotheses.isError}
-                    onClick={() => record.mutate({ sessionId, kind: item.kind }, {
-                      onSuccess: () => onOpenInConfig(item.changes),
-                    })}
+                    onClick={() =>
+                      record.mutate(
+                        { sessionId, kind: item.kind },
+                        {
+                          onSuccess: () => onOpenInConfig(item.changes),
+                        },
+                      )
+                    }
                   >
                     Проверить по шагам
                   </button>
@@ -112,9 +122,14 @@ export function RecommendationPanel({
       ))}
 
       {record.isError && <div className="notice error">{record.error.message}</div>}
-      {hypotheses.isError && <div className="notice error">Не удалось загрузить сохранённые проверки.
-        <button type="button" className="button" onClick={() => void hypotheses.refetch()}>Повторить</button>
-      </div>}
+      {hypotheses.isError && (
+        <div className="notice error">
+          Не удалось загрузить сохранённые проверки.
+          <button type="button" className="button" onClick={() => void hypotheses.refetch()}>
+            Повторить
+          </button>
+        </div>
+      )}
     </div>
   );
 }

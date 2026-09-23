@@ -110,7 +110,7 @@ async function handle(
     if (method === 'POST' && !isWriteAllowed(request)) {
       return send(response, 403, 'text/plain; charset=utf-8', 'Запрещено: чужой источник.');
     }
-    let body = '';
+    let body: string;
     try {
       body = await readBody(request);
     } catch {
@@ -120,7 +120,12 @@ async function handle(
   }
   // Путь есть, но метод не тот — это ошибка вызова, а не отсутствие страницы.
   if (options.jsonRoutes.some((route) => route.path === path)) {
-    return send(response, 405, 'text/plain; charset=utf-8', `Метод ${method} здесь не принимается.`);
+    return send(
+      response,
+      405,
+      'text/plain; charset=utf-8',
+      `Метод ${method} здесь не принимается.`,
+    );
   }
 
   return sendStatic(response, path, options.staticRoot);
@@ -199,11 +204,7 @@ async function sendJson(
   }
 }
 
-function openStream(
-  request: IncomingMessage,
-  response: ServerResponse,
-  route: StreamRoute,
-): void {
+function openStream(request: IncomingMessage, response: ServerResponse, route: StreamRoute): void {
   response.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -269,9 +270,7 @@ async function sendStatic(
 function resolveWithinRoot(root: string, path: string): string | null {
   const absoluteRoot = resolve(root);
   const candidate = resolve(absoluteRoot, `.${normalize(path)}`);
-  return candidate === absoluteRoot || candidate.startsWith(absoluteRoot + sep)
-    ? candidate
-    : null;
+  return candidate === absoluteRoot || candidate.startsWith(absoluteRoot + sep) ? candidate : null;
 }
 
 function contentTypeOf(filePath: string): string {

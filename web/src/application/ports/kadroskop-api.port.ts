@@ -6,6 +6,8 @@ import type {
   CaptureStatus,
   Comparison,
   ControlTransferResult,
+  SettingsBackup,
+  SettingsRestoreResult,
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
@@ -51,12 +53,12 @@ export interface KadroskopApi {
   fetchVersion(signal?: AbortSignal): Promise<string>;
   fetchAudit(signal: AbortSignal): Promise<Audit>;
   fetchSessions(signal: AbortSignal): Promise<readonly SessionSummary[]>;
-  fetchComparison(
-    beforeId: string,
-    afterId: string,
+  fetchComparison(beforeId: string, afterId: string, signal: AbortSignal): Promise<Comparison>;
+  fetchRepeatedComparison(
+    beforeIds: readonly string[],
+    afterIds: readonly string[],
     signal: AbortSignal,
-  ): Promise<Comparison>;
-  fetchRepeatedComparison(beforeIds: readonly string[], afterIds: readonly string[], signal: AbortSignal): Promise<RepeatedComparison>;
+  ): Promise<RepeatedComparison>;
   /** `window` задаёт кусок для графика; метрики от него не зависят. */
   analyzeSession(id: string, signal: AbortSignal, window?: FrameWindow): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
@@ -89,7 +91,13 @@ export interface KadroskopApi {
   /** Локальные Steam-профили и наличие персональной раскладки Dota. */
   fetchAccountControls(signal: AbortSignal): Promise<AccountControls>;
   /** Копирует раскладку с обязательной резервной копией существующего файла. */
-  transferAccountControls(sourceId: string, targetId: string, mode?: SettingsTransferMode): Promise<ControlTransferResult>;
+  fetchSettingsBackups(signal: AbortSignal): Promise<readonly SettingsBackup[]>;
+  restoreSettings(targetId: string, backupId: string): Promise<SettingsRestoreResult>;
+  transferAccountControls(
+    sourceId: string,
+    targetId: string,
+    mode?: SettingsTransferMode,
+  ): Promise<ControlTransferResult>;
 
   /**
    * Поток живых замеров.

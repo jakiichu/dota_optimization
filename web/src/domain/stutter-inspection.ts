@@ -32,26 +32,24 @@ export function inspectableStutters(capture: Capture): readonly StutterInspectio
   const evidence = new Map(
     capture.correlation.stutters.map((entry) => [entry.stutter.frameIndex, entry.evidence]),
   );
-  const kinds = new Map(
-    capture.series.stutterMarks.map((mark) => [mark.frameIndex, mark.kind]),
-  );
+  const kinds = new Map(capture.series.stutterMarks.map((mark) => [mark.frameIndex, mark.kind]));
   return [...capture.worstStutters]
     .sort((left, right) => right.frameTimeMs - left.frameTimeMs)
     .map((stutter) => {
       const foundEvidence = evidence.get(stutter.frameIndex) ?? [];
       const primaryKind = kinds.get(stutter.frameIndex) ?? null;
       const recommendationKind = relatedKind(primaryKind, foundEvidence);
-      const recommendationIndex = recommendationKind === null
-        ? -1
-        : capture.recommendations.findIndex((item) => item.kind === recommendationKind);
+      const recommendationIndex =
+        recommendationKind === null
+          ? -1
+          : capture.recommendations.findIndex((item) => item.kind === recommendationKind);
       return {
         stutter,
         evidence: foundEvidence,
         primaryKind,
         relatedRecommendation: capture.recommendations[recommendationIndex] ?? null,
-        recommendationAnchor: recommendationIndex < 0
-          ? null
-          : recommendationAnchor(recommendationIndex),
+        recommendationAnchor:
+          recommendationIndex < 0 ? null : recommendationAnchor(recommendationIndex),
       };
     });
 }

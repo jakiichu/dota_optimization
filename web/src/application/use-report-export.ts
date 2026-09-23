@@ -11,15 +11,21 @@ export function useReportExport(): {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [path, setPath] = useState<string | null>(null);
-  return { error, pending, path, save: (html) => {
-    setError(null);
-    setPath(null);
-    setPending(true);
-    void api.exportReport(html)
-      .then(setPath)
-      .catch((failure: unknown) => setError(
-        failure instanceof Error ? failure.message : 'Не удалось сохранить отчёт.',
-      ))
-      .finally(() => setPending(false));
-  } };
+  return {
+    error,
+    pending,
+    path,
+    save: (html) => {
+      setError(null);
+      setPath(null);
+      setPending(true);
+      void api
+        .exportReport(html)
+        .then(setPath)
+        .catch((failure: unknown) =>
+          setError(failure instanceof Error ? failure.message : 'Не удалось сохранить отчёт.'),
+        )
+        .finally(() => setPending(false));
+    },
+  };
 }

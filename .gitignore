@@ -25,3 +25,7 @@ sidecar/bin/
 sidecar/**/obj/
 sidecar/**/bin/
 tools/presentmon/*.exe
+
+# Local quality-check output
+.eslintcache
+/coverage/

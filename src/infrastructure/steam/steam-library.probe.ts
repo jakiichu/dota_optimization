@@ -37,9 +37,7 @@ export interface SteamProbeResult {
  * Всё, что не нашлось, возвращается как `null`, а причина — в `errors`:
  * отсутствие Steam не должно выглядеть как отсутствие проблем.
  */
-export async function probeSteamLibraries(
-  steamPath: Maybe<string>,
-): Promise<SteamProbeResult> {
+export async function probeSteamLibraries(steamPath: Maybe<string>): Promise<SteamProbeResult> {
   if (steamPath === null) {
     return { games: [], errors: ['Steam не найден в реестре — игры не проверялись.'] };
   }
@@ -63,10 +61,7 @@ export async function probeSteamLibraries(
 
 // --- библиотеки -------------------------------------------------------------
 
-async function readLibraryPaths(
-  steamPath: string,
-  errors: string[],
-): Promise<readonly string[]> {
+async function readLibraryPaths(steamPath: string, errors: string[]): Promise<readonly string[]> {
   const manifest = join(steamPath, 'steamapps', 'libraryfolders.vdf');
   const parsed = await readVdf(manifest, errors);
   if (parsed === null) return [steamPath];
@@ -91,11 +86,7 @@ async function findInstalledGame(
   errors: string[],
 ): Promise<Omit<GameProfile, 'launchOptions'> | null> {
   for (const library of libraries) {
-    const manifestPath = join(
-      library,
-      'steamapps',
-      `appmanifest_${known.appId}.acf`,
-    );
+    const manifestPath = join(library, 'steamapps', `appmanifest_${known.appId}.acf`);
     const parsed = await readVdf(manifestPath, errors, { quiet: true });
     if (parsed === null) continue;
 

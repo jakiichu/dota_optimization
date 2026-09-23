@@ -49,7 +49,12 @@ function session(id: string, options: SessionOptions = {}): SessionSummary {
     inputLatency:
       options.inputP99 === undefined
         ? null
-        : { p50: options.inputP99 * 0.6, p95: options.inputP99 * 0.9, p99: options.inputP99, p999: options.inputP99 * 1.2 },
+        : {
+            p50: options.inputP99 * 0.6,
+            p95: options.inputP99 * 0.9,
+            p99: options.inputP99,
+            p999: options.inputP99 * 1.2,
+          },
     stutterCount: options.stutterCount ?? 10,
     pacingTimeShare: options.pacingTimeShare ?? 0.05,
     stuttersPerMinute: options.stuttersPerMinute ?? 10,
@@ -74,14 +79,24 @@ describe('compareSessions', () => {
     );
     expect(comparison.verdict).toBe('worse');
     expect(metric(comparison, 'Статтеров в минуту')?.share).toBeNull();
-    expect(JSON.parse(JSON.stringify(comparison)).metrics.find((m: { id: string }) => m.id === 'stutters').share).toBeNull();
+    expect(
+      JSON.parse(JSON.stringify(comparison)).metrics.find(
+        (m: { id: string }) => m.id === 'stutters',
+      ).share,
+    ).toBeNull();
   });
 
   it('учитывает абсолютный порог при переходе от нуля', () => {
     const before = session('до', { pacingTimeShare: 0, stuttersPerMinute: 0 });
-    const small = compareSessions(before, session('после', { pacingTimeShare: 0.009, stuttersPerMinute: 0.4 }));
+    const small = compareSessions(
+      before,
+      session('после', { pacingTimeShare: 0.009, stuttersPerMinute: 0.4 }),
+    );
     expect(small.verdict).toBe('same');
-    const boundary = compareSessions(before, session('после', { pacingTimeShare: 0.01, stuttersPerMinute: 0.5 }));
+    const boundary = compareSessions(
+      before,
+      session('после', { pacingTimeShare: 0.01, stuttersPerMinute: 0.5 }),
+    );
     expect(metric(boundary, 'Времени в рваном ритме')?.verdict).toBe('worse');
     expect(metric(boundary, 'Статтеров в минуту')?.verdict).toBe('worse');
   });
@@ -89,7 +104,9 @@ describe('compareSessions', () => {
   it('различает ноль без изменений и улучшение до нуля', () => {
     const zero = session('ноль', { stuttersPerMinute: 0 });
     expect(metric(compareSessions(zero, zero), 'Статтеров в минуту')?.share).toBe(0);
-    expect(metric(compareSessions(session('до'), zero), 'Статтеров в минуту')?.verdict).toBe('better');
+    expect(metric(compareSessions(session('до'), zero), 'Статтеров в минуту')?.verdict).toBe(
+      'better',
+    );
   });
 
   it('не выдаёт смешанный эффект за ухудшение или отсутствие изменений', () => {
@@ -186,10 +203,7 @@ describe('compareSessions', () => {
   it('не сравнивает метрику, которой нет в одной из записей', () => {
     // Подставив ноль вместо отсутствующего инпут-лага, мы получили бы
     // впечатляющее улучшение из ничего.
-    const comparison = compareSessions(
-      session('до', { inputP99: 50 }),
-      session('после'),
-    );
+    const comparison = compareSessions(session('до', { inputP99: 50 }), session('после'));
 
     expect(metric(comparison, 'Инпут-лаг p99')).toBeUndefined();
   });
@@ -250,7 +264,9 @@ describe('compareSessions', () => {
     // Ровно та ошибка, на которой инструмент однажды выдал разницу нагрузки за
     // результат правки настроек.
     const comparison = compareSessions(
-      session('до', { scene: { kind: 'hero-demo', replayFile: null, startTick: null, note: null } }),
+      session('до', {
+        scene: { kind: 'hero-demo', replayFile: null, startTick: null, note: null },
+      }),
       session('после', { scene: { kind: 'match', replayFile: null, startTick: null, note: null } }),
     );
 
@@ -282,7 +298,12 @@ describe('compareSessions', () => {
   });
 
   it('без указанной сцены сравнение не считается возможным', () => {
-    const unknown: CaptureScene = { kind: 'unknown', replayFile: null, startTick: null, note: null };
+    const unknown: CaptureScene = {
+      kind: 'unknown',
+      replayFile: null,
+      startTick: null,
+      note: null,
+    };
     const comparison = compareSessions(
       session('до', { scene: unknown }),
       session('после', { scene: unknown }),

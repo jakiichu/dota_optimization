@@ -32,10 +32,7 @@ function renderCpu(cpu: NonNullable<SensorSample['cpu']>): string[] {
   ];
 }
 
-export function renderSensorSample(
-  sample: SensorSample,
-  options: ConsoleSensorsOptions,
-): string {
+export function renderSensorSample(sample: SensorSample, options: ConsoleSensorsOptions): string {
   const paint = (text: string, code: string): string =>
     options.color ? `${code}${text}${RESET}` : text;
 
@@ -71,17 +68,18 @@ export function renderSensorSample(
   return lines.join('\n').trimEnd();
 }
 
-function renderGpu(
-  gpu: GpuReading,
-  paint: (text: string, code: string) => string,
-): string[] {
+function renderGpu(gpu: GpuReading, paint: (text: string, code: string) => string): string[] {
   const lines: string[] = [];
   lines.push(`${paint(gpu.adapterName, BOLD)} ${paint(`(${gpu.source})`, DIM)}`);
   lines.push(`  загрузка:    ${percent(gpu.utilizationPercent)}`);
   lines.push(`  температура: ${withUnit(gpu.temperatureC, ' °C')}`);
-  lines.push(`  частоты:     ${withUnit(gpu.coreClockMhz, ' МГц')} / ${withUnit(gpu.memoryClockMhz, ' МГц')} (ядро / память)`);
+  lines.push(
+    `  частоты:     ${withUnit(gpu.coreClockMhz, ' МГц')} / ${withUnit(gpu.memoryClockMhz, ' МГц')} (ядро / память)`,
+  );
   lines.push(`  питание:     ${watts(gpu.powerWatts)} из ${watts(gpu.powerLimitWatts)}`);
-  lines.push(`  видеопамять: ${mebibytes(gpu.memoryUsedBytes)} из ${mebibytes(gpu.memoryTotalBytes)}`);
+  lines.push(
+    `  видеопамять: ${mebibytes(gpu.memoryUsedBytes)} из ${mebibytes(gpu.memoryTotalBytes)}`,
+  );
 
   if (gpu.throttleReasons.length > 0) {
     lines.push(`  троттлинг:   ${gpu.throttleReasons.join(', ')}`);

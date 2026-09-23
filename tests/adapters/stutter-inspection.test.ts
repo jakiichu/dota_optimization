@@ -47,15 +47,32 @@ describe('разбор отдельного рывка', () => {
       correlation: {
         ...source.correlation,
         stutters: [
-          { stutter: second, evidence: [{ kind: 'gpu-work', detail: 'GPU занял почти весь кадр' }] },
+          {
+            stutter: second,
+            evidence: [{ kind: 'gpu-work', detail: 'GPU занял почти весь кадр' }],
+          },
           { stutter: first, evidence: [{ kind: 'waiting', detail: 'кадр ждал вне CPU и GPU' }] },
         ],
       },
       series: {
         ...source.series,
         stutterMarks: [
-          { index: 0, frameIndex: first.frameIndex, atSeconds: first.atSeconds, frameTimeMs: first.frameTimeMs, kind: 'waiting', evidence: [] },
-          { index: 1, frameIndex: second.frameIndex, atSeconds: second.atSeconds, frameTimeMs: second.frameTimeMs, kind: 'gpu-work', evidence: [] },
+          {
+            index: 0,
+            frameIndex: first.frameIndex,
+            atSeconds: first.atSeconds,
+            frameTimeMs: first.frameTimeMs,
+            kind: 'waiting',
+            evidence: [],
+          },
+          {
+            index: 1,
+            frameIndex: second.frameIndex,
+            atSeconds: second.atSeconds,
+            frameTimeMs: second.frameTimeMs,
+            kind: 'gpu-work',
+            evidence: [],
+          },
         ],
       },
     };
@@ -97,10 +114,16 @@ describe('разбор отдельного рывка', () => {
       },
       series: {
         ...source.series,
-        stutterMarks: [{
-          index: 0, frameIndex: event.frameIndex, atSeconds: event.atSeconds,
-          frameTimeMs: event.frameTimeMs, kind: 'gpu-work', evidence: [],
-        }],
+        stutterMarks: [
+          {
+            index: 0,
+            frameIndex: event.frameIndex,
+            atSeconds: event.atSeconds,
+            frameTimeMs: event.frameTimeMs,
+            kind: 'gpu-work',
+            evidence: [],
+          },
+        ],
       },
     };
 

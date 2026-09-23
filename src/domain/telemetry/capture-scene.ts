@@ -52,9 +52,7 @@ export function describeScene(scene: CaptureScene): string {
   const parts = [SCENE_LABEL[scene.kind]];
   if (scene.replayFile !== null) {
     parts.push(
-      scene.startTick === null
-        ? scene.replayFile
-        : `${scene.replayFile}, тик ${scene.startTick}`,
+      scene.startTick === null ? scene.replayFile : `${scene.replayFile}, тик ${scene.startTick}`,
     );
   }
   if (scene.note !== null) parts.push(scene.note);
@@ -106,9 +104,7 @@ export function compareScenes(before: CaptureScene, after: CaptureScene): SceneM
     if (before.replayFile !== after.replayFile) {
       return {
         comparable: false,
-        reasons: [
-          `Разные повторы: ${before.replayFile ?? '?'} и ${after.replayFile ?? '?'}.`,
-        ],
+        reasons: [`Разные повторы: ${before.replayFile ?? '?'} и ${after.replayFile ?? '?'}.`],
       };
     }
     if (before.startTick !== after.startTick) {

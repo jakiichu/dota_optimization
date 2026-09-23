@@ -42,17 +42,10 @@ export const driverFreshnessRule: AuditRule = {
       return unknown(ID, TITLE, 'Дата драйвера недоступна ни для одного адаптера.');
     }
 
-    const oldest = aged.reduce((worst, entry) =>
-      entry.months > worst.months ? entry : worst,
-    );
+    const oldest = aged.reduce((worst, entry) => (entry.months > worst.months ? entry : worst));
 
     if (oldest.months < STALE_MONTHS) {
-      return ok(
-        ID,
-        TITLE,
-        describe(oldest.gpu, oldest.months),
-        'Драйвер достаточно свежий.',
-      );
+      return ok(ID, TITLE, describe(oldest.gpu, oldest.months), 'Драйвер достаточно свежий.');
     }
 
     return {

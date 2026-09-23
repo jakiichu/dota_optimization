@@ -104,8 +104,6 @@ export async function ensureSidecarBuilt(): Promise<void> {
   try {
     await access(SIDECAR_PATH, constants.X_OK);
   } catch {
-    throw new Error(
-      `Сайдкар не найден: ${SIDECAR_PATH}\nСоберите его: npm run sidecar:build`,
-    );
+    throw new Error(`Сайдкар не найден: ${SIDECAR_PATH}\nСоберите его: npm run sidecar:build`);
   }
 }

@@ -8,7 +8,9 @@ describe('запись текстового файла на рабочий ст�
   const directories: string[] = [];
 
   afterEach(async () => {
-    await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
+    await Promise.all(
+      directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
+    );
   });
 
   it('пишет UTF-8 в каталог, который вернула Windows', async () => {
@@ -26,7 +28,8 @@ describe('запись текстового файла на рабочий ст�
   });
 
   it('не позволяет превратить имя в произвольный путь', async () => {
-    await expect(writeTextToDesktop('../outside', 'html', 'x', async () => tmpdir()))
-      .rejects.toThrow('Недопустимое имя');
+    await expect(
+      writeTextToDesktop('../outside', 'html', 'x', async () => tmpdir()),
+    ).rejects.toThrow('Недопустимое имя');
   });
 });

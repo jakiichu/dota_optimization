@@ -84,9 +84,7 @@ describe('computeFrameStatistics', () => {
 
   it('различает записи с одинаковым средним FPS, но разной ровностью', () => {
     const smooth = computeFrameStatistics(trace(steady(10, 100)));
-    const choppy = computeFrameStatistics(
-      trace([...steady(5, 90), ...steady(55, 10)]),
-    );
+    const choppy = computeFrameStatistics(trace([...steady(5, 90), ...steady(55, 10)]));
 
     // Средний FPS почти одинаковый, а хвост распределения — нет.
     expect(choppy.averageFps).toBeCloseTo(smooth.averageFps, 0);

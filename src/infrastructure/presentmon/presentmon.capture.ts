@@ -1,3 +1,4 @@
+import { elevatedCommand, presentMonFailure } from './elevated-command.ts';
 import { execFile } from 'node:child_process';
 import { constants } from 'node:fs';
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -140,10 +141,14 @@ async function runCapture(args: readonly string[], timeoutMs: number): Promise<v
     await execFileAsync(PRESENTMON_PATH, [...args], { timeout: timeoutMs, windowsHide: true });
     return;
   } catch (error) {
-    if (!needsElevation(error)) throw error;
+    if (!needsElevation(error)) throw presentMonFailure(error);
   }
 
-  await runElevated(args, timeoutMs);
+  try {
+    await runElevated(args, timeoutMs);
+  } catch (error) {
+    throw presentMonFailure(error);
+  }
 }
 
 function needsElevation(error: unknown): boolean {
@@ -159,18 +164,13 @@ function needsElevation(error: unknown): boolean {
  * через UAC, свои дескрипторы, и перехватить его вывод нельзя.
  */
 async function runElevated(args: readonly string[], timeoutMs: number): Promise<void> {
-  const argumentList = args.map(quoteForPowerShell).join(', ');
-  const command =
-    `Start-Process -FilePath ${quoteForPowerShell(PRESENTMON_PATH)} ` +
-    `-ArgumentList ${argumentList} -Verb RunAs -WindowStyle Hidden -Wait`;
+  const command = elevatedCommand(PRESENTMON_PATH, args);
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) if (key.toLowerCase() === 'psmodulepath') delete env[key];
 
   await execFileAsync(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command],
-    { timeout: timeoutMs, windowsHide: true },
+    { timeout: timeoutMs, windowsHide: true, env },
   );
-}
-
-function quoteForPowerShell(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`;
 }

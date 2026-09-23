@@ -55,10 +55,7 @@ export interface PresentMonCsvOptions {
   readonly timeColumnIsQpcMs?: boolean;
 }
 
-export function parsePresentMonCsv(
-  text: string,
-  options: PresentMonCsvOptions = {},
-): FrameCapture {
+export function parsePresentMonCsv(text: string, options: PresentMonCsvOptions = {}): FrameCapture {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
   const headerLine = lines[0];
   if (headerLine === undefined) {
@@ -88,9 +85,7 @@ export function parsePresentMonCsv(
     applicationName = readText(cells, columns.application) ?? applicationName;
     processId ??= readNumber(cells, columns.processId);
 
-    const qpcMs = options.timeColumnIsQpcMs === true
-      ? readNumber(cells, columns.startTime)
-      : null;
+    const qpcMs = options.timeColumnIsQpcMs === true ? readNumber(cells, columns.startTime) : null;
     // Ось графика ведём от первого кадра: абсолютный QPC отсчитывается от
     // загрузки системы, и на графике такие числа бесполезны.
     originQpcMs ??= qpcMs;
@@ -136,9 +131,7 @@ const BYTE_ORDER_MARK = '﻿';
 function mapColumns(header: readonly string[]): ColumnIndex {
   // Метку срезаем явно: `trim` убирает её и сам, потому что U+FEFF считается
   // пробелом, но полагаться на такое совпадение не стоит.
-  const normalized = header.map((name) =>
-    name.replace(BYTE_ORDER_MARK, '').trim().toLowerCase(),
-  );
+  const normalized = header.map((name) => name.replace(BYTE_ORDER_MARK, '').trim().toLowerCase());
   const columns: ColumnIndex = {};
 
   for (const key of Object.keys(COLUMN_ALIASES) as ColumnKey[]) {

@@ -1,11 +1,5 @@
-import {
-  analyzeCapture,
-  type CaptureAnalysis,
-} from '../../domain/telemetry/capture-analysis.ts';
-import {
-  UNKNOWN_MACHINE,
-  type MachineContext,
-} from '../../domain/gameconfig/machine-context.ts';
+import { analyzeCapture, type CaptureAnalysis } from '../../domain/telemetry/capture-analysis.ts';
+import { UNKNOWN_MACHINE, type MachineContext } from '../../domain/gameconfig/machine-context.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
 import type { FrameCaptureRequest, FrameCaptureSource } from '../ports/frame-capture.port.ts';

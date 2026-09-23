@@ -4,7 +4,9 @@ import type { AccountControlsStore } from '../../src/application/ports/account-c
 
 const store: AccountControlsStore = {
   list: async () => [],
-  transfer: async () => { throw new Error('не должен вызываться'); },
+  transfer: async () => {
+    throw new Error('не должен вызываться');
+  },
 };
 
 describe('перенос управления между аккаунтами', () => {

@@ -117,10 +117,7 @@ function noteFrameCap(config: GameConfig, measured: MeasuredContext): ConfigNote
  * упирается в процессор, половина строк не даст ничего — и человек будет
  * уверен, что «выжал всё», глядя на неизменившиеся кадры.
  */
-function noteBottleneckMismatch(
-  config: GameConfig,
-  measured: MeasuredContext,
-): ConfigNote[] {
+function noteBottleneckMismatch(config: GameConfig, measured: MeasuredContext): ConfigNote[] {
   if (measured.bottleneck !== 'cpu') return [];
 
   const gpuOnly = config.settings.filter((setting) => setting.impact === 'gpu').length;
@@ -197,8 +194,7 @@ function noteUnparsed(config: GameConfig): ConfigNote[] {
     {
       severity: 'warning',
       title: 'Некоторые строки разобрать не вышло',
-      detail:
-        'Они не похожи на пару «настройка значение»: ' + config.unparsed.join('; ') + '.',
+      detail: 'Они не похожи на пару «настройка значение»: ' + config.unparsed.join('; ') + '.',
       remediation: [
         'Проверьте их глазами: движок такие строки, скорее всего, тоже пропустит, ' +
           'и то, ради чего они написаны, не работает.',

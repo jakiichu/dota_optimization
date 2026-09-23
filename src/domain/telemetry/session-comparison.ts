@@ -232,10 +232,7 @@ export const DECIDING_METRICS: ReadonlySet<MetricId> = new Set<MetricId>([
   'pacing',
 ]);
 
-export function compareSessions(
-  before: SessionSummary,
-  after: SessionSummary,
-): SessionComparison {
+export function compareSessions(before: SessionSummary, after: SessionSummary): SessionComparison {
   const metrics = METRICS.map((spec) => compareMetric(spec, before, after)).filter(
     (metric): metric is MetricDelta => metric !== null,
   );
@@ -251,16 +248,11 @@ export function compareSessions(
     metrics,
     comparable: scenes.comparable,
     bottleneckChanged: before.bottleneck !== after.bottleneck,
-    changes: diffPassports(
-      before.passport ?? EMPTY_PASSPORT,
-      after.passport ?? EMPTY_PASSPORT,
-    ),
+    changes: diffPassports(before.passport ?? EMPTY_PASSPORT, after.passport ?? EMPTY_PASSPORT),
     programsAppeared: newPrograms(after.programs, before.programs),
     programsGone: newPrograms(before.programs, after.programs),
     verdict,
-    summary: scenes.comparable
-      ? describe(verdict, metrics)
-      : 'Эти записи сравнивать нельзя.',
+    summary: scenes.comparable ? describe(verdict, metrics) : 'Эти записи сравнивать нельзя.',
     caveats: [...scenes.reasons, ...collectCaveats(before, after)],
   };
 }
@@ -333,8 +325,14 @@ function describe(verdict: Verdict, metrics: readonly MetricDelta[]): string {
   const tail = unchanged.length === 0 ? '' : ` Без заметных изменений: ${unchanged.join(', ')}.`;
 
   if (verdict === 'mixed') {
-    const better = moved.filter((metric) => metric.verdict === 'better').map(quote).join(', ');
-    const worse = moved.filter((metric) => metric.verdict === 'worse').map(quote).join(', ');
+    const better = moved
+      .filter((metric) => metric.verdict === 'better')
+      .map(quote)
+      .join(', ');
+    const worse = moved
+      .filter((metric) => metric.verdict === 'worse')
+      .map(quote)
+      .join(', ');
     return `Смешанный эффект. Улучшилось: ${better}. Ухудшилось: ${worse}.${tail}`;
   }
 
@@ -394,13 +392,8 @@ function collectCaveats(before: SessionSummary, after: SessionSummary): string[]
     );
   }
 
-  if (
-    before.stutterCount < MIN_STUTTERS_FOR_RATE &&
-    after.stutterCount < MIN_STUTTERS_FOR_RATE
-  ) {
-    caveats.push(
-      'Статтеров слишком мало для выводов об их частоте — сравнивайте по p99.',
-    );
+  if (before.stutterCount < MIN_STUTTERS_FOR_RATE && after.stutterCount < MIN_STUTTERS_FOR_RATE) {
+    caveats.push('Статтеров слишком мало для выводов об их частоте — сравнивайте по p99.');
   }
 
   if (before.bottleneck === 'unknown' || after.bottleneck === 'unknown') {

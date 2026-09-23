@@ -7,6 +7,8 @@ import type {
   Capture,
   Comparison,
   ControlTransferResult,
+  SettingsBackup,
+  SettingsRestoreResult,
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
@@ -85,10 +87,7 @@ export function useSessions(): UseQueryResult<readonly SessionSummary[]> {
   });
 }
 
-export function useComparison(
-  beforeId: string,
-  afterId: string,
-): UseQueryResult<Comparison> {
+export function useComparison(beforeId: string, afterId: string): UseQueryResult<Comparison> {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.comparison(beforeId, afterId),
@@ -99,12 +98,17 @@ export function useComparison(
   });
 }
 
-export function useRepeatedComparison(before: readonly string[], after: readonly string[]): UseQueryResult<RepeatedComparison> {
+export function useRepeatedComparison(
+  before: readonly string[],
+  after: readonly string[],
+): UseQueryResult<RepeatedComparison> {
   const api = useApi();
   return useQuery({
     queryKey: ['repeated-comparison', before, after],
     queryFn: ({ signal }) => api.fetchRepeatedComparison(before, after, signal),
-    enabled: before.length >= 3 && before.length === after.length &&
+    enabled:
+      before.length >= 3 &&
+      before.length === after.length &&
       [...before, ...after].every((id) => id !== '') &&
       new Set([...before, ...after]).size === before.length + after.length,
     staleTime: ANALYSIS_STALE_MS,
@@ -157,8 +161,7 @@ export function useHypothesisActions(): {
 
   return {
     record: useMutation({
-      mutationFn: ({ sessionId, kind }: RecordHypothesis) =>
-        api.recordHypothesis(sessionId, kind),
+      mutationFn: ({ sessionId, kind }: RecordHypothesis) => api.recordHypothesis(sessionId, kind),
       onSuccess: refresh,
     }),
     settle: useMutation({
@@ -266,8 +269,18 @@ export function useConfigMutations(): {
 }
 
 export function useAccountControls(): {
+  readonly backups: UseQueryResult<readonly SettingsBackup[]>;
+  readonly restore: UseMutationResult<
+    SettingsRestoreResult,
+    Error,
+    { targetId: string; backupId: string }
+  >;
   readonly profiles: UseQueryResult<AccountControls>;
-  readonly transfer: UseMutationResult<ControlTransferResult, Error, { sourceId: string; targetId: string; mode: SettingsTransferMode }>;
+  readonly transfer: UseMutationResult<
+    ControlTransferResult,
+    Error,
+    { sourceId: string; targetId: string; mode: SettingsTransferMode }
+  >;
 } {
   const api = useApi();
   const client = useQueryClient();
@@ -277,11 +290,28 @@ export function useAccountControls(): {
     staleTime: 60 * 1000,
   });
   const transfer = useMutation({
-    mutationFn: ({ sourceId, targetId, mode }: { sourceId: string; targetId: string; mode: SettingsTransferMode }) =>
-      api.transferAccountControls(sourceId, targetId, mode),
+    mutationFn: ({
+      sourceId,
+      targetId,
+      mode,
+    }: {
+      sourceId: string;
+      targetId: string;
+      mode: SettingsTransferMode;
+    }) => api.transferAccountControls(sourceId, targetId, mode),
     onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.accountControls }),
   });
-  return { profiles, transfer };
+  const backups = useQuery({
+    queryKey: [...queryKeys.accountControls, 'backups'],
+    queryFn: ({ signal }) => api.fetchSettingsBackups(signal),
+    staleTime: 30_000,
+  });
+  const restore = useMutation({
+    mutationFn: ({ targetId, backupId }: { targetId: string; backupId: string }) =>
+      api.restoreSettings(targetId, backupId),
+    onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.accountControls }),
+  });
+  return { profiles, transfer, backups, restore };
 }
 
 /**
@@ -296,10 +326,7 @@ export function useAccountControls(): {
  * Отдельный запрос, а не фильтрация на клиенте: часовая запись это сотня
  * мегабайт, и держать её в браузере целиком ради увеличения нельзя.
  */
-export function useSessionWindow(
-  id: string,
-  window: FrameWindow | null,
-): UseQueryResult<Capture> {
+export function useSessionWindow(id: string, window: FrameWindow | null): UseQueryResult<Capture> {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.sessionWindow(id, window?.fromSeconds ?? 0, window?.toSeconds ?? 0),
@@ -320,8 +347,7 @@ export function useRunCapture(): UseMutationResult<Capture, Error, CaptureReques
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: CaptureRequest) =>
-      api.runCapture(request, new AbortController().signal),
+    mutationFn: (request: CaptureRequest) => api.runCapture(request, new AbortController().signal),
     onSuccess: (capture) => {
       // Новая запись появилась в списке, а её разбор уже у нас на руках —
       // кладём сразу, чтобы открытие записи не стоило ещё одного запроса.

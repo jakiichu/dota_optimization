@@ -16,11 +16,7 @@ import type { ReplayFile } from './models.ts';
 const FALLBACK_TICKS_PER_SECOND = 30;
 
 export function ticksPerSecond(replay: ReplayFile | undefined): number {
-  if (
-    replay?.ticks == null ||
-    replay.durationSeconds == null ||
-    replay.durationSeconds <= 0
-  ) {
+  if (replay?.ticks == null || replay.durationSeconds == null || replay.durationSeconds <= 0) {
     return FALLBACK_TICKS_PER_SECOND;
   }
   return replay.ticks / replay.durationSeconds;

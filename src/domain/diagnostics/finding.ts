@@ -23,12 +23,7 @@ export interface Finding {
   readonly remediation: readonly string[];
 }
 
-export function ok(
-  ruleId: string,
-  title: string,
-  observed: string,
-  summary: string,
-): Finding {
+export function ok(ruleId: string, title: string, observed: string, summary: string): Finding {
   return {
     ruleId,
     title,
@@ -42,11 +37,7 @@ export function ok(
   };
 }
 
-export function unknown(
-  ruleId: string,
-  title: string,
-  reason: string,
-): Finding {
+export function unknown(ruleId: string, title: string, reason: string): Finding {
   return {
     ruleId,
     title,

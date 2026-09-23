@@ -53,8 +53,7 @@ export function createSessionAnalyzeRoute(
    * окна, а не повторного чтения девяноста мегабайт с диска. Помним ровно одну
    * — держать в памяти весь архив незачем.
    */
-  let last: { id: string; analyzed: Awaited<ReturnType<typeof analyze.execute>> } | null =
-    null;
+  let last: { id: string; analyzed: Awaited<ReturnType<typeof analyze.execute>> } | null = null;
 
   return {
     path: '/api/sessions/analyze',
@@ -93,7 +92,9 @@ export function createSessionAnalyzeRoute(
  * Метрики от него не зависят: они всегда считаются по всей записи. Окно — это
  * увеличение, а не выборка, и подменять им статистику нельзя.
  */
-function windowFrom(query: URLSearchParams): { window?: { fromSeconds: number; toSeconds: number } } {
+function windowFrom(query: URLSearchParams): {
+  window?: { fromSeconds: number; toSeconds: number };
+} {
   const from = Number.parseFloat(query.get('from') ?? '');
   const to = Number.parseFloat(query.get('to') ?? '');
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return {};

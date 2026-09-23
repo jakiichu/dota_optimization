@@ -33,9 +33,7 @@ export const wirelessLinkRule: AuditRule = {
       );
     }
 
-    const savesPower = wireless.some(
-      (adapter) => adapter.allowComputerToTurnOffDevice === true,
-    );
+    const savesPower = wireless.some((adapter) => adapter.allowComputerToTurnOffDevice === true);
 
     const remediation = ['Проверять «лаги» сначала по джиттеру пинга, а не по frametime.'];
     if (savesPower) {

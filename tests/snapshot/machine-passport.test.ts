@@ -41,7 +41,8 @@ function snapshot(options: Options = {}): SystemSnapshot {
     ],
     power: {
       activeSchemeGuid: null,
-      activeSchemeName: options.powerScheme === undefined ? 'Сбалансированная' : options.powerScheme,
+      activeSchemeName:
+        options.powerScheme === undefined ? 'Сбалансированная' : options.powerScheme,
       minProcessorCoresPercentAc: null,
       isLaptop: true,
       onBattery: false,
@@ -125,9 +126,7 @@ describe('diffPassports', () => {
       passportFrom(snapshot({ config: 'fps_max 59' })),
     );
 
-    expect(changes).toEqual([
-      { key: 'cvar:fps_max', label: 'fps_max', before: '0', after: '59' },
-    ]);
+    expect(changes).toEqual([{ key: 'cvar:fps_max', label: 'fps_max', before: '0', after: '59' }]);
   });
 
   it('считает изменением исчезнувшую строку', () => {
@@ -137,9 +136,7 @@ describe('diffPassports', () => {
       passportFrom(snapshot({ config: 'fps_max 59' })),
     );
 
-    expect(changes).toEqual([
-      { key: 'cvar:r_ssao', label: 'r_ssao', before: '0', after: null },
-    ]);
+    expect(changes).toEqual([{ key: 'cvar:r_ssao', label: 'r_ssao', before: '0', after: null }]);
   });
 
   it('считает изменением появившуюся строку', () => {

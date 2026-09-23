@@ -73,10 +73,7 @@ describe('analyzeNetworkQuality', () => {
 
   it('разделяет узлы: канал до роутера и до интернета — разные вещи', () => {
     const samples = [0, 1, 2, 3, 4, 5].map((index) =>
-      sample([
-        probe(3, 'шлюз'),
-        probe(index % 2 === 0 ? 20 : 90, 'интернет'),
-      ]),
+      sample([probe(3, 'шлюз'), probe(index % 2 === 0 ? 20 : 90, 'интернет')]),
     );
 
     const quality = analyzeNetworkQuality(samples);

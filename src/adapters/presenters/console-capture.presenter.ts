@@ -39,10 +39,7 @@ export function renderCaptureReport(
   const lines: string[] = [];
   lines.push(paint(`Запись кадров: ${capture.applicationName}`, BOLD));
   lines.push(
-    paint(
-      `${statistics.frameCount} кадров за ${statistics.durationSeconds.toFixed(1)} с`,
-      DIM,
-    ),
+    paint(`${statistics.frameCount} кадров за ${statistics.durationSeconds.toFixed(1)} с`, DIM),
   );
   lines.push('');
 
@@ -70,8 +67,7 @@ export function renderCaptureReport(
   for (const entry of statistics.pacing.multiples) {
     lines.push(
       paint(
-        `  ×${entry.multiple}: ${entry.frameCount} кадров, ` +
-          `${entry.secondsSpent.toFixed(1)} с`,
+        `  ×${entry.multiple}: ${entry.frameCount} кадров, ` + `${entry.secondsSpent.toFixed(1)} с`,
         DIM,
       ),
     );

@@ -139,8 +139,21 @@ export interface ReplayFile {
 
 export interface ResourceUsage {
   readonly memory: { readonly totalBytes: Maybe<number>; readonly availableBytes: Maybe<number> };
-  readonly disks: readonly { readonly name: string; readonly totalBytes: Maybe<number>; readonly freeBytes: Maybe<number>; readonly system: boolean }[] | null;
-  readonly processes: readonly { readonly name: string; readonly cpuPercent: number; readonly memoryBytes: number }[] | null;
+  readonly disks:
+    | readonly {
+        readonly name: string;
+        readonly totalBytes: Maybe<number>;
+        readonly freeBytes: Maybe<number>;
+        readonly system: boolean;
+      }[]
+    | null;
+  readonly processes:
+    | readonly {
+        readonly name: string;
+        readonly cpuPercent: number;
+        readonly memoryBytes: number;
+      }[]
+    | null;
   readonly sampleSeconds: Maybe<number>;
 }
 
@@ -168,9 +181,7 @@ export interface SystemSnapshot {
 }
 
 export function primaryGpu(snapshot: SystemSnapshot): GpuInfo | undefined {
-  const discrete = snapshot.gpus.find(
-    (gpu) => gpu.vendor === 'nvidia' || gpu.vendor === 'amd',
-  );
+  const discrete = snapshot.gpus.find((gpu) => gpu.vendor === 'nvidia' || gpu.vendor === 'amd');
   return discrete ?? snapshot.gpus[0];
 }
 
@@ -193,20 +204,14 @@ function samePath(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
 }
 
-export function appCompatFor(
-  snapshot: SystemSnapshot,
-  executablePath: string,
-): Maybe<string> {
+export function appCompatFor(snapshot: SystemSnapshot, executablePath: string): Maybe<string> {
   const entry = snapshot.appCompat.find((candidate) =>
     samePath(candidate.executablePath, executablePath),
   );
   return entry === undefined ? null : entry.layers;
 }
 
-export function gpuPreferenceFor(
-  snapshot: SystemSnapshot,
-  executablePath: string,
-): Maybe<string> {
+export function gpuPreferenceFor(snapshot: SystemSnapshot, executablePath: string): Maybe<string> {
   const entry = snapshot.gpuPreferences.find((candidate) =>
     samePath(candidate.executablePath, executablePath),
   );

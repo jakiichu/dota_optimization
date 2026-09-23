@@ -80,9 +80,7 @@ async function readMachine(): Promise<Read> {
  * наибольшую частоту: ошибиться в сторону меньшей значило бы посоветовать
  * потолок ниже, чем экран может показать.
  */
-function highestRefresh(
-  displays: readonly { currentRefreshHz: number | null }[],
-): number | null {
+function highestRefresh(displays: readonly { currentRefreshHz: number | null }[]): number | null {
   const rates = displays
     .map((display) => display.currentRefreshHz)
     .filter((rate): rate is number => rate !== null && rate > 0);

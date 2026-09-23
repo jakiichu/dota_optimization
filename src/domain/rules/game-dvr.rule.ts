@@ -30,12 +30,7 @@ export const gameDvrRule: AuditRule = {
     }
 
     if (!enabledByUser) {
-      return ok(
-        ID,
-        TITLE,
-        'GameDVR_Enabled не задан',
-        'Явной фоновой записи не найдено.',
-      );
+      return ok(ID, TITLE, 'GameDVR_Enabled не задан', 'Явной фоновой записи не найдено.');
     }
 
     return {

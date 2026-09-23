@@ -81,10 +81,17 @@ export function FrameTimeChart({
     const groups = groupMarks(series);
 
     const chart = new uPlot(
-      buildOptions(series, groups, element.clientWidth, zoom, (value) => {
-        hoveredMark.current = value?.mark ?? null;
-        setHovered(value);
-      }, selectedAtSeconds ?? null),
+      buildOptions(
+        series,
+        groups,
+        element.clientWidth,
+        zoom,
+        (value) => {
+          hoveredMark.current = value?.mark ?? null;
+          setHovered(value);
+        },
+        selectedAtSeconds ?? null,
+      ),
       buildData(series, groups),
       element,
     );
@@ -109,9 +116,7 @@ export function FrameTimeChart({
   return (
     <div className="frame-chart-wrap">
       <div className="frame-chart" ref={container} />
-      {hovered !== null && (
-        <StutterTip mark={hovered.mark} left={hovered.left} top={hovered.top} />
-      )}
+      {hovered !== null && <StutterTip mark={hovered.mark} left={hovered.left} top={hovered.top} />}
     </div>
   );
 }
@@ -226,21 +231,24 @@ function buildOptions(
     cursor: { y: false },
     scales: { x: { time: false } },
     hooks: {
-      draw: selectedAtSeconds === null ? [] : [
-        (self) => {
-          const x = self.valToPos(selectedAtSeconds, 'x', true);
-          const { top, height } = self.bbox;
-          self.ctx.save();
-          self.ctx.strokeStyle = '#ffffff';
-          self.ctx.lineWidth = 2;
-          self.ctx.setLineDash([6, 5]);
-          self.ctx.beginPath();
-          self.ctx.moveTo(x, top);
-          self.ctx.lineTo(x, top + height);
-          self.ctx.stroke();
-          self.ctx.restore();
-        },
-      ],
+      draw:
+        selectedAtSeconds === null
+          ? []
+          : [
+              (self) => {
+                const x = self.valToPos(selectedAtSeconds, 'x', true);
+                const { top, height } = self.bbox;
+                self.ctx.save();
+                self.ctx.strokeStyle = '#ffffff';
+                self.ctx.lineWidth = 2;
+                self.ctx.setLineDash([6, 5]);
+                self.ctx.beginPath();
+                self.ctx.moveTo(x, top);
+                self.ctx.lineTo(x, top + height);
+                self.ctx.stroke();
+                self.ctx.restore();
+              },
+            ],
       setCursor: [
         (self) => {
           const { left } = self.cursor;

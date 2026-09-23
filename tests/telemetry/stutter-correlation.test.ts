@@ -20,17 +20,12 @@ interface FrameOptions {
   readonly withQpc?: boolean;
 }
 
-function buildFrames(
-  frameTimes: readonly number[],
-  options: FrameOptions = {},
-): FrameSample[] {
+function buildFrames(frameTimes: readonly number[], options: FrameOptions = {}): FrameSample[] {
   return frameTrace(
     frameTimes,
     (frameTimeMs) => ({
-      cpuBusyMs:
-        options.cpuBusyShare === undefined ? null : frameTimeMs * options.cpuBusyShare,
-      gpuBusyMs:
-        options.gpuBusyShare === undefined ? null : frameTimeMs * options.gpuBusyShare,
+      cpuBusyMs: options.cpuBusyShare === undefined ? null : frameTimeMs * options.cpuBusyShare,
+      gpuBusyMs: options.gpuBusyShare === undefined ? null : frameTimeMs * options.gpuBusyShare,
       presentMode: options.presentMode ?? null,
       dropped: options.dropped ?? null,
     }),
@@ -65,8 +60,7 @@ function sensorSample(
         memoryClockMhz: null,
         powerWatts: null,
         powerLimitWatts: null,
-        memoryUsedBytes:
-          reading.memoryMib === undefined ? null : reading.memoryMib * 1024 * 1024,
+        memoryUsedBytes: reading.memoryMib === undefined ? null : reading.memoryMib * 1024 * 1024,
         memoryTotalBytes: null,
         utilizationPercent: reading.utilization === undefined ? 90 : reading.utilization,
         throttleReasons: reading.throttle ?? [],
@@ -193,14 +187,22 @@ describe('correlateStutters', () => {
     const both: SensorSample = {
       ...sample,
       gpus: [
-        { ...sample.gpus[0]!, adapterName: 'luid_0x0000', source: 'pdh', utilizationPercent: 99, throttleReasons: [] },
+        {
+          ...sample.gpus[0]!,
+          adapterName: 'luid_0x0000',
+          source: 'pdh',
+          utilizationPercent: 99,
+          throttleReasons: [],
+        },
         ...sample.gpus,
       ],
     };
 
     const evidence = correlate(frames, [both]).stutters[0]?.evidence ?? [];
 
-    expect(evidence.find((item) => item.kind === 'throttling')?.detail).toContain('предел мощности');
+    expect(evidence.find((item) => item.kind === 'throttling')?.detail).toContain(
+      'предел мощности',
+    );
   });
 
   it('не приписывает статтеру показания из будущего', () => {
@@ -216,10 +218,10 @@ describe('correlateStutters', () => {
   });
 
   it('считает, сколько статтеров пришлось на каждую причину', () => {
-    const frames = buildFrames(
-      [...steady(8, 25), 60, ...steady(8, 25), 70, ...steady(8, 25)],
-      { gpuBusyShare: 0.95, cpuBusyShare: 0.2 },
-    );
+    const frames = buildFrames([...steady(8, 25), 60, ...steady(8, 25), 70, ...steady(8, 25)], {
+      gpuBusyShare: 0.95,
+      cpuBusyShare: 0.2,
+    });
 
     const report = correlate(frames);
 

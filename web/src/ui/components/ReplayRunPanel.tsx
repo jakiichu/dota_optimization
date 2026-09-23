@@ -88,8 +88,8 @@ export function ReplayRunPanel({ recorder }: { recorder: Recorder }): React.JSX.
       </div>
 
       <div className="muted">
-        Повтор проигрывает одни и те же кадры: те же герои, те же заклинания, та же
-        нагрузка. Это единственный способ сравнить настройки, а не сцены.
+        Повтор проигрывает одни и те же кадры: те же герои, те же заклинания, та же нагрузка. Это
+        единственный способ сравнить настройки, а не сцены.
       </div>
 
       <Obstacles options={options} />
@@ -109,83 +109,82 @@ export function ReplayRunPanel({ recorder }: { recorder: Recorder }): React.JSX.
             </div>
           )}
           {options.ready && options.replays.length > 0 && (
-          <>
-            <div className="capture-form" style={{ marginTop: 16 }}>
-              <label>
-                <span className="metric-label">повтор</span>
-                <select
-                  className="input"
-                  value={chosenName}
-                  onChange={(event) => setReplayFile(event.target.value)}
-                  disabled={launch.isPending}
-                >
-                  {options.replays.map((replay) => (
-                    <option key={replay.name} value={replay.name}>
-                      {describeReplay(replay)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="metric-label">тик</span>
-                <input
-                  className="input"
-                  value={tick}
-                  inputMode="numeric"
-                  placeholder="с начала"
-                  onChange={(event) => setTick(event.target.value)}
-                  disabled={launch.isPending}
-                />
-              </label>
-              <button
-                type="button"
-                className="button primary"
-                disabled={launch.isPending || options.state.gameRunning}
-                onClick={() =>
-                  launch.mutate({
-                    replayFile: chosenName,
-                    startTick: validTick ? parsedTick : null,
-                    label: '',
-                  })
-                }
-              >
-                {launch.isPending ? 'Запускаю…' : 'Запустить Dota с этим повтором'}
-              </button>
-            </div>
-
-            {/* Тик — это тридцатая доля секунды, и вслепую он не выбирается. */}
-            <TickHint replay={chosen} tick={validTick ? parsedTick : null} />
-
-            <div className="tick-presets">
-              <span className="muted">с минуты:</span>
-              {PRESET_MINUTES.filter((minutes) =>
-                withinReplay(chosen, minutes * SECONDS_IN_MINUTE),
-              ).map((minutes) => (
+            <>
+              <div className="capture-form" style={{ marginTop: 16 }}>
+                <label>
+                  <span className="metric-label">повтор</span>
+                  <select
+                    className="input"
+                    value={chosenName}
+                    onChange={(event) => setReplayFile(event.target.value)}
+                    disabled={launch.isPending}
+                  >
+                    {options.replays.map((replay) => (
+                      <option key={replay.name} value={replay.name}>
+                        {describeReplay(replay)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="metric-label">тик</span>
+                  <input
+                    className="input"
+                    value={tick}
+                    inputMode="numeric"
+                    placeholder="с начала"
+                    onChange={(event) => setTick(event.target.value)}
+                    disabled={launch.isPending}
+                  />
+                </label>
                 <button
-                  key={minutes}
                   type="button"
-                  className="chip"
+                  className="button primary"
+                  disabled={launch.isPending || options.state.gameRunning}
                   onClick={() =>
-                    setTick(String(secondsToTick(chosen, minutes * SECONDS_IN_MINUTE)))
+                    launch.mutate({
+                      replayFile: chosenName,
+                      startTick: validTick ? parsedTick : null,
+                      label: '',
+                    })
                   }
                 >
-                  {minutes} мин
+                  {launch.isPending ? 'Запускаю…' : 'Запустить Dota с этим повтором'}
                 </button>
-              ))}
-              <button type="button" className="chip" onClick={() => setTick('')}>
-                с начала
-              </button>
-            </div>
-
-            {options.state.gameRunning && (
-              <div className="notice">
-                Dota уже запущена, а команды прогона выполняются только при старте
-                игры. Закройте её — иначе повтор не загрузится, а мы решим, что
-                загрузился.
               </div>
-            )}
-            {launch.isError && <div className="notice error">{launch.error.message}</div>}
-          </>
+
+              {/* Тик — это тридцатая доля секунды, и вслепую он не выбирается. */}
+              <TickHint replay={chosen} tick={validTick ? parsedTick : null} />
+
+              <div className="tick-presets">
+                <span className="muted">с минуты:</span>
+                {PRESET_MINUTES.filter((minutes) =>
+                  withinReplay(chosen, minutes * SECONDS_IN_MINUTE),
+                ).map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    className="chip"
+                    onClick={() =>
+                      setTick(String(secondsToTick(chosen, minutes * SECONDS_IN_MINUTE)))
+                    }
+                  >
+                    {minutes} мин
+                  </button>
+                ))}
+                <button type="button" className="chip" onClick={() => setTick('')}>
+                  с начала
+                </button>
+              </div>
+
+              {options.state.gameRunning && (
+                <div className="notice">
+                  Dota уже запущена, а команды прогона выполняются только при старте игры. Закройте
+                  её — иначе повтор не загрузится, а мы решим, что загрузился.
+                </div>
+              )}
+              {launch.isError && <div className="notice error">{launch.error.message}</div>}
+            </>
           )}
         </>
       )}
@@ -220,8 +219,7 @@ function TickHint({
   if (!tickWithinReplay(replay, tick)) {
     return (
       <div className="tick-hint warn">
-        Такого тика в повторе нет: он длится {replay?.ticks} тиков (
-        {replayLength(replay)}).
+        Такого тика в повторе нет: он длится {replay?.ticks} тиков ({replayLength(replay)}).
       </div>
     );
   }
@@ -366,8 +364,8 @@ function SeekCommand({ command }: { command: string }): React.JSX.Element {
         </button>
       </div>
       <div className="muted">
-        Вставьте это в консоль игры — она уже открыта. Прыжок мгновенный: быстрый
-        пропуск кадров включён заранее.
+        Вставьте это в консоль игры — она уже открыта. Прыжок мгновенный: быстрый пропуск кадров
+        включён заранее.
       </div>
     </div>
   );

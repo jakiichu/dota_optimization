@@ -1,8 +1,4 @@
-import {
-  buildProcessTimeline,
-  spikeNear,
-  type ProcessTimeline,
-} from './background-load.ts';
+import { buildProcessTimeline, spikeNear, type ProcessTimeline } from './background-load.ts';
 import type { Stutter } from './frame-metrics.ts';
 import type { FrameSample } from './frame-sample.ts';
 import { GENERIC_SENSOR_SOURCE, type GpuReading, type SensorSample } from './sensor-sample.ts';
@@ -259,9 +255,7 @@ function fromNeighbours(frames: readonly FrameSample[], index: number): Evidence
   const evidence: Evidence[] = [];
 
   const modes = new Set(
-    window
-      .map((frame) => frame.presentMode)
-      .filter((mode): mode is string => mode !== null),
+    window.map((frame) => frame.presentMode).filter((mode): mode is string => mode !== null),
   );
   if (modes.size > 1) {
     evidence.push({
@@ -486,14 +480,10 @@ function describeLimitations(
   const first = frames[0];
 
   if (first !== undefined && first.cpuBusyMs === null) {
-    limitations.push(
-      'В записи нет разбивки кадра по CPU и GPU — нужны метрики PresentMon 2.x.',
-    );
+    limitations.push('В записи нет разбивки кадра по CPU и GPU — нужны метрики PresentMon 2.x.');
   }
   if (first !== undefined && first.qpcMs === null) {
-    limitations.push(
-      'У кадров нет абсолютного времени — сопоставить их с сенсорами нельзя.',
-    );
+    limitations.push('У кадров нет абсолютного времени — сопоставить их с сенсорами нельзя.');
   }
   if (timeline === null) {
     limitations.push('Показания сенсоров за время записи не собраны.');

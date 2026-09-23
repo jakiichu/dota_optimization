@@ -28,11 +28,7 @@ export function HypothesisPanel(): React.JSX.Element | null {
       </div>
 
       {hypotheses.data.map((hypothesis) => (
-        <HypothesisRow
-          key={hypothesis.id}
-          hypothesis={hypothesis}
-          sessions={sessions.data ?? []}
-        />
+        <HypothesisRow key={hypothesis.id} hypothesis={hypothesis} sessions={sessions.data ?? []} />
       ))}
     </div>
   );
@@ -83,9 +79,7 @@ function HypothesisRow({
           chosenId={chosenId}
           onChoose={setChosen}
           pending={settle.isPending}
-          onSettle={() =>
-            settle.mutate({ id: hypothesis.id, afterSessionId: chosenId })
-          }
+          onSettle={() => settle.mutate({ id: hypothesis.id, afterSessionId: chosenId })}
         />
       ) : (
         <>
@@ -126,17 +120,15 @@ function Pending({
 }): React.JSX.Element {
   if (hypothesis.before === null) {
     return (
-      <div className="muted">
-        Запись «до» удалена — проверять не с чем. Гипотезу можно убрать.
-      </div>
+      <div className="muted">Запись «до» удалена — проверять не с чем. Гипотезу можно убрать.</div>
     );
   }
 
   if (hypothesis.candidates.length === 0) {
     return (
       <div className="muted">
-        Ждём вторую запись. Примените изменение и запишите ту же сцену ещё раз —
-        повтор с того же тика.
+        Ждём вторую запись. Примените изменение и запишите ту же сцену ещё раз — повтор с того же
+        тика.
       </div>
     );
   }
@@ -144,11 +136,7 @@ function Pending({
   return (
     <div className="hypothesis-settle">
       <span className="muted">запись «после»:</span>
-      <select
-        className="input"
-        value={chosenId}
-        onChange={(event) => onChoose(event.target.value)}
-      >
+      <select className="input" value={chosenId} onChange={(event) => onChoose(event.target.value)}>
         {hypothesis.candidates.map((candidate) => (
           <option key={candidate.id} value={candidate.id}>
             {describe(byId.get(candidate.id), candidate.id)}
@@ -178,9 +166,8 @@ function UncleanExperiment({
 
   return (
     <div className="unclean">
-      Между записями поменялось не только это:{' '}
-      {changes.map((change) => change.label).join(', ')}. Вывод может быть не про ту
-      настройку — чтобы проверить наверняка, меняйте по одной.
+      Между записями поменялось не только это: {changes.map((change) => change.label).join(', ')}.
+      Вывод может быть не про ту настройку — чтобы проверить наверняка, меняйте по одной.
     </div>
   );
 }

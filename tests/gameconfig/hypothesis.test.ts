@@ -87,20 +87,14 @@ describe('checkHypothesis', () => {
   it('говорит «не подтвердилась», когда ничего не изменилось', () => {
     // Это не то же самое, что «стало хуже»: правка просто не сделала того,
     // ради чего её предлагали, и действия по такому итогу другие.
-    const found = check(
-      session('до', { pacing: 0.2 }),
-      session('после', { pacing: 0.199 }),
-    );
+    const found = check(session('до', { pacing: 0.2 }), session('после', { pacing: 0.199 }));
 
     expect(found.outcome).toBe('no-change');
     expect(found.summary).toContain('выбранные пороги');
   });
 
   it('опровергает предсказание и велит вернуть настройку', () => {
-    const found = check(
-      session('до', { pacing: 0.1 }),
-      session('после', { pacing: 0.3 }),
-    );
+    const found = check(session('до', { pacing: 0.1 }), session('после', { pacing: 0.3 }));
 
     expect(found.outcome).toBe('refuted');
     expect(found.summary).toContain('Верните настройку');
@@ -180,10 +174,7 @@ describe('unexpectedChanges', () => {
   });
 
   it('ловит и то, что не относится к игре', () => {
-    const found = unexpectedChanges(
-      ['fps_max'],
-      [change('power.scheme', 'Схема электропитания')],
-    );
+    const found = unexpectedChanges(['fps_max'], [change('power.scheme', 'Схема электропитания')]);
 
     expect(found).toHaveLength(1);
   });

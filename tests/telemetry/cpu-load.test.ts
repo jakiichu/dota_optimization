@@ -72,10 +72,7 @@ describe('analyzeCpuLoad', () => {
   });
 
   it('видит упор в одно ядро: занято мало потоков, а кадр держит процессор', () => {
-    const found = analyzeCpuLoad(
-      [sample({ utilization: 12, threads: 16 })],
-      bottleneck('cpu'),
-    );
+    const found = analyzeCpuLoad([sample({ utilization: 12, threads: 16 })], bottleneck('cpu'));
 
     expect(found.singleThreadBound).toBe(true);
     expect(found.summary).toContain('одного ядра');
@@ -83,29 +80,20 @@ describe('analyzeCpuLoad', () => {
 
   it('не называет однопоточным упор в видеокарту', () => {
     // Малая загрузка процессора при упоре в GPU — это норма, а не диагноз.
-    const found = analyzeCpuLoad(
-      [sample({ utilization: 12, threads: 16 })],
-      bottleneck('gpu'),
-    );
+    const found = analyzeCpuLoad([sample({ utilization: 12, threads: 16 })], bottleneck('gpu'));
 
     expect(found.singleThreadBound).toBe(false);
   });
 
   it('не называет однопоточным загруженный процессор', () => {
-    const found = analyzeCpuLoad(
-      [sample({ utilization: 80, threads: 16 })],
-      bottleneck('cpu'),
-    );
+    const found = analyzeCpuLoad([sample({ utilization: 80, threads: 16 })], bottleneck('cpu'));
 
     expect(found.busyThreads).toBe(12.8);
     expect(found.singleThreadBound).toBe(false);
   });
 
   it('замечает, что процессор не держит базовую частоту', () => {
-    const found = analyzeCpuLoad(
-      [sample({ utilization: 70, performance: 72 })],
-      bottleneck('cpu'),
-    );
+    const found = analyzeCpuLoad([sample({ utilization: 70, performance: 72 })], bottleneck('cpu'));
 
     expect(found.throttled).toBe(true);
     expect(found.summary).toContain('72% от базовой');
@@ -140,8 +128,18 @@ describe('analyzeCpuLoad', () => {
     // до появления вендорского источника сказать этого было нечем.
     const found = analyzeCpuLoad(
       [
-        sample({ utilization: 90, performance: 70, reasons: ['предел мощности'], vendorSource: true }),
-        sample({ utilization: 90, performance: 72, reasons: ['предел мощности'], vendorSource: true }),
+        sample({
+          utilization: 90,
+          performance: 70,
+          reasons: ['предел мощности'],
+          vendorSource: true,
+        }),
+        sample({
+          utilization: 90,
+          performance: 72,
+          reasons: ['предел мощности'],
+          vendorSource: true,
+        }),
       ],
       bottleneck('cpu'),
     );
@@ -160,7 +158,10 @@ describe('analyzeCpuLoad', () => {
       [sample({ utilization: 90, performance: 70, vendorSource: true })],
       bottleneck('cpu'),
     );
-    const nobody = analyzeCpuLoad([sample({ utilization: 90, performance: 70 })], bottleneck('cpu'));
+    const nobody = analyzeCpuLoad(
+      [sample({ utilization: 90, performance: 70 })],
+      bottleneck('cpu'),
+    );
 
     expect(silent.throttleTimeShare).toBe(0);
     expect(silent.summary).toContain('ни на что не жаловался');
@@ -172,7 +173,14 @@ describe('analyzeCpuLoad', () => {
     // На нормальных частотах те же биты изредка мигают: это работа регулятора
     // питания, а не проблема, и объявлять её проблемой значит кричать зря.
     const found = analyzeCpuLoad(
-      [sample({ utilization: 20, performance: 98, reasons: ['предел мощности'], vendorSource: true })],
+      [
+        sample({
+          utilization: 20,
+          performance: 98,
+          reasons: ['предел мощности'],
+          vendorSource: true,
+        }),
+      ],
       bottleneck('gpu'),
     );
 

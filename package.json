@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Диагностика потерь кадров и статтеров на Windows: статический аудит конфигурации + телеметрия кадров.",
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "start": "node scripts/start.mjs",
@@ -32,9 +32,14 @@
     "arch": "depcruise src --config .dependency-cruiser.cjs",
     "arch:ui": "cd web && depcruise src --config ../.dependency-cruiser.ui.cjs",
     "arch:graph": "depcruise src --config .dependency-cruiser.cjs --output-type dot",
-    "check": "npm run typecheck && npm run typecheck:ui && npm run arch && npm run arch:ui && npm run test"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run typecheck:ui && npm run arch && npm run arch:ui && npm run test",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"{src,desktop,web/src,tests,scripts}/**/*.{ts,tsx,js,mjs,cjs,css}\" \"*.{json,mjs,cjs,ts,md}\" \"web/*.{ts,json,html}\"",
+    "format:check": "prettier --check \"{src,desktop,web/src,tests,scripts}/**/*.{ts,tsx,js,mjs,cjs,css}\" \"*.{json,mjs,cjs,ts,md}\" \"web/*.{ts,json,html}\""
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
@@ -42,8 +47,14 @@
     "dependency-cruiser": "^16.10.0",
     "electron": "44.4.3",
     "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
     "postject": "^1.0.0-alpha.6",
+    "prettier": "^3.9.9",
     "typescript": "^5.9.0",
+    "typescript-eslint": "^8.70.1",
     "vite": "^7.3.6",
     "vitest": "^3.2.0"
   },

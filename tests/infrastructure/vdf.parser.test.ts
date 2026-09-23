@@ -27,9 +27,7 @@ describe('parseVdf', () => {
   it('разбирает вложенные секции библиотек', () => {
     const parsed = parseVdf(LIBRARY_FOLDERS);
 
-    expect(vdfString(parsed, 'libraryfolders', '0', 'path')).toBe(
-      'C:\\Program Files (x86)\\Steam',
-    );
+    expect(vdfString(parsed, 'libraryfolders', '0', 'path')).toBe('C:\\Program Files (x86)\\Steam');
     expect(vdfString(parsed, 'libraryfolders', '1', 'path')).toBe('D:\\SteamLibrary');
     expect(vdfString(parsed, 'libraryfolders', '0', 'apps', '570')).toBe('77872265207');
   });

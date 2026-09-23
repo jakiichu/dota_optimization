@@ -1,8 +1,4 @@
-import { useMemo } from 'react';
-import {
-  SENSOR_HISTORY_SECONDS,
-  useSensorStream,
-} from '../../application/use-sensor-stream.ts';
+import { SENSOR_HISTORY_SECONDS, useSensorStream } from '../../application/use-sensor-stream.ts';
 import type { GpuReading, SensorSample } from '../../domain/models.ts';
 import { mib, ms, percent, UNKNOWN } from '../../domain/formatting.ts';
 import { UtilizationChart } from '../components/UtilizationChart.tsx';
@@ -13,16 +9,12 @@ const CHART_COLORS = ['#4aa8ff', '#3fca7a', '#ffb340', '#a78bfa'];
 export function SensorsSection(): React.JSX.Element {
   const { latest, history, error } = useSensorStream();
 
-  const series = useMemo(
-    () =>
-      [...history.utilizationByAdapter.entries()].map(([label, values], index) => ({
-        label,
-        color: CHART_COLORS[index % CHART_COLORS.length] ?? '#4aa8ff',
-        values,
-      })),
-    // Пересобираем на каждый замер: массивы мутируются на месте.
-    [history, latest],
-  );
+  // История обновляется на месте: несколько рядов пересобираем при каждом рендере.
+  const series = [...history.utilizationByAdapter.entries()].map(([label, values], index) => ({
+    label,
+    color: CHART_COLORS[index % CHART_COLORS.length] ?? '#4aa8ff',
+    values,
+  }));
 
   if (error !== null && latest === null) {
     return <ErrorState message={error} />;
@@ -31,7 +23,10 @@ export function SensorsSection(): React.JSX.Element {
   if (latest === null) {
     return (
       <>
-        <SectionHeader title="Мониторинг" subtitle="Нагрузка, частоты и температура компьютера в реальном времени." />
+        <SectionHeader
+          title="Мониторинг"
+          subtitle="Нагрузка, частоты и температура компьютера в реальном времени."
+        />
         <EmptyState>Получаю первые показания датчиков…</EmptyState>
       </>
     );
@@ -39,7 +34,10 @@ export function SensorsSection(): React.JSX.Element {
 
   return (
     <>
-      <SectionHeader title="Мониторинг" subtitle="Нагрузка, частоты и температура компьютера в реальном времени." />
+      <SectionHeader
+        title="Мониторинг"
+        subtitle="Нагрузка, частоты и температура компьютера в реальном времени."
+      />
 
       {error !== null && <EmptyState>{error}</EmptyState>}
 
@@ -77,13 +75,7 @@ export function SensorsSection(): React.JSX.Element {
   );
 }
 
-function GpuCard({
-  gpu,
-  color,
-}: {
-  gpu: GpuReading;
-  color: string;
-}): React.JSX.Element {
+function GpuCard({ gpu, color }: { gpu: GpuReading; color: string }): React.JSX.Element {
   return (
     <div className="card">
       <div className="card-head">
@@ -150,7 +142,9 @@ function CpuCard({ cpu }: { cpu: NonNullable<SensorSample['cpu']> }): React.JSX.
       <div className="metrics">
         <Metric
           label="загрузка"
-          value={cpu.utilizationPercent === null ? UNKNOWN : `${cpu.utilizationPercent.toFixed(1)} %`}
+          value={
+            cpu.utilizationPercent === null ? UNKNOWN : `${cpu.utilizationPercent.toFixed(1)} %`
+          }
         />
         <Metric
           label="занято потоков"
@@ -158,15 +152,15 @@ function CpuCard({ cpu }: { cpu: NonNullable<SensorSample['cpu']> }): React.JSX.
         />
         <Metric
           label="частота от базовой"
-          value={cpu.performancePercent === null ? UNKNOWN : `${cpu.performancePercent.toFixed(0)} %`}
+          value={
+            cpu.performancePercent === null ? UNKNOWN : `${cpu.performancePercent.toFixed(0)} %`
+          }
         />
       </div>
       {/* «93% от базовой» само по себе ничего не говорит. Причина говорит — и
           видна прямо сейчас, а не после разбора записи. */}
       {cpu.throttleReasons.length > 0 && (
-        <div className="muted">
-          Драйвер сейчас сообщает: {cpu.throttleReasons.join(', ')}.
-        </div>
+        <div className="muted">Драйвер сейчас сообщает: {cpu.throttleReasons.join(', ')}.</div>
       )}
     </div>
   );

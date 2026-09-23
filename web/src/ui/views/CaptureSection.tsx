@@ -1,3 +1,4 @@
+import { SessionRecap } from '../components/SessionRecap.tsx';
 import type { CaptureController } from '../../application/use-capture-controller.ts';
 import { useEffect, useState } from 'react';
 import {
@@ -17,12 +18,7 @@ import { ReportExportPanel } from '../components/ReportExportPanel.tsx';
 import { StutterInspector } from '../components/StutterInspector.tsx';
 import { inspectableStutters, type StutterInspection } from '../../domain/stutter-inspection.ts';
 import { ReplayRunPanel } from '../components/ReplayRunPanel.tsx';
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  SectionHeader,
-} from '../components/States.tsx';
+import { EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/States.tsx';
 
 const DEFAULT_PROCESS = 'dota2.exe';
 
@@ -39,9 +35,11 @@ const DURATIONS = [30, 60, 120, 300, 600] as const;
 const WHOLE_GAME = 0;
 
 export function CaptureSection({
+  requestedSessionId,
   recorder,
   onOpenInConfig,
 }: {
+  requestedSessionId?: string | null;
   recorder: CaptureController;
   /** Уйти в редактор конфига с подставленным изменением из рекомендации. */
   onOpenInConfig: (changes: readonly ConfigChange[]) => void;
@@ -60,13 +58,22 @@ export function CaptureSection({
   useEffect(() => {
     if (recorder.status.data?.sessionId) setOpenedId(recorder.status.data.sessionId);
   }, [recorder.status.data?.sessionId]);
+  useEffect(() => {
+    if (requestedSessionId) setOpenedId(requestedSessionId);
+  }, [requestedSessionId]);
   const opened = useSessionAnalysis(openedId);
-  const shownCapture = capture.data !== undefined &&
-    (openedId === null || openedId === capture.data.sessionId) ? capture.data : opened.data;
+  const shownCapture =
+    capture.data !== undefined && (openedId === null || openedId === capture.data.sessionId)
+      ? capture.data
+      : opened.data;
   const wholeGame = durationSeconds === WHOLE_GAME;
-  const begin = (): void => recorder.begin({
-    processName, seconds: wholeGame ? 0 : durationSeconds, label, wholeGame,
-  });
+  const begin = (): void =>
+    recorder.begin({
+      processName,
+      seconds: wholeGame ? 0 : durationSeconds,
+      label,
+      wholeGame,
+    });
 
   return (
     <>
@@ -76,62 +83,80 @@ export function CaptureSection({
       />
 
       <div className="card capture-setup">
-        <div className="card-head"><span className="card-title">Новая запись</span><span className="card-note">Старт через 5 секунд после нажатия</span></div>
-        <p className="setup-description">Запустите Dota 2, выберите длительность и нажмите «Начать запись». Затем вернитесь в игру.</p>
+        <div className="card-head">
+          <span className="card-title">Новая запись</span>
+          <span className="card-note">Старт через 5 секунд после нажатия</span>
+        </div>
+        <p className="setup-description">
+          Запустите Dota 2, выберите длительность и нажмите «Начать запись». Затем вернитесь в игру.
+        </p>
         <div className="capture-form">
-        <label>
-          <span className="metric-label">Длительность</span>
-          <select
-            className="input"
-            value={durationSeconds}
-            onChange={(event) => setDurationSeconds(Number(event.target.value))}
-            disabled={recorder.blocked}
-          >
-            {DURATIONS.map((value) => (
-              <option key={value} value={value}>
-                {value < 60 ? `${value} секунд` : `${value / 60} мин`}
-              </option>
-            ))}
-            <option value={WHOLE_GAME}>До выхода из игры</option>
-          </select>
-        </label>
-        <label>
-          <span className="metric-label">Название <span className="optional-label">необязательно</span></span>
-          <input
-            className="input"
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="Например, до изменения настроек"
-            disabled={recorder.blocked}
-          />
-        </label>
-        <button
-          type="button"
-          className="button primary"
-          disabled={recorder.blocked}
-          onClick={begin}
-        >
-          {startsIn !== null
-            ? `Вернитесь в игру… ${startsIn}`
-            : recording
-              ? 'Запись идёт…'
-              : runActive
-                ? 'Записать прогон'
-                : 'Начать запись'}
-        </button>
-
-        <details className="advanced-options">
-          <summary>Дополнительно: процесс для записи</summary>
-          <label><span className="metric-label">Имя процесса</span>
-            <input className="input" value={processName} onChange={(event) => setProcessName(event.target.value)} disabled={recorder.blocked} />
+          <label>
+            <span className="metric-label">Длительность</span>
+            <select
+              className="input"
+              value={durationSeconds}
+              onChange={(event) => setDurationSeconds(Number(event.target.value))}
+              disabled={recorder.blocked}
+            >
+              {DURATIONS.map((value) => (
+                <option key={value} value={value}>
+                  {value < 60 ? `${value} секунд` : `${value / 60} мин`}
+                </option>
+              ))}
+              <option value={WHOLE_GAME}>До выхода из игры</option>
+            </select>
           </label>
-          <p className="muted">Для Dota 2 оставьте dota2.exe.</p>
-        </details>
+          <label>
+            <span className="metric-label">
+              Название <span className="optional-label">необязательно</span>
+            </span>
+            <input
+              className="input"
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder="Например, до изменения настроек"
+              disabled={recorder.blocked}
+            />
+          </label>
+          <button
+            type="button"
+            className="button primary"
+            disabled={recorder.blocked}
+            onClick={begin}
+          >
+            {startsIn !== null
+              ? `Вернитесь в игру… ${startsIn}`
+              : recording
+                ? 'Запись идёт…'
+                : runActive
+                  ? 'Записать прогон'
+                  : 'Начать запись'}
+          </button>
+
+          <details className="advanced-options">
+            <summary>Дополнительно: процесс для записи</summary>
+            <label>
+              <span className="metric-label">Имя процесса</span>
+              <input
+                className="input"
+                value={processName}
+                onChange={(event) => setProcessName(event.target.value)}
+                disabled={recorder.blocked}
+              />
+            </label>
+            <p className="muted">Для Dota 2 оставьте dota2.exe.</p>
+          </details>
         </div>
       </div>
 
       <details className="replay-disclosure" open={runActive || undefined}>
-        <summary><span><strong>Повтор для точного сравнения</strong><span className="muted">Одинаковая сцена до и после изменения настройки</span></span></summary>
+        <summary>
+          <span>
+            <strong>Повтор для точного сравнения</strong>
+            <span className="muted">Одинаковая сцена до и после изменения настройки</span>
+          </span>
+        </summary>
         <ReplayRunPanel recorder={{ recording, startsIn, onRecord: begin }} />
       </details>
 
@@ -139,7 +164,8 @@ export function CaptureSection({
           и нажмёт ещё раз. */}
       {startsIn !== null && (
         <EmptyState>
-          Запись начнётся через {startsIn} с. Переключитесь в игру и не сворачивайте её во время замера — это влияет на результат.
+          Запись начнётся через {startsIn} с. Переключитесь в игру и не сворачивайте её во время
+          замера — это влияет на результат.
         </EmptyState>
       )}
 
@@ -164,7 +190,16 @@ export function CaptureSection({
       {opened.isFetching && openedId !== null && <LoadingState what="Читаю запись…" />}
       {opened.isError && <ErrorState message={opened.error.message} />}
       {shownCapture !== undefined && (
-        <CaptureReport capture={shownCapture} onOpenInConfig={onOpenInConfig} />
+        <div key={shownCapture.sessionId}>
+          <SessionRecap capture={shownCapture} />
+          <details
+            className="replay-disclosure"
+            open={requestedSessionId === shownCapture.sessionId || undefined}
+          >
+            <summary>Подробный разбор: графики, рывки и рекомендации</summary>
+            <CaptureReport capture={shownCapture} onOpenInConfig={onOpenInConfig} />
+          </details>
+        </div>
       )}
     </>
   );
@@ -186,9 +221,19 @@ function SavedCaptures({
   onOpen: (id: string) => void;
 }): React.JSX.Element | null {
   const sessions = useSessions();
-  if (sessions.isError) return <ErrorState message={sessions.error.message} onRetry={() => void sessions.refetch()} />;
+  if (sessions.isError)
+    return <ErrorState message={sessions.error.message} onRetry={() => void sessions.refetch()} />;
   if (sessions.data === undefined) return null;
-  if (sessions.data.length === 0) return <div className="card"><div className="card-title">Здесь будут ваши записи</div><p className="muted">После первого замера появятся график плавности, разбор рывков и рекомендации. Запись сохранится автоматически.</p></div>;
+  if (sessions.data.length === 0)
+    return (
+      <div className="card">
+        <div className="card-title">Здесь будут ваши записи</div>
+        <p className="muted">
+          После первого замера появятся график плавности, разбор рывков и рекомендации. Запись
+          сохранится автоматически.
+        </p>
+      </div>
+    );
 
   return (
     <div className="card">
@@ -232,9 +277,10 @@ function CaptureReport({
   const zoomed = useSessionWindow(capture.sessionId, window);
   const shown = zoomed.data?.series ?? capture.series;
   const stutters = inspectableStutters(capture);
-  const selected = stutters.find((entry) => entry.stutter.frameIndex === selectedFrameIndex)
-    ?? stutters[0]
-    ?? null;
+  const selected =
+    stutters.find((entry) => entry.stutter.frameIndex === selectedFrameIndex) ??
+    stutters[0] ??
+    null;
   const inspect = (entry: StutterInspection): void => {
     setSelectedFrameIndex(entry.stutter.frameIndex);
     const padding = 1.5;
@@ -279,15 +325,35 @@ function CaptureReport({
         />
       </div>
 
-      <StutterInspector stutters={stutters} selectedFrameIndex={selectedFrameIndex} onSelect={inspect} />
+      <StutterInspector
+        stutters={stutters}
+        selectedFrameIndex={selectedFrameIndex}
+        onSelect={inspect}
+      />
 
       <div className="card">
         <div className="metrics">
-          <Metric label="Средний FPS" note="Кадров в секунду · больше — лучше" value={capture.averageFps.toFixed(1)} />
-          <Metric label="Обычный кадр" note="Медиана · меньше — лучше" value={ms(capture.frameTime.p50)} />
+          <Metric
+            label="Средний FPS"
+            note="Кадров в секунду · больше — лучше"
+            value={capture.averageFps.toFixed(1)}
+          />
+          <Metric
+            label="Обычный кадр"
+            note="Медиана · меньше — лучше"
+            value={ms(capture.frameTime.p50)}
+          />
           <Metric label="95% кадров · p95" value={ms(capture.frameTime.p95)} />
-          <Metric label="Долгие кадры · p99" note="99% кадров укладываются в это время" value={ms(capture.frameTime.p99)} />
-          <Metric label="Редкие задержки · p99.9" value={ms(capture.frameTime.p999)} note="99,9% кадров укладываются в это время" />
+          <Metric
+            label="Долгие кадры · p99"
+            note="99% кадров укладываются в это время"
+            value={ms(capture.frameTime.p99)}
+          />
+          <Metric
+            label="Редкие задержки · p99.9"
+            value={ms(capture.frameTime.p999)}
+            note="99,9% кадров укладываются в это время"
+          />
           {capture.inputLatency !== null && (
             <Metric
               label="инпут-лаг p99"
@@ -301,10 +367,7 @@ function CaptureReport({
             value={`${capture.stutterCount} (${capture.stuttersPerMinute.toFixed(1)}/мин)`}
           />
         </div>
-        <div
-          className="verdict"
-          style={{ color: BOTTLENECK_COLOR[capture.bottleneck.kind] }}
-        >
+        <div className="verdict" style={{ color: BOTTLENECK_COLOR[capture.bottleneck.kind] }}>
           {BOTTLENECK_LABEL[capture.bottleneck.kind]}
         </div>
         <div className="muted">{capture.bottleneck.explanation}</div>
@@ -352,26 +415,18 @@ function CpuPanel({ load }: { load: CpuLoad }): React.JSX.Element | null {
     <div className="card">
       <div className="card-head">
         <span className="card-title">Процессор</span>
-        {load.threadCount !== null && (
-          <span className="card-note">{load.threadCount} потоков</span>
-        )}
+        {load.threadCount !== null && <span className="card-note">{load.threadCount} потоков</span>}
       </div>
 
       <div className="metrics">
         {load.busyThreads !== null && load.threadCount !== null && (
-          <Metric
-            label="занято потоков"
-            value={`${load.busyThreads} из ${load.threadCount}`}
-          />
+          <Metric label="занято потоков" value={`${load.busyThreads} из ${load.threadCount}`} />
         )}
         {load.utilizationPercent !== null && (
           <Metric label="загрузка" value={`${load.utilizationPercent.toFixed(0)} %`} />
         )}
         {load.performancePercent !== null && (
-          <Metric
-            label="частота от базовой"
-            value={`${load.performancePercent.toFixed(0)} %`}
-          />
+          <Metric label="частота от базовой" value={`${load.performancePercent.toFixed(0)} %`} />
         )}
         {load.lowestPerformancePercent !== null && (
           <Metric
@@ -468,9 +523,9 @@ function ChartNote({
     <div className="chart-note">
       {series.decimated && (
         <span className="muted">
-          Показано {series.time.length} точек из {series.sourceFrameCount} кадров: из
-          каждого окна взяты самый короткий и самый длинный кадр, все статтеры оставлены.
-          Приблизьте участок, чтобы увидеть его целиком.
+          Показано {series.time.length} точек из {series.sourceFrameCount} кадров: из каждого окна
+          взяты самый короткий и самый длинный кадр, все статтеры оставлены. Приблизьте участок,
+          чтобы увидеть его целиком.
         </span>
       )}
       {zooming && <span className="muted">Читаю участок…</span>}

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeGameConfig } from '../../src/domain/gameconfig/config-analysis.ts';
-import {
-  findSetting,
-  parseGameConfig,
-} from '../../src/domain/gameconfig/game-config.ts';
+import { findSetting, parseGameConfig } from '../../src/domain/gameconfig/game-config.ts';
 
 const PATH = 'C:\\dota\\cfg\\autoexec.cfg';
 

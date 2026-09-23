@@ -105,12 +105,8 @@ export function analyzeCpuLoad(
     .filter((cpu): cpu is NonNullable<SensorSample['cpu']> => cpu != null);
   if (readings.length === 0) return NOT_MEASURED;
 
-  const utilization = median(
-    readings.map((cpu) => cpu.utilizationPercent).filter(isNumber),
-  );
-  const performance = median(
-    readings.map((cpu) => cpu.performancePercent).filter(isNumber),
-  );
+  const utilization = median(readings.map((cpu) => cpu.utilizationPercent).filter(isNumber));
+  const performance = median(readings.map((cpu) => cpu.performancePercent).filter(isNumber));
   const performances = readings.map((cpu) => cpu.performancePercent).filter(isNumber);
   const lowest = performances.length === 0 ? null : Math.min(...performances);
 

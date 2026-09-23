@@ -3,31 +3,46 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { TransferSettingsFile } from '../../application/ports/account-controls.port.ts';
 
 const FILES = new Set([
-  'remote/cfg/dotakeys_personal.lst', 'remote/cfg/config.cfg', 'remote/cfg/autoexec.cfg',
-  'remote/user_convars.vcfg', 'remote/user_keys.vcfg',
-  'local/cfg/machine_convars.vcfg', 'local/cfg/video.txt',
-  'remote/cfg/hero_grid_config.json', 'remote/cfg/hero_facet_config.cfg', 'remote/cfg/herobuilds.cfg',
-  'remote/cfg/dota_armory_filters.txt', 'remote/cfg/dota_player_loadout_shuffle.txt',
-  'remote/cfg/saved_sets.kv', 'remote/cfg/dota_player_scratchpad.txt',
-  'remote/scripts/control_groups.txt', 'remote/scripts/item_suggest_preference.txt',
-  'remote/scripts/dota_backpack_filters.txt', 'remote/scripts/lobby_settings.txt',
+  'remote/cfg/dotakeys_personal.lst',
+  'remote/cfg/config.cfg',
+  'remote/cfg/autoexec.cfg',
+  'remote/user_convars.vcfg',
+  'remote/user_keys.vcfg',
+  'local/cfg/machine_convars.vcfg',
+  'local/cfg/video.txt',
+  'remote/cfg/hero_grid_config.json',
+  'remote/cfg/hero_facet_config.cfg',
+  'remote/cfg/herobuilds.cfg',
+  'remote/cfg/dota_armory_filters.txt',
+  'remote/cfg/dota_player_loadout_shuffle.txt',
+  'remote/cfg/saved_sets.kv',
+  'remote/cfg/dota_player_scratchpad.txt',
+  'remote/scripts/control_groups.txt',
+  'remote/scripts/item_suggest_preference.txt',
+  'remote/scripts/dota_backpack_filters.txt',
+  'remote/scripts/lobby_settings.txt',
 ]);
 export function isSettingsFile(path: string): boolean {
   const key = path.toLowerCase();
-  return FILES.has(key) || /^local\/cfg\/user_(convars|keys)_\d+_slot\d+\.vcfg$/.test(key)
-    || /^remote\/guides\/[^/]+\.build$/.test(key);
+  return (
+    FILES.has(key) ||
+    /^local\/cfg\/user_(convars|keys)_\d+_slot\d+\.vcfg$/.test(key) ||
+    /^remote\/guides\/[^/]+\.build$/.test(key)
+  );
 }
 
 /** Не разрешаем выход из userdata или переход через junction/symlink. */
 export async function checkedPath(root: string, path: string): Promise<string> {
   const absolute = resolve(root, path);
   const tail = relative(resolve(root), absolute);
-  if (!tail || tail.startsWith('..') || isAbsolute(tail)) throw new Error('Недопустимый путь настроек.');
+  if (!tail || tail.startsWith('..') || isAbsolute(tail))
+    throw new Error('Недопустимый путь настроек.');
   let current = resolve(root);
   for (const segment of ['', ...tail.split(sep)]) {
     if (segment) current = join(current, segment);
     try {
-      if ((await lstat(current)).isSymbolicLink()) throw new Error('Перенос через ссылки и junction не поддерживается.');
+      if ((await lstat(current)).isSymbolicLink())
+        throw new Error('Перенос через ссылки и junction не поддерживается.');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
@@ -43,11 +58,21 @@ export async function accountRoot(steamPath: string, id: string): Promise<string
 
 export async function listSettings(root: string): Promise<TransferSettingsFile[]> {
   const files: TransferSettingsFile[] = [];
-  for (const directory of ['local/cfg', 'remote', 'remote/cfg', 'remote/scripts', 'remote/guides']) {
+  for (const directory of [
+    'local/cfg',
+    'remote',
+    'remote/cfg',
+    'remote/scripts',
+    'remote/guides',
+  ]) {
     const folder = await checkedPath(root, directory);
     let entries;
-    try { entries = await readdir(folder, { withFileTypes: true }); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
+    try {
+      entries = await readdir(folder, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
     for (const entry of entries) {
       const path = `${directory}/${entry.name}`;
       if (!isSettingsFile(path)) continue;

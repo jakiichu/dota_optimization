@@ -66,9 +66,7 @@ export interface ConfigView {
 const UNKNOWN_LABEL = 'мы не знаем, что это делает';
 
 export function toConfigView(state: GameConfigState, names: SettingNames): ConfigView {
-  const settings = (state.config?.settings ?? []).map((setting) =>
-    toSettingView(setting, names),
-  );
+  const settings = (state.config?.settings ?? []).map((setting) => toSettingView(setting, names));
 
   return {
     path: state.path,

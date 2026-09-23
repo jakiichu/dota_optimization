@@ -14,9 +14,7 @@ function display(current: number | null, max: number | null) {
 
 describe('displayRefreshRateRule', () => {
   it('помечает как критичное, если монитор работает ниже своего максимума', () => {
-    const finding = displayRefreshRateRule.evaluate(
-      snapshotWith({ displays: [display(60, 144)] }),
-    );
+    const finding = displayRefreshRateRule.evaluate(snapshotWith({ displays: [display(60, 144)] }));
 
     expect(finding?.severity).toBe('critical');
     expect(finding?.observed).toContain('60 Гц из 144 Гц');

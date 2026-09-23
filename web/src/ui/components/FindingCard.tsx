@@ -46,10 +46,10 @@ export function FindingCard({ finding }: { finding: Finding }): React.JSX.Elemen
       >
         <span className="dot" style={{ background: SEVERITY_COLOR[finding.severity] }} />
         <span className="finding-title">{finding.title}</span>
-        <span className="finding-id">
-          {SEVERITY_LABEL[finding.severity]}
+        <span className="finding-id">{SEVERITY_LABEL[finding.severity]}</span>
+        <span className="finding-toggle" aria-hidden="true">
+          {open ? '−' : '+'}
         </span>
-        <span className="finding-toggle" aria-hidden="true">{open ? '−' : '+'}</span>
       </button>
       <div className="finding-summary">{finding.summary}</div>
 

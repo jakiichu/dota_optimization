@@ -19,8 +19,7 @@ import { readVpkFile, readVpkIndex } from '../steam/vpk.reader.ts';
  */
 
 /** Где внутри архива лежит локализация. */
-const LOCALIZATION = (language: string): string =>
-  `resource/localization/dota_${language}.txt`;
+const LOCALIZATION = (language: string): string => `resource/localization/dota_${language}.txt`;
 
 const FALLBACK_LANGUAGE = 'english';
 

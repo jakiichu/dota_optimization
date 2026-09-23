@@ -109,7 +109,12 @@ export function ConfigSection({
             </button>
           ))}
       </SectionHeader>
-      {data.path !== null && <details className="file-location"><summary>Где находится файл настроек</summary><code>{data.path}</code></details>}
+      {data.path !== null && (
+        <details className="file-location">
+          <summary>Где находится файл настроек</summary>
+          <code>{data.path}</code>
+        </details>
+      )}
 
       <Outcomes
         exportedPath={exportToDesktop.data}
@@ -120,15 +125,15 @@ export function ConfigSection({
 
       {data.path === null ? (
         <EmptyState>
-          Steam с установленной Dota найти не удалось. Конфиг лежит в{' '}
-          <code>{CONFIG_LOCATION}</code> внутри папки игры.
+          Steam с установленной Dota найти не удалось. Конфиг лежит в <code>{CONFIG_LOCATION}</code>{' '}
+          внутри папки игры.
         </EmptyState>
       ) : (
         <>
           {!data.exists && (
             <EmptyState>
-              Конфига нет — и это нормально: <code>autoexec.cfg</code> создаёт сам игрок.
-              Вставьте его ниже, и он появится там, где игра его ждёт.
+              Конфига нет — и это нормально: <code>autoexec.cfg</code> создаёт сам игрок. Вставьте
+              его ниже, и он появится там, где игра его ждёт.
             </EmptyState>
           )}
 
@@ -146,9 +151,7 @@ export function ConfigSection({
                 config={data}
                 draft={draft}
                 proposedNames={proposedNames}
-                onChange={(name, value) =>
-                  setDraft((previous) => ({ ...previous, [name]: value }))
-                }
+                onChange={(name, value) => setDraft((previous) => ({ ...previous, [name]: value }))}
               />
               <Unparsed config={data} />
             </>
@@ -192,8 +195,8 @@ function Outcomes({
           возможен, до того как это ему понадобится. */}
       {backupPath !== null && (
         <div className="notice">
-          Прежняя версия конфига сохранена рядом с ним: <code>{backupPath}</code>. Если
-          станет хуже — переименуйте её обратно в <code>autoexec.cfg</code>.
+          Прежняя версия конфига сохранена рядом с ним: <code>{backupPath}</code>. Если станет хуже
+          — переименуйте её обратно в <code>autoexec.cfg</code>.
         </div>
       )}
     </>
@@ -260,8 +263,8 @@ function Unparsed({ config }: { config: GameConfig }): React.JSX.Element | null 
         ))}
       </ul>
       <div className="muted">
-        Разобрать их как «настройка — значение» не вышло: движок, скорее всего, тоже
-        пропустит. Мы их не трогаем и при записи сохраняем как есть.
+        Разобрать их как «настройка — значение» не вышло: движок, скорее всего, тоже пропустит. Мы
+        их не трогаем и при записи сохраняем как есть.
       </div>
     </div>
   );
@@ -299,9 +302,9 @@ function DraftBar({
         </button>
       </div>
       <div className="draft-note">
-        Пока это только черновик — файл не тронут. По кнопке правки уйдут в файл, а
-        прежняя версия сохранится рядом копией. Игра читает конфиг при запуске: если
-        Dota открыта, изменения подействуют со следующего раза.
+        Пока это только черновик — файл не тронут. По кнопке правки уйдут в файл, а прежняя версия
+        сохранится рядом копией. Игра читает конфиг при запуске: если Dota открыта, изменения
+        подействуют со следующего раза.
       </div>
     </div>
   );
@@ -380,9 +383,9 @@ function QuickLoad({
         <span className="card-title">{exists ? 'Заменить конфиг' : 'Создать конфиг'}</span>
       </div>
       <div className="muted">
-        Перенос конфига между компьютерами: вставьте текст, перетащите файл или
-        выберите его. Искать папку игры не нужно — файл ляжет туда, куда игра смотрит,
-        а нынешний сохранится рядом копией.
+        Перенос конфига между компьютерами: вставьте текст, перетащите файл или выберите его. Искать
+        папку игры не нужно — файл ляжет туда, куда игра смотрит, а нынешний сохранится рядом
+        копией.
       </div>
 
       <textarea

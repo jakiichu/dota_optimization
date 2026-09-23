@@ -25,9 +25,7 @@ function steady(frameTimeMs: number, count: number): number[] {
 /** Ровный поток с частью кадров, промахнувшихся мимо развёртки. */
 function withDoubled(base: number, total: number, share: number): number[] {
   const every = Math.round(1 / share);
-  return Array.from({ length: total }, (_, index) =>
-    index % every === 0 ? base * 2 : base,
-  );
+  return Array.from({ length: total }, (_, index) => (index % every === 0 ? base * 2 : base));
 }
 
 function context(options: Options = {}): RecommendationContext {
@@ -170,9 +168,7 @@ describe('recommend', () => {
       'dota_ambient_cloth 0',
       'r_dota_allow_wind_on_trees 0',
     ];
-    const found = recommend(
-      context({ cpuShare: 0.98, gpuShare: 0.2, configLines: everything }),
-    );
+    const found = recommend(context({ cpuShare: 0.98, gpuShare: 0.2, configLines: everything }));
     const relief = found.find((entry) => entry.kind === 'cpu-relief');
 
     expect(relief?.changes).toHaveLength(0);
@@ -182,10 +178,14 @@ describe('recommend', () => {
   it('говорит, что троттлинг настройками не лечится', () => {
     // Человек, которому предложили крутить тени при перегреве, будет крутить
     // их до посинения.
-    const frames = frameTrace([...steady(8, 30), 60, ...steady(8, 30)], (frameTimeMs) => ({
-      cpuBusyMs: frameTimeMs * 0.4,
-      gpuBusyMs: frameTimeMs * 0.4,
-    }), 1000);
+    const frames = frameTrace(
+      [...steady(8, 30), 60, ...steady(8, 30)],
+      (frameTimeMs) => ({
+        cpuBusyMs: frameTimeMs * 0.4,
+        gpuBusyMs: frameTimeMs * 0.4,
+      }),
+      1000,
+    );
     const statistics = computeFrameStatistics(frames);
     const sensors = [
       {
@@ -249,7 +249,10 @@ describe('recommend', () => {
       errors: [],
     }));
 
-    const found = recommend({ ...context({ cpuShare: 0.4, gpuShare: 0.4 }), network: analyzeNetworkQuality(jittery) });
+    const found = recommend({
+      ...context({ cpuShare: 0.4, gpuShare: 0.4 }),
+      network: analyzeNetworkQuality(jittery),
+    });
     const note = found.find((entry) => entry.kind === 'not-config');
 
     expect(note?.title).toContain('дело в сети');

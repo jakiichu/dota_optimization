@@ -1,9 +1,5 @@
 import type { Maybe } from '../../domain/snapshot/system-snapshot.ts';
-import type {
-  Bottleneck,
-  FrameStatistics,
-  Stutter,
-} from '../../domain/telemetry/frame-metrics.ts';
+import type { Bottleneck, FrameStatistics, Stutter } from '../../domain/telemetry/frame-metrics.ts';
 import type { FrameCapture, FrameSample } from '../../domain/telemetry/frame-sample.ts';
 import {
   framesInWindow,
@@ -162,9 +158,7 @@ function toSeries(
   // Сначала окно, потом выбор точек: приблизив кусок часовой записи, человек
   // должен увидеть его кадр за кадром, а не ту же огибающую крупнее.
   const bounds =
-    window === undefined
-      ? { from: 0, to: allFrames.length }
-      : framesInWindow(allFrames, window);
+    window === undefined ? { from: 0, to: allFrames.length } : framesInWindow(allFrames, window);
   const frames = allFrames.slice(bounds.from, bounds.to);
 
   const inWindow = stutters.filter(

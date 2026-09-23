@@ -236,11 +236,7 @@ export interface BackgroundProcess {
 // --- рекомендации -----------------------------------------------------------
 
 export type RecommendationKind =
-  | 'frame-cap'
-  | 'cpu-relief'
-  | 'gpu-relief'
-  | 'present-mode'
-  | 'not-config';
+  'frame-cap' | 'cpu-relief' | 'gpu-relief' | 'present-mode' | 'not-config';
 
 export type Confidence = 'measured' | 'likely';
 
@@ -279,11 +275,7 @@ export interface Recommendation {
 // --- проверка гипотез -------------------------------------------------------
 
 export type HypothesisOutcome =
-  | 'confirmed'
-  | 'refuted'
-  | 'no-change'
-  | 'not-comparable'
-  | 'not-measured';
+  'confirmed' | 'refuted' | 'no-change' | 'not-comparable' | 'not-measured';
 
 export interface HypothesisCheck {
   readonly outcome: HypothesisOutcome;
@@ -615,4 +607,18 @@ export interface CaptureStatus {
   readonly wholeGame: boolean;
   readonly sessionId: string | null;
   readonly error: string | null;
+}
+
+export interface SettingsBackup {
+  readonly id: string;
+  readonly targetId: string;
+  readonly targetLabel: string;
+  readonly sourceLabel: string | null;
+  readonly createdAt: string;
+  readonly kind: 'transfer' | 'restore';
+  readonly files: readonly { readonly path: string; readonly existed: boolean }[];
+}
+export interface SettingsRestoreResult {
+  readonly backupPath: string;
+  readonly restoredFiles: readonly string[];
 }

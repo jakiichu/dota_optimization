@@ -23,6 +23,26 @@ export interface ControlTransferResult {
 }
 
 export interface AccountControlsStore {
+  backups?(): Promise<readonly SettingsBackup[]>;
+  restore?(targetId: string, backupId: string): Promise<SettingsRestoreResult>;
   list(): Promise<readonly SteamControlProfile[]>;
-  transfer(sourceId: string, targetId: string, mode?: SettingsTransferMode): Promise<ControlTransferResult>;
+  transfer(
+    sourceId: string,
+    targetId: string,
+    mode?: SettingsTransferMode,
+  ): Promise<ControlTransferResult>;
+}
+
+export interface SettingsBackup {
+  readonly id: string;
+  readonly targetId: string;
+  readonly targetLabel: string;
+  readonly sourceLabel: string | null;
+  readonly createdAt: string;
+  readonly kind: 'transfer' | 'restore';
+  readonly files: readonly { readonly path: string; readonly existed: boolean }[];
+}
+export interface SettingsRestoreResult {
+  readonly backupPath: string;
+  readonly restoredFiles: readonly string[];
 }

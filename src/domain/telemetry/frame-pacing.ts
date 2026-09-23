@@ -109,10 +109,7 @@ export function analyzeFramePacing(frames: readonly FrameSample[]): FramePacing 
  * честной просадке времена размазаны, а при промахе кадр ждёт ровно один
  * лишний интервал и садится точно на удвоенное значение.
  */
-function findMultiples(
-  frameTimes: readonly number[],
-  base: number,
-): PacingMultiple[] {
+function findMultiples(frameTimes: readonly number[], base: number): PacingMultiple[] {
   const found: PacingMultiple[] = [];
 
   for (const multiple of MULTIPLES) {
@@ -166,8 +163,7 @@ function describe(
 
   const doubled = multiples
     .map(
-      (entry) =>
-        `${(entry.share * 100).toFixed(1)}% кадров длятся в ${entry.multiple} раза дольше`,
+      (entry) => `${(entry.share * 100).toFixed(1)}% кадров длятся в ${entry.multiple} раза дольше`,
     )
     .join(', ');
   const lost = `${(timeShare * 100).toFixed(0)}% времени записи ушло в такие кадры`;

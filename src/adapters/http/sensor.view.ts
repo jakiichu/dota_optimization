@@ -1,8 +1,4 @@
-import type {
-  CpuReading,
-  GpuReading,
-  SensorSample,
-} from '../../domain/telemetry/sensor-sample.ts';
+import type { CpuReading, GpuReading, SensorSample } from '../../domain/telemetry/sensor-sample.ts';
 
 /**
  * Замер в форме, готовой для графика.

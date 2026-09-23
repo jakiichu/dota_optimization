@@ -13,16 +13,14 @@ module.exports = {
     {
       name: 'domain-is-pure',
       severity: 'error',
-      comment:
-        'domain — чистые бизнес-правила: ни ввода-вывода, ни знания о внешнем мире.',
+      comment: 'domain — чистые бизнес-правила: ни ввода-вывода, ни знания о внешнем мире.',
       from: { path: '^src/domain' },
       to: { path: '^src/(application|adapters|infrastructure|main)' },
     },
     {
       name: 'domain-no-node-builtins',
       severity: 'error',
-      comment:
-        'Обращение к node: в domain означает, что правило стало непроверяемым в тестах.',
+      comment: 'Обращение к node: в domain означает, что правило стало непроверяемым в тестах.',
       from: { path: '^src/domain' },
       to: { dependencyTypes: ['core'] },
     },
@@ -36,24 +34,21 @@ module.exports = {
     {
       name: 'application-inward-only',
       severity: 'error',
-      comment:
-        'Сценарии зависят от портов, а не от их реализаций (DIP).',
+      comment: 'Сценарии зависят от портов, а не от их реализаций (DIP).',
       from: { path: '^src/application' },
       to: { path: '^src/(adapters|infrastructure|main)' },
     },
     {
       name: 'application-no-io',
       severity: 'error',
-      comment:
-        'Ввод-вывод в сценарии — это адаптер, который забыли вынести за порт.',
+      comment: 'Ввод-вывод в сценарии — это адаптер, который забыли вынести за порт.',
       from: { path: '^src/application' },
       to: { dependencyTypes: ['core'] },
     },
     {
       name: 'adapters-not-infrastructure',
       severity: 'error',
-      comment:
-        'Адаптер представления не должен знать про конкретный сборщик данных.',
+      comment: 'Адаптер представления не должен знать про конкретный сборщик данных.',
       from: { path: '^src/adapters' },
       to: { path: '^src/(infrastructure|main)' },
     },
@@ -74,7 +69,7 @@ module.exports = {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'Модуль, на который никто не ссылается, — вероятно, мёртвый код.',
-      from: { orphan: true, pathNot: ['\.d\.ts$', '(^|/)tsconfig\.json$'] },
+      from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)tsconfig\\.json$'] },
       to: {},
     },
   ],

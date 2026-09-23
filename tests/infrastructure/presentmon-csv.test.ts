@@ -24,11 +24,7 @@ const V1_HEADER =
 
 describe('splitCsvLine', () => {
   it('не рассыпает строку на запятой внутри кавычек', () => {
-    expect(splitCsvLine('"Game, The.exe",1234,16.7')).toEqual([
-      'Game, The.exe',
-      '1234',
-      '16.7',
-    ]);
+    expect(splitCsvLine('"Game, The.exe",1234,16.7')).toEqual(['Game, The.exe', '1234', '16.7']);
   });
 
   it('понимает удвоенную кавычку', () => {
@@ -115,8 +111,13 @@ describe('parsePresentMonCsv', () => {
   });
 
   it('пропускает мусорные строки, а не ломается на них', () => {
-    const csv = [V2_HEADER, v2Row(16.6, '4', '15'), '', 'обрывок строки', v2Row(16.7, '4', '15')]
-      .join('\n');
+    const csv = [
+      V2_HEADER,
+      v2Row(16.6, '4', '15'),
+      '',
+      'обрывок строки',
+      v2Row(16.7, '4', '15'),
+    ].join('\n');
 
     expect(parsePresentMonCsv(csv).frames).toHaveLength(2);
   });

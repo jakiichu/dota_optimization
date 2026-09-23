@@ -51,9 +51,7 @@ export interface HypothesisView {
 }
 
 /** Откуда берутся рекомендации по записи. */
-export type RecommendationsFor = (
-  sessionId: string,
-) => Promise<readonly Recommendation[]>;
+export type RecommendationsFor = (sessionId: string) => Promise<readonly Recommendation[]>;
 
 export class TrackHypotheses {
   readonly #store: HypothesisStore;
@@ -105,16 +103,12 @@ export class TrackHypotheses {
   }
 
   async list(): Promise<readonly HypothesisView[]> {
-    const [stored, sessions] = await Promise.all([
-      this.#store.list(),
-      this.#sessions.list(),
-    ]);
+    const [stored, sessions] = await Promise.all([this.#store.list(), this.#sessions.list()]);
     const byId = new Map(sessions.map((session) => [session.id, session]));
 
     return stored.map((entry) => {
       const before = byId.get(entry.beforeSessionId) ?? null;
-      const after =
-        entry.afterSessionId === null ? null : (byId.get(entry.afterSessionId) ?? null);
+      const after = entry.afterSessionId === null ? null : (byId.get(entry.afterSessionId) ?? null);
 
       const comparison = before !== null && after !== null ? compareSessions(before, after) : null;
       const prediction = entry.recommendation.prediction;
@@ -168,9 +162,7 @@ function candidatesFor(
     .filter((session) => session.id !== before.id && session.capturedAt > before.capturedAt)
     .map((session) => ({
       id: session.id,
-      comparable: compareScenes(
-        before.scene ?? UNKNOWN_SCENE,
-        session.scene ?? UNKNOWN_SCENE,
-      ).comparable,
+      comparable: compareScenes(before.scene ?? UNKNOWN_SCENE, session.scene ?? UNKNOWN_SCENE)
+        .comparable,
     }));
 }

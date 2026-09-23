@@ -48,10 +48,7 @@ export async function runJsonProducingProcess(
     });
   } catch (error) {
     await rm(workDir, { recursive: true, force: true });
-    throw new ExternalProcessError(
-      `Сбор данных не удался: ${options.label}`,
-      stderrOf(error),
-    );
+    throw new ExternalProcessError(`Сбор данных не удался: ${options.label}`, stderrOf(error));
   }
 
   try {

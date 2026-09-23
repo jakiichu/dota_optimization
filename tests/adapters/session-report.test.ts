@@ -15,12 +15,34 @@ describe('отчёт о записи', () => {
   it('не включает произвольные тексты, пути и идентификаторы записи', () => {
     const source = reportCapture();
     const secret = 'PRIVATE_USER_C:\\Users\\Secret\\<script>alert(1)</script>';
-    const html = createSessionReport({ ...source, application: secret, sessionId: secret,
-      background: [{ name: secret, usualPercent: 5, peakPercent: 10 }],
-      bottleneck: { ...source.bottleneck, explanation: secret },
-      series: { ...source.series, stutterMarks: [{ index: 0, frameIndex: 0, atSeconds: 0, frameTimeMs: 100, kind: null, evidence: [secret] }] },
-      recommendations: source.recommendations.map((r) => ({ ...r, evidence: secret, title: secret })),
-    }, { chart: true, inputLatency: true });
+    const html = createSessionReport(
+      {
+        ...source,
+        application: secret,
+        sessionId: secret,
+        background: [{ name: secret, usualPercent: 5, peakPercent: 10 }],
+        bottleneck: { ...source.bottleneck, explanation: secret },
+        series: {
+          ...source.series,
+          stutterMarks: [
+            {
+              index: 0,
+              frameIndex: 0,
+              atSeconds: 0,
+              frameTimeMs: 100,
+              kind: null,
+              evidence: [secret],
+            },
+          ],
+        },
+        recommendations: source.recommendations.map((r) => ({
+          ...r,
+          evidence: secret,
+          title: secret,
+        })),
+      },
+      { chart: true, inputLatency: true },
+    );
     expect(html).not.toContain('PRIVATE_USER');
     expect(html).not.toContain('private-session-id');
     expect(html).not.toContain('alert(1)');
@@ -47,9 +69,15 @@ describe('отчёт о записи', () => {
 
   it('не рисует нечисловые точки и не выдаёт пропущенные показатели за ноль', () => {
     const source = reportCapture();
-    const html = createSessionReport({ ...source, averageFps: NaN, inputLatency: null,
-      series: { ...source.series, time: [NaN, 1, 2], frameTimeMs: [10, Infinity, 20] },
-    }, { chart: true, inputLatency: true });
+    const html = createSessionReport(
+      {
+        ...source,
+        averageFps: NaN,
+        inputLatency: null,
+        series: { ...source.series, time: [NaN, 1, 2], frameTimeMs: [10, Infinity, 20] },
+      },
+      { chart: true, inputLatency: true },
+    );
     expect(html).toContain('Недостаточно точек');
     expect(html).toContain('p99: — мс');
     expect(html).not.toMatch(/NaN|Infinity/);

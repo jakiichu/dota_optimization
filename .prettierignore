@@ -1,0 +1,16 @@
+node_modules/
+build/
+release/
+dist/
+web/dist/
+sessions/
+captures/
+coverage/
+sidecar/
+tools/
+tests/fixtures/
+package-lock.json
+*.ps1
+.idea/
+CLAUDE.md
+AGENTS.md

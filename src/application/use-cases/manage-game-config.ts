@@ -1,4 +1,8 @@
-import { analyzeGameConfig, type ConfigAnalysis, type MeasuredContext } from '../../domain/gameconfig/config-analysis.ts';
+import {
+  analyzeGameConfig,
+  type ConfigAnalysis,
+  type MeasuredContext,
+} from '../../domain/gameconfig/config-analysis.ts';
 import { withSetting, withoutSetting } from '../../domain/gameconfig/config-edit.ts';
 import { parseGameConfig, type GameConfig } from '../../domain/gameconfig/game-config.ts';
 import type { GameConfigStore } from '../ports/game-config.port.ts';

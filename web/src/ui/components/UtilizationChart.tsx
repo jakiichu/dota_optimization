@@ -51,7 +51,6 @@ export function UtilizationChart(props: UtilizationChartProps): React.JSX.Elemen
       chart.destroy();
       plot.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.series.length, props.maxY, props.unit]);
 
   useEffect(() => {

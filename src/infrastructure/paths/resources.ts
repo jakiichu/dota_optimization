@@ -42,7 +42,8 @@ const SOURCE_ROOT = PACKAGED
   : // Этот файл лежит в src/infrastructure/paths — отсюда три уровня вверх.
     resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
-const ROOT = process.env['KADROSKOP_RESOURCES'] ?? (PACKAGED ? dirname(process.execPath) : SOURCE_ROOT);
+const ROOT =
+  process.env['KADROSKOP_RESOURCES'] ?? (PACKAGED ? dirname(process.execPath) : SOURCE_ROOT);
 
 /** Абсолютный путь к ресурсу приложения. */
 export function resourcePath(...segments: readonly string[]): string {

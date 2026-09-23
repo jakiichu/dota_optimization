@@ -1,4 +1,10 @@
-import { compareSessions, DECIDING_METRICS, type MetricId, type SessionComparison, type SessionSummary } from './session-comparison.ts';
+import {
+  compareSessions,
+  DECIDING_METRICS,
+  type MetricId,
+  type SessionComparison,
+  type SessionSummary,
+} from './session-comparison.ts';
 
 export interface RepeatedMetric {
   readonly id: MetricId;
@@ -22,14 +28,26 @@ export function compareRepeatedSessions(
   before: readonly SessionSummary[],
   after: readonly SessionSummary[],
 ): RepeatedComparison {
-  validateRepeatedIds(before.map((s) => s.id), after.map((s) => s.id));
+  validateRepeatedIds(
+    before.map((s) => s.id),
+    after.map((s) => s.id),
+  );
   const first = before[0]!;
   const pairs = before.map((session, index) => compareSessions(session, after[index]!));
   const reasons: string[] = [];
   const all = [...before, ...after];
-  if (all.some((s) => s.scene.kind !== 'replay' || s.scene.startTick === null ||
-    s.scene.replayFile === null || !compareSessions(first, s).comparable)) {
-    reasons.push('Для серии нужен один и тот же повтор с одной известной начальной точки во всех записях.');
+  if (
+    all.some(
+      (s) =>
+        s.scene.kind !== 'replay' ||
+        s.scene.startTick === null ||
+        s.scene.replayFile === null ||
+        !compareSessions(first, s).comparable,
+    )
+  ) {
+    reasons.push(
+      'Для серии нужен один и тот же повтор с одной известной начальной точки во всех записях.',
+    );
   }
   if (all.some((s) => s.application.toLowerCase() !== first.application.toLowerCase())) {
     reasons.push('В серии выбраны разные приложения.');
@@ -40,7 +58,9 @@ export function compareRepeatedSessions(
   }
   for (const group of [before, after]) {
     if (group.slice(1).some((s) => compareSessions(group[0]!, s).changes.length > 0)) {
-      reasons.push('Внутри группы менялась конфигурация машины. Соберите группу с одинаковыми настройками.');
+      reasons.push(
+        'Внутри группы менялась конфигурация машины. Соберите группу с одинаковыми настройками.',
+      );
       break;
     }
   }
@@ -54,38 +74,72 @@ export function compareRepeatedSessions(
     const to = range(available.map((m) => m.after));
     // Направление должно повториться в каждой паре и разделять наблюдавшиеся
     // диапазоны. Это описательная проверка, не доверительный интервал.
-    const better = available.every((m) => m.verdict === 'better') &&
+    const better =
+      available.every((m) => m.verdict === 'better') &&
       (metric.lowerIsBetter ? to.max < from.min : to.min > from.max);
-    const worse = available.every((m) => m.verdict === 'worse') &&
+    const worse =
+      available.every((m) => m.verdict === 'worse') &&
       (metric.lowerIsBetter ? to.min > from.max : to.max < from.min);
-    metrics.push({ id, label: metric.label, unit: metric.unit, before: from, after: to,
-      direction: better ? 'better' : worse ? 'worse' : 'overlap' });
+    metrics.push({
+      id,
+      label: metric.label,
+      unit: metric.unit,
+      before: from,
+      after: to,
+      direction: better ? 'better' : worse ? 'worse' : 'overlap',
+    });
   }
   const better = metrics.some((m) => m.direction === 'better');
   const worse = metrics.some((m) => m.direction === 'worse');
   // Разнонаправленный результат даже одной пары не прячем за медианой серии.
-  const anyBetter = pairs.some((p) => p.metrics.some((m) => DECIDING_METRICS.has(m.id) && m.verdict === 'better'));
-  const anyWorse = pairs.some((p) => p.metrics.some((m) => DECIDING_METRICS.has(m.id) && m.verdict === 'worse'));
-  const status = reasons.length > 0 ? 'not-comparable' : anyBetter && anyWorse ? 'mixed' :
-    better ? 'better' : worse ? 'worse' : 'inconclusive';
+  const anyBetter = pairs.some((p) =>
+    p.metrics.some((m) => DECIDING_METRICS.has(m.id) && m.verdict === 'better'),
+  );
+  const anyWorse = pairs.some((p) =>
+    p.metrics.some((m) => DECIDING_METRICS.has(m.id) && m.verdict === 'worse'),
+  );
+  const status =
+    reasons.length > 0
+      ? 'not-comparable'
+      : anyBetter && anyWorse
+        ? 'mixed'
+        : better
+          ? 'better'
+          : worse
+            ? 'worse'
+            : 'inconclusive';
   const summaries: Record<RepeatedComparison['status'], string> = {
-    better: 'Улучшение повторилось во всех парах; диапазоны хотя бы одной основной метрики не пересекаются.',
-    worse: 'Ухудшение повторилось во всех парах; диапазоны хотя бы одной основной метрики не пересекаются.',
+    better:
+      'Улучшение повторилось во всех парах; диапазоны хотя бы одной основной метрики не пересекаются.',
+    worse:
+      'Ухудшение повторилось во всех парах; диапазоны хотя бы одной основной метрики не пересекаются.',
     mixed: 'Смешанный эффект: среди основных метрик или прогонов есть и улучшения, и ухудшения.',
-    inconclusive: 'Устойчивый эффект не обнаружен: изменения малы, повторяются не во всех парах или диапазоны пересекаются.',
+    inconclusive:
+      'Устойчивый эффект не обнаружен: изменения малы, повторяются не во всех парах или диапазоны пересекаются.',
     'not-comparable': 'Условия серии различаются — делать общий вывод нельзя.',
   };
-  const caveats = [...reasons,
+  const caveats = [
+    ...reasons,
     'Диапазоны показывают минимум и максимум среди выбранных прогонов. Это не доверительные интервалы и не доказательство причины изменений.',
     'Одинаковая начальная точка указана в записи; фактический момент старта и камеру нужно выдерживать при каждом прогоне.',
   ];
-  if (all.some((s) => s.passport.settings.length === 0)) caveats.push('В части записей нет сохранённых настроек машины: проверить постоянство конфигурации полностью нельзя.');
-  if (all.some((s) => s.programs === null)) caveats.push('В части записей нет данных о фоновых программах.');
-  if (all.some((s) => {
-    const diff = compareSessions(first, s);
-    return diff.programsAppeared.length > 0 || diff.programsGone.length > 0;
-  })) caveats.push('Набор фоновых программ менялся: он тоже мог повлиять на результат.');
-  if (pairs.some((p) => p.changes.length !== 1)) caveats.push('Между группами не везде зафиксировано ровно одно изменение. Связать эффект с одной настройкой нельзя.');
+  if (all.some((s) => s.passport.settings.length === 0))
+    caveats.push(
+      'В части записей нет сохранённых настроек машины: проверить постоянство конфигурации полностью нельзя.',
+    );
+  if (all.some((s) => s.programs === null))
+    caveats.push('В части записей нет данных о фоновых программах.');
+  if (
+    all.some((s) => {
+      const diff = compareSessions(first, s);
+      return diff.programsAppeared.length > 0 || diff.programsGone.length > 0;
+    })
+  )
+    caveats.push('Набор фоновых программ менялся: он тоже мог повлиять на результат.');
+  if (pairs.some((p) => p.changes.length !== 1))
+    caveats.push(
+      'Между группами не везде зафиксировано ровно одно изменение. Связать эффект с одной настройкой нельзя.',
+    );
   return { status, summary: summaries[status], pairs, metrics, caveats };
 }
 
@@ -102,6 +156,9 @@ export function validateRepeatedIds(before: readonly string[], after: readonly s
 function range(values: number[]): RepeatedMetric['before'] {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
-  return { min: sorted[0]!, max: sorted[sorted.length - 1]!,
-    median: sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]! };
+  return {
+    min: sorted[0]!,
+    max: sorted[sorted.length - 1]!,
+    median: sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]!,
+  };
 }

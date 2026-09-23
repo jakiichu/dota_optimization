@@ -38,9 +38,7 @@ export function renderConsoleReport(
   lines.push(paint('Аудит конфигурации', BOLD));
   lines.push(paint(renderMachineLine(snapshot), DIM));
   if (!snapshot.collectedAsAdmin) {
-    lines.push(
-      paint('Запущено без прав администратора — часть проверок недоступна.', DIM),
-    );
+    lines.push(paint('Запущено без прав администратора — часть проверок недоступна.', DIM));
   }
   lines.push('');
 
@@ -82,10 +80,7 @@ function renderMachineLine(snapshot: SystemSnapshot): string {
   return parts.join(' · ');
 }
 
-function renderFinding(
-  finding: Finding,
-  paint: (text: string, code: string) => string,
-): string[] {
+function renderFinding(finding: Finding, paint: (text: string, code: string) => string): string[] {
   const style = SEVERITY_STYLE[finding.severity];
   const lines: string[] = [];
 

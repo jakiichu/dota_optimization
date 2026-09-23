@@ -94,8 +94,7 @@ export function checkHypothesis(
   if (predicted === null) {
     return {
       outcome: 'not-measured',
-      summary:
-        'Проверить нечем: этой метрики нет хотя бы в одной из записей.',
+      summary: 'Проверить нечем: этой метрики нет хотя бы в одной из записей.',
       predicted: null,
       paid,
       betterOnPaper: false,

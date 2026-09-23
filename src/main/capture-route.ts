@@ -6,7 +6,11 @@ import type { MachineContextSource } from './game-config-source.ts';
 import type { StartReplayRun } from '../application/use-cases/start-replay-run.ts';
 import type { SensorStream } from '../application/ports/sensor-stream.port.ts';
 import type { SessionStore } from '../application/ports/session-store.port.ts';
-import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
+import {
+  UNKNOWN_SCENE,
+  type CaptureScene,
+  type SceneKind,
+} from '../domain/telemetry/capture-scene.ts';
 
 const DEFAULT_PROCESS_NAME = 'dota2.exe';
 const DEFAULT_SECONDS = 60;
@@ -50,8 +54,16 @@ export function createCaptureRoutes(
     wholeGame: boolean;
     sessionId: string | null;
     error: string | null;
-  } = { phase: 'idle', startedAt: null, processName: '', label: '', seconds: 0,
-    wholeGame: false, sessionId: null, error: null };
+  } = {
+    phase: 'idle',
+    startedAt: null,
+    processName: '',
+    label: '',
+    seconds: 0,
+    wholeGame: false,
+    sessionId: null,
+    error: null,
+  };
 
   const capture: JsonRoute = {
     path: '/api/capture',
@@ -68,9 +80,16 @@ export function createCaptureRoutes(
         seconds: wholeGame ? MAX_SECONDS : clampSeconds(query.get('seconds')),
         stopWhenGameExits: wholeGame,
       };
-      state = { phase: 'recording', startedAt: new Date().toISOString(),
-        processName: request.processName, label: query.get('label') ?? '',
-        seconds: request.seconds, wholeGame, sessionId: null, error: null };
+      state = {
+        phase: 'recording',
+        startedAt: new Date().toISOString(),
+        processName: request.processName,
+        label: query.get('label') ?? '',
+        seconds: request.seconds,
+        wholeGame,
+        sessionId: null,
+        error: null,
+      };
 
       // Сохраняем всё, что записали: сравнение «до и после» разделено
       // перезагрузкой, и запись, оставшаяся только в памяти, для него бесполезна.
@@ -89,14 +108,28 @@ export function createCaptureRoutes(
       });
       inFlight = running;
 
-      try {
-        return await running;
-      } catch (error) {
-        state = { ...state, phase: 'failed', error: error instanceof Error ? error.message : String(error) };
-        throw error;
-      } finally {
-        inFlight = null;
+      const completion = (async () => {
+        try {
+          return await running;
+        } catch (error) {
+          console.error('[capture]', error);
+          state = {
+            ...state,
+            phase: 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          };
+          throw error;
+        } finally {
+          inFlight = null;
+        }
+      })();
+      if (query.get('background') === '1') {
+        void completion.catch(() => {
+          /* Ошибка доступна через status. */
+        });
+        return { startedAt: state.startedAt };
       }
+      return completion;
     },
   };
 
@@ -130,7 +163,9 @@ export function createCaptureRoutes(
 
   const status: JsonRoute = {
     path: '/api/capture/status',
-    async handle() { return state; },
+    async handle() {
+      return state;
+    },
   };
   return [capture, stop, status];
 }

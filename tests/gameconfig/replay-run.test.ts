@@ -61,13 +61,7 @@ describe('buildLaunchScript', () => {
   it('открывает консоль: перемотку всё равно вводить руками', () => {
     const { launchArgs } = buildLaunchScript(run());
 
-    expect(launchArgs).toEqual([
-      '-applaunch',
-      '570',
-      '-console',
-      '+exec',
-      'kadroskop-bench',
-    ]);
+    expect(launchArgs).toEqual(['-applaunch', '570', '-console', '+exec', 'kadroskop-bench']);
   });
 
   it('говорит человеку, что делать, а не делает вид, что всё само', () => {

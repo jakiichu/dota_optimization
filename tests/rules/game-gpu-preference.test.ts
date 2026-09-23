@@ -24,8 +24,7 @@ function laptopWith(preference: string | null): SystemSnapshot {
         replays: [],
       },
     ],
-    gpuPreferences:
-      preference === null ? [] : [{ executablePath: DOTA_EXE, preference }],
+    gpuPreferences: preference === null ? [] : [{ executablePath: DOTA_EXE, preference }],
   });
 }
 
@@ -55,9 +54,9 @@ describe('gameGpuPreferenceRule', () => {
           installDir: 'dota 2 beta',
           executablePath: DOTA_EXE,
           launchOptions: null,
-        configPath: null,
-        config: null,
-        replays: [],
+          configPath: null,
+          config: null,
+          replays: [],
         },
       ],
     });
@@ -68,9 +67,7 @@ describe('gameGpuPreferenceRule', () => {
   it('не различает регистр пути — Windows его тоже не различает', () => {
     const snapshot = snapshotWith({
       ...laptopWith('GpuPreference=1;'),
-      gpuPreferences: [
-        { executablePath: DOTA_EXE.toUpperCase(), preference: 'GpuPreference=1;' },
-      ],
+      gpuPreferences: [{ executablePath: DOTA_EXE.toUpperCase(), preference: 'GpuPreference=1;' }],
     });
 
     expect(gameGpuPreferenceRule.evaluate(snapshot)?.severity).toBe('critical');

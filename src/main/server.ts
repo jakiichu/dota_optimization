@@ -214,10 +214,7 @@ interface Startup {
  * случае второй экземпляр не нужен вовсе, во втором надо просто отойти в
  * сторону. Отличаем их по ответу на /api/health.
  */
-async function startServer(
-  preferredPort: number,
-  staticRoot: string | null,
-): Promise<Startup> {
+async function startServer(preferredPort: number, staticRoot: string | null): Promise<Startup> {
   const options = {
     jsonRoutes: [
       healthRoute,
@@ -228,9 +225,7 @@ async function startServer(
       createSessionListRoute(sessionStore),
       createSessionCompareRoute(sessionStore),
       createSessionAnalyzeRoute(sessionStore, machineContext),
-      createReportExportRoute((html) =>
-        writeTextToDesktop('kadroskop-report', 'html', html),
-      ),
+      createReportExportRoute((html) => writeTextToDesktop('kadroskop-report', 'html', html)),
       ...createConfigRoutes(sessionStore, () => machineContext.forget()),
       ...createAccountControlsRoutes(),
     ],
@@ -268,7 +263,9 @@ async function main(): Promise<void> {
   }
 
   const desktop = process.env['KADROSKOP_DESKTOP'] === '1';
-  const port = desktop ? 0 : Number.parseInt(process.env['KADROSKOP_PORT'] ?? '', 10) || DEFAULT_PORT;
+  const port = desktop
+    ? 0
+    : Number.parseInt(process.env['KADROSKOP_PORT'] ?? '', 10) || DEFAULT_PORT;
   const staticRoot = (await directoryExists(UI_ROOT)) ? UI_ROOT : null;
 
   const { server, existingUrl } = await startServer(port, staticRoot);
@@ -299,7 +296,9 @@ async function main(): Promise<void> {
   process.on('SIGTERM', shutdown);
   // Дочерний сервер принадлежит оболочке и не остаётся сиротой после её выхода.
   if (desktop && process.send !== undefined) {
-    process.on('message', (message) => { if (message === 'shutdown') shutdown(); });
+    process.on('message', (message) => {
+      if (message === 'shutdown') shutdown();
+    });
     process.on('disconnect', shutdown);
   }
 }

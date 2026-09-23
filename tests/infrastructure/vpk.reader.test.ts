@@ -48,7 +48,11 @@ function buildVpk(entries: readonly FakeEntry[]): {
   // Дерево: расширение → путь → имя. В тесте всё лежит в одной ветке.
   parts.push(text('txt'), text('resource/localization'));
   for (const entry of placed) {
-    const name = entry.path.split('/').at(-1)?.replace(/\.txt$/, '') ?? '';
+    const name =
+      entry.path
+        .split('/')
+        .at(-1)
+        ?.replace(/\.txt$/, '') ?? '';
     parts.push(text(name));
 
     const record = Buffer.alloc(18);
@@ -132,7 +136,11 @@ describe('readVpkFile', () => {
     // Смещение у таких файлов считается от конца дерева, а не от начала файла.
     // Перепутав это, мы прочитали бы кусок собственного каталога.
     const dirPath = await write([
-      { path: 'resource/localization/inline.txt', archiveIndex: INLINE, data: Buffer.from('внутри') },
+      {
+        path: 'resource/localization/inline.txt',
+        archiveIndex: INLINE,
+        data: Buffer.from('внутри'),
+      },
     ]);
     const index = await readVpkIndex(dirPath);
     const entry = index.entries.get('resource/localization/inline.txt');

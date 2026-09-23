@@ -267,5 +267,8 @@ function median(values: readonly number[]): number {
 
 /** `dota2.exe` и `dota2` — одно и то же: у .NET имя процесса без расширения. */
 function bareName(name: string): string {
-  return name.trim().toLowerCase().replace(/\.exe$/u, '');
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\.exe$/u, '');
 }

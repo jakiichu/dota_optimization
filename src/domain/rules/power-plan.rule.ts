@@ -13,11 +13,7 @@ export const coreParkingRule: AuditRule = {
   evaluate(snapshot: SystemSnapshot): Finding | null {
     const minCores = snapshot.power.minProcessorCoresPercentAc;
     if (minCores === null) {
-      return unknown(
-        ID,
-        TITLE,
-        'Не удалось прочитать значение CPMINCORES активной схемы.',
-      );
+      return unknown(ID, TITLE, 'Не удалось прочитать значение CPMINCORES активной схемы.');
     }
 
     if (minCores >= NO_PARKING_PERCENT) {
@@ -40,7 +36,8 @@ export const coreParkingRule: AuditRule = {
       summary: `Windows может парковать до ${NO_PARKING_PERCENT - minCores}% ядер.`,
       observed: `CPMINCORES (от сети) = ${minCores}%`,
       expected: 'Оценивать по записи игры, а не только по настройке схемы питания',
-      impact: 'Разрешённая парковка не доказывает, что ядра парковались во время игры или вызывали рывки. Влияние зависит от процессора и нагрузки.',
+      impact:
+        'Разрешённая парковка не доказывает, что ядра парковались во время игры или вызывали рывки. Влияние зависит от процессора и нагрузки.',
       remediation: [
         'Сначала запишите повторяемый участок игры. Менять эту настройку только по результату аудита не требуется.',
         'Если проверяете другую схему питания, сравните тот же участок до и после и учитывайте нагрев и расход энергии.',

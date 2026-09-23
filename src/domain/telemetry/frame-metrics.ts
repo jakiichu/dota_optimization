@@ -131,9 +131,7 @@ export function computeFrameStatistics(frames: readonly FrameSample[]): FrameSta
     pacing: analyzeFramePacing(frames),
     stutters,
     stuttersPerMinute:
-      durationSeconds === 0
-        ? 0
-        : (stutters.length * SECONDS_IN_MINUTE) / durationSeconds,
+      durationSeconds === 0 ? 0 : (stutters.length * SECONDS_IN_MINUTE) / durationSeconds,
     bottleneck: classifyBottleneck(frames, percentiles),
   };
 }
@@ -269,8 +267,7 @@ export function classifyBottleneck(
       kind: 'unknown',
       gpuBusyShare: null,
       cpuBusyShare: null,
-      explanation:
-        'В записи нет разбивки кадра по CPU и GPU — нужны метрики PresentMon 2.x.',
+      explanation: 'В записи нет разбивки кадра по CPU и GPU — нужны метрики PresentMon 2.x.',
     };
   }
 
@@ -294,8 +291,7 @@ export function classifyBottleneck(
   }
 
   // Ровные кадры при незагруженном железе — это ограничитель, а не узкое место.
-  const flat =
-    percentiles.p50 > 0 && percentiles.p99 / percentiles.p50 < LIMITED_P99_TO_P50;
+  const flat = percentiles.p50 > 0 && percentiles.p99 / percentiles.p50 < LIMITED_P99_TO_P50;
   if (flat && gpu < RELAXED_SHARE && cpu < RELAXED_SHARE) {
     return {
       kind: 'limited',

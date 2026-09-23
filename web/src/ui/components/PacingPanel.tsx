@@ -13,8 +13,8 @@ export function PacingPanel({ pacing }: { pacing: FramePacing }): React.JSX.Elem
       <div className="gpu-head">
         <span className="gpu-name">Ритм кадров</span>
         <span className="gpu-source">
-          базовый интервал {pacing.baseIntervalMs.toFixed(1)} мс ·{' '}
-          {pacing.impliedHz.toFixed(0)} кадров в секунду
+          базовый интервал {pacing.baseIntervalMs.toFixed(1)} мс · {pacing.impliedHz.toFixed(0)}{' '}
+          кадров в секунду
           {pacing.nearestCommonHz !== null && ` · похоже на ${pacing.nearestCommonHz} Гц`}
         </span>
       </div>
@@ -29,9 +29,7 @@ export function PacingPanel({ pacing }: { pacing: FramePacing }): React.JSX.Elem
           {pacing.multiples.map((entry) => (
             <div key={entry.multiple}>
               <span className="metric-label">кадров в {entry.multiple} раза длиннее</span>
-              <span className="metric-value">
-                {(entry.share * 100).toFixed(1)} %
-              </span>
+              <span className="metric-value">{(entry.share * 100).toFixed(1)} %</span>
             </div>
           ))}
           <div>

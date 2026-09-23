@@ -10,12 +10,7 @@ import { BOTTLENECK_LABEL, VERDICT_COLOR, VERDICT_LABEL } from '../../domain/pre
 import { dateTime, seconds, signed, withUnit } from '../../domain/formatting.ts';
 import { HypothesisPanel } from '../components/HypothesisPanel.tsx';
 import { RepeatedComparisonPanel } from '../components/RepeatedComparisonPanel.tsx';
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  SectionHeader,
-} from '../components/States.tsx';
+import { EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/States.tsx';
 
 export function CompareSection({ onCapture }: { onCapture: () => void }): React.JSX.Element {
   const sessions = useSessions();
@@ -38,22 +33,30 @@ export function CompareSection({ onCapture }: { onCapture: () => void }): React.
     return <LoadingState what="Читаю список записей…" />;
   }
   if (sessions.isError) {
-    return (
-      <ErrorState message={sessions.error.message} onRetry={() => void sessions.refetch()} />
-    );
+    return <ErrorState message={sessions.error.message} onRetry={() => void sessions.refetch()} />;
   }
 
   if (sessions.data.length < 2) {
     return (
       <>
-        <SectionHeader title="Сравнение" subtitle="Узнайте, стала ли игра плавнее после изменения одной настройки." />
+        <SectionHeader
+          title="Сравнение"
+          subtitle="Узнайте, стала ли игра плавнее после изменения одной настройки."
+        />
         <HypothesisPanel />
         <div className="card empty-guide">
-          <span className="empty-guide-symbol" aria-hidden="true">⇄</span>
+          <span className="empty-guide-symbol" aria-hidden="true">
+            ⇄
+          </span>
           <h2>Сначала — две записи</h2>
-          <p>Сделайте замер до изменения настройки, затем повторите ту же сцену после. Здесь появится сравнение плавности.</p>
+          <p>
+            Сделайте замер до изменения настройки, затем повторите ту же сцену после. Здесь появится
+            сравнение плавности.
+          </p>
           <span className="muted">Готово записей: {sessions.data.length} из 2 необходимых</span>
-          <button className="button primary" onClick={onCapture}>Перейти к записи</button>
+          <button className="button primary" onClick={onCapture}>
+            Перейти к записи
+          </button>
         </div>
       </>
     );
@@ -72,30 +75,42 @@ export function CompareSection({ onCapture }: { onCapture: () => void }): React.
       <HypothesisPanel />
 
       <div className="capture-form">
-        <button type="button" className={`button ${mode === 'pair' ? 'primary' : ''}`} aria-pressed={mode === 'pair'} onClick={() => setMode('pair')}>Две записи</button>
-        <button type="button" className={`button ${mode === 'repeated' ? 'primary' : ''}`} aria-pressed={mode === 'repeated'} onClick={() => setMode('repeated')}>Повторные замеры</button>
+        <button
+          type="button"
+          className={`button ${mode === 'pair' ? 'primary' : ''}`}
+          aria-pressed={mode === 'pair'}
+          onClick={() => setMode('pair')}
+        >
+          Две записи
+        </button>
+        <button
+          type="button"
+          className={`button ${mode === 'repeated' ? 'primary' : ''}`}
+          aria-pressed={mode === 'repeated'}
+          onClick={() => setMode('repeated')}
+        >
+          Повторные замеры
+        </button>
       </div>
-      <div hidden={mode !== 'repeated'}><RepeatedComparisonPanel sessions={sessions.data} /></div>
+      <div hidden={mode !== 'repeated'}>
+        <RepeatedComparisonPanel sessions={sessions.data} />
+      </div>
       <div hidden={mode !== 'pair'}>
-      <div className="capture-form">
-        <label>
-          <span className="metric-label">До изменения</span>
-          <SessionPicker sessions={sessions.data} value={beforeId} onChange={setBeforeId} />
-        </label>
-        <label>
-          <span className="metric-label">После изменения</span>
-          <SessionPicker sessions={sessions.data} value={afterId} onChange={setAfterId} />
-        </label>
-      </div>
+        <div className="capture-form">
+          <label>
+            <span className="metric-label">До изменения</span>
+            <SessionPicker sessions={sessions.data} value={beforeId} onChange={setBeforeId} />
+          </label>
+          <label>
+            <span className="metric-label">После изменения</span>
+            <SessionPicker sessions={sessions.data} value={afterId} onChange={setAfterId} />
+          </label>
+        </div>
 
-      {beforeId === afterId && (
-        <EmptyState>Выберите две разные записи.</EmptyState>
-      )}
-      {comparison.isPending && beforeId !== afterId && (
-        <LoadingState what="Считаю разницу…" />
-      )}
-      {comparison.isError && <ErrorState message={comparison.error.message} />}
-      {comparison.data !== undefined && <ComparisonReport comparison={comparison.data} />}
+        {beforeId === afterId && <EmptyState>Выберите две разные записи.</EmptyState>}
+        {comparison.isPending && beforeId !== afterId && <LoadingState what="Считаю разницу…" />}
+        {comparison.isError && <ErrorState message={comparison.error.message} />}
+        {comparison.data !== undefined && <ComparisonReport comparison={comparison.data} />}
       </div>
     </>
   );
@@ -119,8 +134,7 @@ function SessionPicker({
     >
       {sessions.map((session) => (
         <option key={session.id} value={session.id}>
-          {session.label} · {seconds(session.durationSeconds, 0)} ·{' '}
-          {dateTime(session.capturedAt)}
+          {session.label} · {seconds(session.durationSeconds, 0)} · {dateTime(session.capturedAt)}
         </option>
       ))}
     </select>
@@ -175,9 +189,8 @@ function WhatChanged({
 
       {changes.length === 0 && appeared.length === 0 && gone.length === 0 ? (
         <div className="muted">
-          Ничего не изменилось — либо настройки те же, либо записи сделаны до того,
-          как приложение стало запоминать состояние машины. Во втором случае разницу
-          в числах объяснить нечем.
+          Ничего не изменилось — либо настройки те же, либо записи сделаны до того, как приложение
+          стало запоминать состояние машины. Во втором случае разницу в числах объяснить нечем.
         </div>
       ) : (
         <div className="changes">
@@ -204,7 +217,8 @@ function ComparisonReport({ comparison }: { comparison: Comparison }): React.JSX
         </div>
         {comparison.bottleneckChanged && (
           <div className="muted">
-            Ограничение производительности изменилось: {BOTTLENECK_LABEL[comparison.before.bottleneck]} →{' '}
+            Ограничение производительности изменилось:{' '}
+            {BOTTLENECK_LABEL[comparison.before.bottleneck]} →{' '}
             {BOTTLENECK_LABEL[comparison.after.bottleneck]}
           </div>
         )}

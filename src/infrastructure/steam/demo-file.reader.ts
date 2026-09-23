@@ -71,7 +71,10 @@ export async function readDemoLength(path: string): Promise<DemoLength | null> {
 }
 
 /** Читатель, помнящий, где остановился: формат весь на переменной длине. */
-function reader(buffer: Buffer, from = 0): { varint(): number; at(): number; skip(by: number): void } {
+function reader(
+  buffer: Buffer,
+  from = 0,
+): { varint(): number; at(): number; skip(by: number): void } {
   let at = from;
   return {
     varint(): number {

@@ -78,7 +78,9 @@ export const gameGpuPreferenceRule: AuditRule = {
       severity: 'info',
       summary: 'Выбор видеоядра оставлен на усмотрение Windows.',
       observed: undecided
-        .map((entry) => `${entry.game.name}: ${entry.value === null ? 'не задано' : 'решает Windows'}`)
+        .map(
+          (entry) => `${entry.game.name}: ${entry.value === null ? 'не задано' : 'решает Windows'}`,
+        )
         .join('; '),
       expected: `GpuPreference=${HIGH_PERFORMANCE} — явная привязка к дискретному GPU`,
       impact:

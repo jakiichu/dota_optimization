@@ -207,12 +207,7 @@ describe('programsIn', () => {
     // Иначе сравнение двух записей выдавало бы «появился svchost» каждый раз и
     // обесценило бы единственную настоящую строку.
     const timeline = buildProcessTimeline(
-      [
-        sample(1, [process('svchost', 3)]),
-        sample(2, []),
-        sample(3, []),
-        sample(4, []),
-      ],
+      [sample(1, [process('svchost', 3)]), sample(2, []), sample(3, []), sample(4, [])],
       'dota2.exe',
     );
 

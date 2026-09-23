@@ -82,9 +82,7 @@ export const gameLaunchOptionsRule: AuditRule = {
       title: TITLE,
       severity: 'info',
       summary: 'Есть параметры запуска, которые стоит перепроверить замером.',
-      observed: hits
-        .map((hit) => `${hit.game.name}: ${hit.option.label}`)
-        .join('; '),
+      observed: hits.map((hit) => `${hit.game.name}: ${hit.option.label}`).join('; '),
       expected: 'Только те параметры, выигрыш от которых вы измерили сами',
       impact: hits.map((hit) => `${hit.option.label} — ${hit.option.why}`).join(' '),
       remediation: hits.map((hit) => hit.option.advice),

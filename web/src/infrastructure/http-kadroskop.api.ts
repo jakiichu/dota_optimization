@@ -1,7 +1,4 @@
-import type {
-  CaptureRequest,
-  KadroskopApi,
-} from '../application/ports/kadroskop-api.port.ts';
+import type { CaptureRequest, KadroskopApi } from '../application/ports/kadroskop-api.port.ts';
 import type {
   Audit,
   AccountControls,
@@ -10,6 +7,8 @@ import type {
   CaptureStatus,
   Comparison,
   ControlTransferResult,
+  SettingsBackup,
+  SettingsRestoreResult,
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
@@ -57,18 +56,18 @@ export class HttpKadroskopApi implements KadroskopApi {
     return getJson<Comparison>(`/api/sessions/compare?${query.toString()}`, signal);
   }
 
-  async fetchRepeatedComparison(beforeIds: readonly string[], afterIds: readonly string[], signal: AbortSignal): Promise<RepeatedComparison> {
+  async fetchRepeatedComparison(
+    beforeIds: readonly string[],
+    afterIds: readonly string[],
+    signal: AbortSignal,
+  ): Promise<RepeatedComparison> {
     const query = new URLSearchParams({ mode: 'repeated' });
     beforeIds.forEach((id) => query.append('before', id));
     afterIds.forEach((id) => query.append('after', id));
     return getJson<RepeatedComparison>(`/api/sessions/compare?${query.toString()}`, signal);
   }
 
-  async analyzeSession(
-    id: string,
-    signal: AbortSignal,
-    window?: FrameWindow,
-  ): Promise<Capture> {
+  async analyzeSession(id: string, signal: AbortSignal, window?: FrameWindow): Promise<Capture> {
     const query = new URLSearchParams({ id });
     if (window !== undefined) {
       query.set('from', String(window.fromSeconds));
@@ -144,6 +143,13 @@ export class HttpKadroskopApi implements KadroskopApi {
 
   async fetchAccountControls(signal: AbortSignal): Promise<AccountControls> {
     return getJson<AccountControls>('/api/account-controls', signal);
+  }
+
+  fetchSettingsBackups(signal: AbortSignal): Promise<readonly SettingsBackup[]> {
+    return getJson('/api/account-controls/backups', signal);
+  }
+  restoreSettings(targetId: string, backupId: string): Promise<SettingsRestoreResult> {
+    return postJson('/api/account-controls/restore', { targetId, backupId });
   }
 
   async transferAccountControls(

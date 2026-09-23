@@ -12,11 +12,12 @@ import { renderSensorSample } from '../adapters/presenters/console-sensors.prese
 import { actionableFindings } from '../domain/diagnostics/audit-report.ts';
 import { allAuditRules } from '../domain/rules/rule-registry.ts';
 import { createMachineContextSource } from './game-config-source.ts';
+import { isUsableReplay, planReplayBenchmark } from '../domain/gameconfig/benchmark-plan.ts';
 import {
-  isUsableReplay,
-  planReplayBenchmark,
-} from '../domain/gameconfig/benchmark-plan.ts';
-import { UNKNOWN_SCENE, type CaptureScene, type SceneKind } from '../domain/telemetry/capture-scene.ts';
+  UNKNOWN_SCENE,
+  type CaptureScene,
+  type SceneKind,
+} from '../domain/telemetry/capture-scene.ts';
 import type { SnapshotCollector } from '../application/ports/snapshot-collector.port.ts';
 import { JsonFileSnapshotCollector } from '../infrastructure/file/json-file-snapshot.collector.ts';
 import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.capture.ts';
@@ -126,10 +127,7 @@ async function runAudit(options: Options): Promise<number> {
       ? new WindowsSnapshotCollector()
       : new JsonFileSnapshotCollector(options.fromFile);
 
-  const { snapshot, report } = await new RunConfigurationAudit(
-    collector,
-    allAuditRules,
-  ).execute();
+  const { snapshot, report } = await new RunConfigurationAudit(collector, allAuditRules).execute();
 
   if (options.saveSnapshotTo !== null) {
     await writeFile(options.saveSnapshotTo, JSON.stringify(snapshot, null, 2), 'utf8');
@@ -190,9 +188,17 @@ async function runCapture(options: Options): Promise<number> {
     stdout.write(`${JSON.stringify(session, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(capture, statistics, session.correlation, session.network, session.cpuLoad, session.recommendations, {
-        color: options.color,
-      })}\n`,
+      `${renderCaptureReport(
+        capture,
+        statistics,
+        session.correlation,
+        session.network,
+        session.cpuLoad,
+        session.recommendations,
+        {
+          color: options.color,
+        },
+      )}\n`,
     );
   }
 
@@ -244,9 +250,17 @@ async function runAnalyze(id: string | undefined, options: Options): Promise<num
     stdout.write(`${JSON.stringify(analyzed, null, 2)}\n`);
   } else {
     stdout.write(
-      `${renderCaptureReport(analyzed.capture, analyzed.statistics, analyzed.correlation, analyzed.network, analyzed.cpuLoad, analyzed.recommendations, {
-        color: options.color,
-      })}
+      `${renderCaptureReport(
+        analyzed.capture,
+        analyzed.statistics,
+        analyzed.correlation,
+        analyzed.network,
+        analyzed.cpuLoad,
+        analyzed.recommendations,
+        {
+          color: options.color,
+        },
+      )}
 `,
     );
   }
@@ -285,14 +299,13 @@ async function runBench(options: Options): Promise<number> {
     allAuditRules,
   ).execute();
 
-  const replays = snapshot.games
-    .flatMap((game) => game.replays)
-    .filter(isUsableReplay);
+  const replays = snapshot.games.flatMap((game) => game.replays).filter(isUsableReplay);
 
   if (replays.length === 0) {
     stdout.write(
       'Повторов не нашлось. Скачайте любой матч в игре: вкладка «Повторы» → ' +
-        'скачать. Без повтора замер нельзя воспроизвести точно.' + NEWLINE,
+        'скачать. Без повтора замер нельзя воспроизвести точно.' +
+        NEWLINE,
     );
     return EXIT_OK;
   }

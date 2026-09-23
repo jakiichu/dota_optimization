@@ -16,7 +16,8 @@ export const memoryIntegrityRule: AuditRule = {
   title: TITLE,
   evaluate(snapshot: SystemSnapshot): Finding | null {
     const hvci = snapshot.security.hypervisorEnforcedCodeIntegrityEnabled;
-    if (hvci === null) return unknown(ID, TITLE, 'Состояние целостности памяти не удалось прочитать.');
+    if (hvci === null)
+      return unknown(ID, TITLE, 'Состояние целостности памяти не удалось прочитать.');
     if (hvci === 0) {
       return ok(
         ID,
@@ -33,7 +34,8 @@ export const memoryIntegrityRule: AuditRule = {
       summary: 'В настройке HVCI включена защита целостности памяти.',
       observed: 'HypervisorEnforcedCodeIntegrity\\Enabled = 1',
       expected: 'Сохранять защиту включённой; влияние оценивать по измерениям',
-      impact: 'Влияние защиты на производительность зависит от оборудования и нагрузки. Этот снимок не измеряет потери FPS и не подтверждает фактическое состояние после перезагрузки.',
+      impact:
+        'Влияние защиты на производительность зависит от оборудования и нагрузки. Этот снимок не измеряет потери FPS и не подтверждает фактическое состояние после перезагрузки.',
       remediation: [
         'Проверить состояние: Безопасность Windows → Безопасность устройства → Изоляция ядра → Целостность памяти.',
         'Для поиска причин рывков сначала запишите игру. Отключение защиты не является рекомендацией этой проверки.',

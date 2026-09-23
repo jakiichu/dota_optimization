@@ -52,9 +52,7 @@ const NOT_MEASURED: NetworkQuality = {
   summary: 'Сеть не измерялась.',
 };
 
-export function analyzeNetworkQuality(
-  samples: readonly SensorSample[],
-): NetworkQuality {
+export function analyzeNetworkQuality(samples: readonly SensorSample[]): NetworkQuality {
   const byTarget = groupByTarget(samples);
   if (byTarget.size === 0) return NOT_MEASURED;
 
@@ -143,17 +141,12 @@ function worstSeverity(targets: readonly NetworkTargetQuality[]): NetworkSeverit
   return 'ok';
 }
 
-function describe(
-  severity: NetworkSeverity,
-  targets: readonly NetworkTargetQuality[],
-): string {
+function describe(severity: NetworkSeverity, targets: readonly NetworkTargetQuality[]): string {
   if (severity === 'ok') {
     return 'Сеть вела себя ровно — рывки, если они были, не сетевые.';
   }
 
-  const worst = [...targets].sort(
-    (left, right) => rank(right.severity) - rank(left.severity),
-  )[0];
+  const worst = [...targets].sort((left, right) => rank(right.severity) - rank(left.severity))[0];
   if (worst === undefined) return 'Сеть вела себя ровно.';
 
   const parts: string[] = [];

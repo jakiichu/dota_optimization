@@ -65,10 +65,7 @@ export function renderComparison(
   return lines.join('\n');
 }
 
-function renderMetric(
-  metric: MetricDelta,
-  paint: (text: string, code: string) => string,
-): string {
+function renderMetric(metric: MetricDelta, paint: (text: string, code: string) => string): string {
   const unit = metric.unit === '' ? '' : ` ${metric.unit}`;
   const before = `${metric.before.toFixed(1)}${unit}`.padStart(VALUE_WIDTH);
   const after = `${metric.after.toFixed(1)}${unit}`.padStart(VALUE_WIDTH);

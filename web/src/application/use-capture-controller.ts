@@ -19,12 +19,15 @@ export function useCaptureController() {
     refetchOnWindowFocus: true,
     retry: false,
   });
-  const [pending, setPending] = useState<{ request: CaptureRequest; deadline: number } | null>(null);
+  const [pending, setPending] = useState<{ request: CaptureRequest; deadline: number } | null>(
+    null,
+  );
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
   const [now, setNow] = useState(Date.now());
   const phase = status.data?.phase;
-  const recording = capture.isPending || phase === 'recording' || phase === 'stopping' || phase === 'saving';
+  const recording =
+    capture.isPending || phase === 'recording' || phase === 'stopping' || phase === 'saving';
   const mutate = capture.mutate;
   useEffect(() => {
     if (pending === null && !recording) return undefined;
@@ -48,12 +51,19 @@ export function useCaptureController() {
     void client.invalidateQueries({ queryKey: queryKeys.hypotheses });
   }, [completedId, client]);
 
-  const startsIn = pending === null ? null : Math.max(0, Math.ceil((pending.deadline - now) / 1000));
+  const startsIn =
+    pending === null ? null : Math.max(0, Math.ceil((pending.deadline - now) / 1000));
   return {
-    capture, stop, status, recording, startsIn,
+    capture,
+    stop,
+    status,
+    recording,
+    startsIn,
     blocked: recording || pending !== null || status.isPending || status.isError,
-    elapsedSeconds: status.data?.startedAt == null ? 0
-      : Math.max(0, Math.floor((now - Date.parse(status.data.startedAt)) / 1000)),
+    elapsedSeconds:
+      status.data?.startedAt == null
+        ? 0
+        : Math.max(0, Math.floor((now - Date.parse(status.data.startedAt)) / 1000)),
     begin(request: CaptureRequest) {
       if (recording || pendingRef.current !== null || status.isPending || status.isError) return;
       capture.reset();
@@ -63,9 +73,16 @@ export function useCaptureController() {
       pendingRef.current = queued;
       setPending(queued);
     },
-    cancelStart() { pendingRef.current = null; setPending(null); },
+    cancelStart() {
+      pendingRef.current = null;
+      setPending(null);
+    },
     stopRecording() {
-      stop.mutate(undefined, { onSettled: () => { void status.refetch(); } });
+      stop.mutate(undefined, {
+        onSettled: () => {
+          void status.refetch();
+        },
+      });
     },
   };
 }

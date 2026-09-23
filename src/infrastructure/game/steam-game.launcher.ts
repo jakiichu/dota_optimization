@@ -81,10 +81,7 @@ export class SteamGameLauncher implements GameLauncher {
     }
   }
 
-  async launch(
-    configLines: readonly string[],
-    launchArgs: readonly string[],
-  ): Promise<string> {
+  async launch(configLines: readonly string[], launchArgs: readonly string[]): Promise<string> {
     const found = await this.#locate();
     if (found.steamExecutable === null || found.configDir === null) {
       throw new Error('Запустить игру нечем: не найден Steam или папка её настроек.');

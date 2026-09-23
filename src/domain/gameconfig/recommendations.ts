@@ -21,11 +21,7 @@ import type { Prediction } from './hypothesis.ts';
  */
 
 export type RecommendationKind =
-  | 'frame-cap'
-  | 'cpu-relief'
-  | 'gpu-relief'
-  | 'present-mode'
-  | 'not-config';
+  'frame-cap' | 'cpu-relief' | 'gpu-relief' | 'present-mode' | 'not-config';
 
 /**
  * Насколько мы уверены.

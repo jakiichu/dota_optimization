@@ -78,10 +78,7 @@ export function toAuditView(
   };
 }
 
-function toFindingView(
-  finding: Finding,
-  corroboration: RuleCorroboration | null,
-): FindingView {
+function toFindingView(finding: Finding, corroboration: RuleCorroboration | null): FindingView {
   return {
     ruleId: finding.ruleId,
     title: finding.title,

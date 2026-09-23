@@ -63,7 +63,11 @@ const KNOWLEDGE: Readonly<Record<string, CvarInfo>> = {
   },
   r_deferred_additive_pass: { impact: 'gpu', what: 'дополнительный проход освещения', cost: '' },
   r_deferred_simple_light: { impact: 'gpu', what: 'упрощённое освещение', cost: '' },
-  r_deferred_specular: { impact: 'gpu', what: 'блики на поверхностях', cost: 'мир выглядит матовым' },
+  r_deferred_specular: {
+    impact: 'gpu',
+    what: 'блики на поверхностях',
+    cost: 'мир выглядит матовым',
+  },
   r_deferred_specular_bloom: { impact: 'gpu', what: 'свечение бликов', cost: '' },
   r_deferred_height_fog: { impact: 'gpu', what: 'объёмный туман', cost: '' },
   r_dota_normal_maps: {
@@ -81,48 +85,112 @@ const KNOWLEDGE: Readonly<Record<string, CvarInfo>> = {
     cost: 'текстуры под углом становятся размытыми',
   },
   r_depth_of_field: { impact: 'gpu', what: 'размытие глубины', cost: '' },
-  r_dota_color_correction: { impact: 'gpu', what: 'цветокоррекция', cost: 'цвета становятся тусклее' },
+  r_dota_color_correction: {
+    impact: 'gpu',
+    what: 'цветокоррекция',
+    cost: 'цвета становятся тусклее',
+  },
   r_dota_render_2d_skybox: { impact: 'gpu', what: 'фон неба', cost: '' },
   r_dashboard_render_quality: { impact: 'gpu', what: 'качество отрисовки меню', cost: '' },
   r_dynamiclighting: { impact: 'gpu', what: 'динамическое освещение', cost: '' },
   r_light_flickering_enabled: { impact: 'gpu', what: 'мерцание источников света', cost: '' },
   r_dota_shadow_ambient_light: { impact: 'gpu', what: 'подсветка теней', cost: '' },
-  r_dota_local_light_compute: { impact: 'gpu', what: 'расчёт локальных источников света', cost: '' },
+  r_dota_local_light_compute: {
+    impact: 'gpu',
+    what: 'расчёт локальных источников света',
+    cost: '',
+  },
   r_dota_bloom_compute_shader: { impact: 'gpu', what: 'способ расчёта свечения', cost: '' },
   r_decal_cullsize: { impact: 'gpu', what: 'отсечение мелких наложений', cost: '' },
-  r_character_decal_resolution: { impact: 'gpu', what: 'разрешение наложений на моделях', cost: '' },
+  r_character_decal_resolution: {
+    impact: 'gpu',
+    what: 'разрешение наложений на моделях',
+    cost: '',
+  },
   r_renderoverlayfragment: { impact: 'gpu', what: 'отрисовка накладываемых фрагментов', cost: '' },
 
   // Тени: самая дорогая часть кадра и по видеокарте, и по процессору.
-  cl_globallight_shadow_mode: { impact: 'both', what: 'режим общих теней', cost: 'тени грубеют или пропадают' },
+  cl_globallight_shadow_mode: {
+    impact: 'both',
+    what: 'режим общих теней',
+    cost: 'тени грубеют или пропадают',
+  },
   csm_viewmodel_shadows: { impact: 'gpu', what: 'тени от модели', cost: '' },
-  lb_shadow_texture_height_override: { impact: 'both', what: 'высота карты теней', cost: 'тени становятся угловатыми' },
-  lb_shadow_texture_width_override: { impact: 'both', what: 'ширина карты теней', cost: 'тени становятся угловатыми' },
-  lb_dynamic_shadow_resolution_base: { impact: 'both', what: 'разрешение динамических теней', cost: '' },
-  lb_dynamic_shadow_resolution_delay: { impact: 'both', what: 'задержка обновления теней', cost: '' },
-  r_dota_spotlight_shadows_resolution: { impact: 'both', what: 'разрешение теней прожекторов', cost: '' },
+  lb_shadow_texture_height_override: {
+    impact: 'both',
+    what: 'высота карты теней',
+    cost: 'тени становятся угловатыми',
+  },
+  lb_shadow_texture_width_override: {
+    impact: 'both',
+    what: 'ширина карты теней',
+    cost: 'тени становятся угловатыми',
+  },
+  lb_dynamic_shadow_resolution_base: {
+    impact: 'both',
+    what: 'разрешение динамических теней',
+    cost: '',
+  },
+  lb_dynamic_shadow_resolution_delay: {
+    impact: 'both',
+    what: 'задержка обновления теней',
+    cost: '',
+  },
+  r_dota_spotlight_shadows_resolution: {
+    impact: 'both',
+    what: 'разрешение теней прожекторов',
+    cost: '',
+  },
   r_dota_allow_spotlight_shadows: { impact: 'both', what: 'тени от прожекторов', cost: '' },
   sc_shadow_depth_bias: { impact: 'gpu', what: 'смещение глубины теней', cost: '' },
 
   // Частицы: в замесах это главная нагрузка на процессор.
-  cl_particle_fallback_base: { impact: 'cpu', what: 'с какого уровня упрощать частицы', cost: 'эффекты беднее' },
-  cl_particle_fallback_multiplier: { impact: 'cpu', what: 'насколько агрессивно упрощать частицы', cost: 'эффекты беднее' },
-  cl_particle_sim_fallback_base_multiplier: { impact: 'cpu', what: 'упрощение расчёта частиц', cost: '' },
+  cl_particle_fallback_base: {
+    impact: 'cpu',
+    what: 'с какого уровня упрощать частицы',
+    cost: 'эффекты беднее',
+  },
+  cl_particle_fallback_multiplier: {
+    impact: 'cpu',
+    what: 'насколько агрессивно упрощать частицы',
+    cost: 'эффекты беднее',
+  },
+  cl_particle_sim_fallback_base_multiplier: {
+    impact: 'cpu',
+    what: 'упрощение расчёта частиц',
+    cost: '',
+  },
   cl_particle_sim_fallback_threshold_ms: {
     impact: 'cpu',
     what: 'порог времени, после которого частицы упрощаются',
     cost: '',
   },
   cl_aggregate_particles: { impact: 'cpu', what: 'объединение частиц в пакеты', cost: '' },
-  cl_retire_low_priority_lights: { impact: 'both', what: 'отключение неважных источников света', cost: '' },
-  dota_allow_clientside_particles: { impact: 'cpu', what: 'частицы, считаемые на клиенте', cost: '' },
+  cl_retire_low_priority_lights: {
+    impact: 'both',
+    what: 'отключение неважных источников света',
+    cost: '',
+  },
+  dota_allow_clientside_particles: {
+    impact: 'cpu',
+    what: 'частицы, считаемые на клиенте',
+    cost: '',
+  },
   dota_disable_particle_lights: { impact: 'both', what: 'свет от частиц', cost: '' },
   r_particle_max_detail_level: { impact: 'both', what: 'детализация частиц', cost: '' },
   r_particle_max_texture_layers: { impact: 'gpu', what: 'слои текстур у частиц', cost: '' },
   r_particle_cables_cast_shadows: { impact: 'gpu', what: 'тени от тросов', cost: '' },
-  r_dota_disable_weather_particles: { impact: 'both', what: 'погодные эффекты', cost: 'погода перестаёт быть видна' },
+  r_dota_disable_weather_particles: {
+    impact: 'both',
+    what: 'погодные эффекты',
+    cost: 'погода перестаёт быть видна',
+  },
   dota_unit_fly_particle: { impact: 'cpu', what: 'частицы у летающих юнитов', cost: '' },
-  dota_building_destruction_effects: { impact: 'both', what: 'эффекты разрушения зданий', cost: '' },
+  dota_building_destruction_effects: {
+    impact: 'both',
+    what: 'эффекты разрушения зданий',
+    cost: '',
+  },
 
   // Окружение и мелочи, считаемые процессором.
   dota_ambient_creatures: { impact: 'cpu', what: 'зверьки на карте', cost: '' },
@@ -135,21 +203,33 @@ const KNOWLEDGE: Readonly<Record<string, CvarInfo>> = {
   r_aoproxy_min_dist: { impact: 'gpu', what: 'ближняя граница приближённого затенения', cost: '' },
   panorama_allow_transitions: { impact: 'cpu', what: 'анимации интерфейса', cost: '' },
   dota_sf_hud_disable_fade: { impact: 'cpu', what: 'плавное исчезание интерфейса', cost: '' },
-  dota_defer_panorama_on_sim_ticks: { impact: 'cpu', what: 'откладывание отрисовки интерфейса', cost: '' },
+  dota_defer_panorama_on_sim_ticks: {
+    impact: 'cpu',
+    what: 'откладывание отрисовки интерфейса',
+    cost: '',
+  },
   r_experimental_lag_limiter: {
     impact: 'both',
     what: 'экспериментальный ограничитель задержки',
     cost: 'поведение не документировано',
   },
   r_dota_allow_desaturate_layers: { impact: 'gpu', what: 'обесцвечивание слоёв', cost: '' },
-  engine_enable_frametime_warnings: { impact: 'none', what: 'предупреждения движка о долгих кадрах', cost: '' },
+  engine_enable_frametime_warnings: {
+    impact: 'none',
+    what: 'предупреждения движка о долгих кадрах',
+    cost: '',
+  },
 
   // Не про производительность.
   violence_ablood: { impact: 'cosmetic', what: 'кровь у существ', cost: '' },
   violence_agibs: { impact: 'cosmetic', what: 'останки существ', cost: '' },
   violence_hblood: { impact: 'cosmetic', what: 'кровь у героев', cost: '' },
   violence_hgibs: { impact: 'cosmetic', what: 'останки героев', cost: '' },
-  dota_unit_use_player_color: { impact: 'gameplay', what: 'подсветка юнитов цветом игрока', cost: '' },
+  dota_unit_use_player_color: {
+    impact: 'gameplay',
+    what: 'подсветка юнитов цветом игрока',
+    cost: '',
+  },
   dota_friendly_color: { impact: 'gameplay', what: 'цвет союзников', cost: '' },
   dota_enemy_color: { impact: 'gameplay', what: 'цвет противников', cost: '' },
   dota_selection_groups: {
