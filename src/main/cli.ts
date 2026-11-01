@@ -24,7 +24,7 @@ import { PresentMonCapture } from '../infrastructure/presentmon/presentmon.captu
 import { SidecarSensorSampler } from '../infrastructure/sensors/sidecar-sensor.sampler.ts';
 import { SidecarSensorStream } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
 import { FileSessionStore } from '../infrastructure/sessions/file-session.store.ts';
-import { RESOURCES } from '../infrastructure/paths/resources.ts';
+import { RESOURCES, resourcePath } from '../infrastructure/paths/resources.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 
 /**
@@ -205,7 +205,7 @@ async function runCapture(options: Options): Promise<number> {
   return statistics.frameCount === 0 ? EXIT_ERROR : EXIT_OK;
 }
 
-const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
+const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot(), [resourcePath('sessions')]);
 const machineContext = createMachineContextSource();
 
 async function runSessions(options: Options): Promise<number> {

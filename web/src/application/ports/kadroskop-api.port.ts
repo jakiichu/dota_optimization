@@ -4,6 +4,7 @@ import type {
   BenchmarkOptions,
   Capture,
   CaptureStatus,
+  CaptureReadiness,
   Comparison,
   ControlTransferResult,
   SettingsBackup,
@@ -11,8 +12,10 @@ import type {
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
+  ConfigReview,
   FrameWindow,
   GameConfig,
+  GameStatus,
   Hypothesis,
   RecommendationKind,
   ReplayRun,
@@ -42,6 +45,8 @@ export interface CaptureRequest {
  * кнопки.
  */
 export interface KadroskopApi {
+  fetchGameStatus(signal: AbortSignal): Promise<GameStatus>;
+  controlGame(action: 'open' | 'close'): Promise<void>;
   /** Сохранить локально сформированный HTML-отчёт на рабочий стол. */
   exportReport(html: string): Promise<string>;
   /**
@@ -62,6 +67,7 @@ export interface KadroskopApi {
   /** `window` задаёт кусок для графика; метрики от него не зависят. */
   analyzeSession(id: string, signal: AbortSignal, window?: FrameWindow): Promise<Capture>;
   runCapture(request: CaptureRequest, signal: AbortSignal): Promise<Capture>;
+  fetchCaptureReadiness(processName: string, signal: AbortSignal): Promise<CaptureReadiness>;
   fetchCaptureStatus(signal: AbortSignal): Promise<CaptureStatus>;
   /** Прекратить идущую запись досрочно. */
   stopCapture(): Promise<void>;
@@ -84,6 +90,8 @@ export interface KadroskopApi {
   applyConfigEdits(edits: readonly ConfigEdit[]): Promise<GameConfig>;
   /** Замена файла целиком: конфиг принесли с другой машины или вставили текстом. */
   replaceConfig(text: string): Promise<GameConfig>;
+  /** Разбор вставленного конфига против своего — без записи. */
+  reviewConfig(text: string): Promise<ConfigReview>;
   removeConfig(): Promise<GameConfig>;
   /** Кладёт копию на рабочий стол и возвращает путь к ней. */
   exportConfig(): Promise<string>;

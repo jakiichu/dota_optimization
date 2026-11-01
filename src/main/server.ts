@@ -32,7 +32,10 @@ import {
 } from '../infrastructure/sensors/sidecar-sensor.stream.ts';
 import { StartReplayRun } from '../application/use-cases/start-replay-run.ts';
 import { SteamGameLauncher } from '../infrastructure/game/steam-game.launcher.ts';
-import { RESOURCES } from '../infrastructure/paths/resources.ts';
+import { WindowsGameControl } from '../infrastructure/game/windows-game.control.ts';
+import { ControlGame } from '../application/use-cases/control-game.ts';
+import { createGameRoutes } from './game-routes.ts';
+import { RESOURCES, resourcePath } from '../infrastructure/paths/resources.ts';
 import { buildVersion } from '../infrastructure/paths/version.ts';
 import { WindowsSnapshotCollector } from '../infrastructure/windows/windows-snapshot.collector.ts';
 import { createReportExportRoute } from './report-routes.ts';
@@ -65,7 +68,7 @@ const APP_ID = 'kadroskop';
 const UI_ROOT = RESOURCES.webRoot();
 
 /** Записи лежат рядом с приложением: их носят вместе с ним и прикладывают к письмам. */
-const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot());
+const sessionStore = new FileSessionStore(RESOURCES.sessionsRoot(), [resourcePath('sessions')]);
 
 /**
  * Что известно о машине: конфиг игры и частота экрана.
@@ -82,7 +85,9 @@ const machineContext = createMachineContextSource();
  * Он помнит, какой повтор мы запустили, а запись кадров у него это спрашивает.
  * Два экземпляра означали бы, что запись помечается сценой от другого прогона.
  */
-const replayRun = new StartReplayRun(new SteamGameLauncher());
+const gameLauncher = new SteamGameLauncher();
+const replayRun = new StartReplayRun(gameLauncher);
+const gameControl = new ControlGame(new WindowsGameControl(gameLauncher));
 
 /**
  * Проверка собственных рекомендаций.
@@ -215,11 +220,16 @@ interface Startup {
  * сторону. Отличаем их по ответу на /api/health.
  */
 async function startServer(preferredPort: number, staticRoot: string | null): Promise<Startup> {
+  const captureRoutes = createCaptureRoutes(sensorStream, sessionStore, machineContext, replayRun);
   const options = {
     jsonRoutes: [
       healthRoute,
       auditRoute,
-      ...createCaptureRoutes(sensorStream, sessionStore, machineContext, replayRun),
+      ...captureRoutes,
+      ...createGameRoutes(
+        gameControl,
+        captureRoutes.find((route) => route.path === '/api/capture/status')!,
+      ),
       ...createBenchmarkRoutes(replayRun),
       ...createHypothesisRoutes(hypotheses),
       createSessionListRoute(sessionStore),

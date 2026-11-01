@@ -5,6 +5,7 @@ import type {
   BenchmarkOptions,
   Capture,
   CaptureStatus,
+  CaptureReadiness,
   Comparison,
   ControlTransferResult,
   SettingsBackup,
@@ -12,8 +13,10 @@ import type {
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
+  ConfigReview,
   FrameWindow,
   GameConfig,
+  GameStatus,
   Hypothesis,
   RecommendationKind,
   ReplayRun,
@@ -29,6 +32,13 @@ import type {
  * про это не знают вовсе — они видят только порт.
  */
 export class HttpKadroskopApi implements KadroskopApi {
+  fetchGameStatus(signal: AbortSignal): Promise<GameStatus> {
+    return getJson('/api/game', signal);
+  }
+
+  async controlGame(action: 'open' | 'close'): Promise<void> {
+    await postJson(`/api/game/${action}`, {});
+  }
   async exportReport(html: string): Promise<string> {
     const result = await postJson<{ path: string }>('/api/reports/export', { html });
     return result.path;
@@ -90,6 +100,12 @@ export class HttpKadroskopApi implements KadroskopApi {
     await postJson<{ stopping: boolean }>('/api/capture/stop', {});
   }
 
+  async fetchCaptureReadiness(processName: string, signal: AbortSignal): Promise<CaptureReadiness> {
+    return getJson<CaptureReadiness>(
+      `/api/capture/readiness?process=${encodeURIComponent(processName)}`,
+      signal,
+    );
+  }
   async fetchCaptureStatus(signal: AbortSignal): Promise<CaptureStatus> {
     return getJson<CaptureStatus>('/api/capture/status', signal);
   }
@@ -130,6 +146,10 @@ export class HttpKadroskopApi implements KadroskopApi {
 
   async replaceConfig(text: string): Promise<GameConfig> {
     return postJson<GameConfig>('/api/config/replace', { text });
+  }
+
+  async reviewConfig(text: string): Promise<ConfigReview> {
+    return postJson<ConfigReview>('/api/config/review', { text });
   }
 
   async removeConfig(): Promise<GameConfig> {

@@ -1,3 +1,4 @@
+import { importSessions } from './import-sessions.ts';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SessionRecord, SessionStore } from '../../application/ports/session-store.port.ts';
@@ -6,10 +7,7 @@ import {
   METRICS_VERSION,
   summarize,
 } from '../../domain/telemetry/capture-analysis.ts';
-import {
-  EMPTY_PASSPORT,
-  type MachinePassport,
-} from '../../domain/snapshot/machine-passport.ts';
+import { EMPTY_PASSPORT, type MachinePassport } from '../../domain/snapshot/machine-passport.ts';
 import { UNKNOWN_SCENE, type CaptureScene } from '../../domain/telemetry/capture-scene.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 import type { SensorSample } from '../../domain/telemetry/sensor-sample.ts';
@@ -45,8 +43,11 @@ interface LegacyStoredFile {
  */
 export class FileSessionStore implements SessionStore {
   readonly #directory: string;
+  readonly #legacyDirectories: readonly string[];
+  #migration: Promise<void> | null = null;
 
-  constructor(directory: string) {
+  constructor(directory: string, legacyDirectories: readonly string[] = []) {
+    this.#legacyDirectories = legacyDirectories;
     this.#directory = directory;
   }
 
@@ -57,6 +58,7 @@ export class FileSessionStore implements SessionStore {
     capture: FrameCapture,
     sensors: readonly SensorSample[],
   ): Promise<SessionSummary> {
+    await this.#prepare();
     await mkdir(this.#directory, { recursive: true });
 
     const record: SessionRecord = {
@@ -76,6 +78,7 @@ export class FileSessionStore implements SessionStore {
   }
 
   async list(): Promise<readonly SessionSummary[]> {
+    await this.#prepare();
     let names: string[];
     try {
       names = await readdir(this.#directory);
@@ -110,6 +113,7 @@ export class FileSessionStore implements SessionStore {
    * посмотрит.
    */
   async #readAndRefresh(id: string): Promise<StoredFile> {
+    await this.#prepare();
     const raw = await readFile(this.#path(id), 'utf8');
     const stored = migrate(JSON.parse(raw) as StoredFile | LegacyStoredFile);
 
@@ -121,6 +125,20 @@ export class FileSessionStore implements SessionStore {
     const refreshed: StoredFile = { record, summary: summarizeRecord(record) };
     await this.#write(refreshed);
     return refreshed;
+  }
+
+  #prepare(): Promise<void> {
+    this.#migration ??= (async () => {
+      for (const source of this.#legacyDirectories) {
+        try {
+          const result = await importSessions(source, this.#directory);
+          if (result.errors.length) console.error('[session import]', result.errors);
+        } catch (error) {
+          console.error('[session import]', error);
+        }
+      }
+    })();
+    return this.#migration;
   }
 
   async #write(stored: StoredFile): Promise<void> {

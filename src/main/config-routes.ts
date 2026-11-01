@@ -1,4 +1,4 @@
-import { toConfigView } from '../adapters/http/config.view.ts';
+import { toConfigReviewView, toConfigView } from '../adapters/http/config.view.ts';
 import type { SessionStore } from '../application/ports/session-store.port.ts';
 import {
   ManageGameConfig,
@@ -61,6 +61,15 @@ export function createConfigRoutes(
       path: '/api/config/replace',
       method: 'POST',
       handle: (_query, body) => changing(() => manage.replace(textFrom(body))),
+    },
+    {
+      // Ничего не пишет, но текст приходит в теле — поэтому POST.
+      path: '/api/config/review',
+      method: 'POST',
+      async handle(_query, body) {
+        const reviewed = await manage.review(textFrom(body));
+        return toConfigReviewView(reviewed, await settingNames(reviewed.ownPath));
+      },
     },
     {
       path: '/api/config/remove',

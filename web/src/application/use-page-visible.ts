@@ -3,6 +3,14 @@ import { useEffect, useState } from 'react';
 declare global {
   interface Window {
     kadroskopDesktop?: {
+      sessionsFolder(): Promise<string>;
+      openSessionsFolder(): Promise<void>;
+      importSessions(): Promise<{
+        imported: number;
+        skipped: number;
+        rejected: number;
+        errors: string[];
+      } | null>;
       getAutoRecording(): Promise<{ enabled: boolean; message: string }>;
       setAutoRecording(enabled: boolean): Promise<{ enabled: boolean; message: string }>;
       onVisibility(callback: (visible: boolean) => void): () => void;

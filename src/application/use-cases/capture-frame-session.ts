@@ -55,6 +55,7 @@ export class CaptureFrameSession {
       unsubscribe?.();
     }
 
+    request.onProgress?.('analyzing');
     return {
       capture,
       ...analyzeCapture(capture, sensorSamples, await this.#machine()),

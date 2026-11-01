@@ -1,13 +1,14 @@
 import { elevatedCommand, presentMonFailure } from './elevated-command.ts';
 import { execFile } from 'node:child_process';
 import { constants } from 'node:fs';
-import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { RESOURCES } from '../paths/resources.ts';
 import type {
   FrameCaptureRequest,
+  CaptureProgress,
   FrameCaptureSource,
 } from '../../application/ports/frame-capture.port.ts';
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
@@ -72,6 +73,7 @@ export class PresentMonCapture implements FrameCaptureSource {
   }
 
   async capture(request: FrameCaptureRequest): Promise<FrameCapture> {
+    request.onProgress?.('starting');
     await ensureInstalled();
 
     const workDir = await mkdtemp(join(tmpdir(), 'kadroskop-capture-'));
@@ -82,12 +84,49 @@ export class PresentMonCapture implements FrameCaptureSource {
     const args = buildArgs(request, csvPath);
     const timeoutMs = request.seconds * MS_IN_SECOND + TIMEOUT_MARGIN_MS;
 
+    let finished = false;
+    let confirmed = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const inspect = async () => {
+      try {
+        const file = await open(csvPath, 'r');
+        try {
+          const buffer = Buffer.alloc(64 * 1024);
+          const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
+          const lines = buffer.toString('utf8', 0, bytesRead).split(/\r?\n/).filter(Boolean);
+          if (
+            !finished &&
+            !confirmed &&
+            lines.length > 1 &&
+            lines[0]?.includes('Application') &&
+            lines[1]!.includes(',')
+          ) {
+            confirmed = true;
+            request.onProgress?.('recording');
+          }
+        } finally {
+          await file.close();
+        }
+      } catch {
+        /* Файл появится после запуска и первых кадров. */
+      }
+      if (!finished && !confirmed)
+        timer = setTimeout(() => {
+          void inspect();
+        }, 500);
+    };
+    void inspect();
     try {
-      await runCapture(args, timeoutMs);
+      await runCapture(args, timeoutMs, request.onProgress);
+      finished = true;
+      clearTimeout(timer);
+      request.onProgress?.('analyzing');
       return parsePresentMonCsv(await readFile(csvPath, 'utf8'), {
         timeColumnIsQpcMs: true,
       });
     } finally {
+      finished = true;
+      clearTimeout(timer);
       if (!keepRaw) {
         await rm(workDir, { recursive: true, force: true });
       }
@@ -136,16 +175,26 @@ function buildArgs(request: FrameCaptureRequest, csvPath: string): string[] {
  * администратора, запроса UAC не будет вовсе. И только получив отказ по правам,
  * поднимаемся через RunAs — тогда пользователь увидит ровно один запрос.
  */
-async function runCapture(args: readonly string[], timeoutMs: number): Promise<void> {
+async function runCapture(
+  args: readonly string[],
+  timeoutMs: number,
+  onProgress?: (phase: CaptureProgress) => void,
+): Promise<void> {
   try {
-    await execFileAsync(PRESENTMON_PATH, [...args], { timeout: timeoutMs, windowsHide: true });
+    const running = execFileAsync(PRESENTMON_PATH, [...args], {
+      timeout: timeoutMs,
+      windowsHide: true,
+    });
+    running.child.once('spawn', () => onProgress?.('waiting-frames'));
+    await running;
     return;
   } catch (error) {
     if (!needsElevation(error)) throw presentMonFailure(error);
   }
 
   try {
-    await runElevated(args, timeoutMs);
+    onProgress?.('awaiting-permission');
+    await runElevated(args, timeoutMs, onProgress);
   } catch (error) {
     throw presentMonFailure(error);
   }
@@ -163,14 +212,27 @@ function needsElevation(error: unknown): boolean {
  * Именно поэтому запись пишется в файл, а не в stdout: у процесса, поднятого
  * через UAC, свои дескрипторы, и перехватить его вывод нельзя.
  */
-async function runElevated(args: readonly string[], timeoutMs: number): Promise<void> {
+async function runElevated(
+  args: readonly string[],
+  timeoutMs: number,
+  onProgress?: (phase: CaptureProgress) => void,
+): Promise<void> {
   const command = elevatedCommand(PRESENTMON_PATH, args);
   const env = { ...process.env };
   for (const key of Object.keys(env)) if (key.toLowerCase() === 'psmodulepath') delete env[key];
 
-  await execFileAsync(
+  const elevated = execFileAsync(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command],
     { timeout: timeoutMs, windowsHide: true, env },
   );
+  let output = '';
+  elevated.child.stdout?.on('data', (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-256);
+    if (output.includes('KADROSKOP_STARTED')) {
+      onProgress?.('waiting-frames');
+      output = '';
+    }
+  });
+  await elevated;
 }

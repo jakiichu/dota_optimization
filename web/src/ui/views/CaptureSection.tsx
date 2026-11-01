@@ -1,8 +1,10 @@
+import { SessionStorage } from '../components/SessionStorage.tsx';
 import { SessionRecap } from '../components/SessionRecap.tsx';
 import type { CaptureController } from '../../application/use-capture-controller.ts';
 import { useEffect, useState } from 'react';
 import {
   useBenchmark,
+  useCaptureReadiness,
   useSessionAnalysis,
   useSessions,
   useSessionWindow,
@@ -51,6 +53,7 @@ export function CaptureSection({
 
   const { capture, recording, startsIn } = recorder;
   const benchmark = useBenchmark();
+  const readiness = useCaptureReadiness(processName, !recorder.blocked);
   const runActive = benchmark.data?.state.current != null;
   // Сохранённая запись, которую открыли посмотреть. Новая запись эту замену
   // отменяет: смотреть старую, когда только что сделали свежую, незачем.
@@ -90,6 +93,34 @@ export function CaptureSection({
         <p className="setup-description">
           Запустите Dota 2, выберите длительность и нажмите «Начать запись». Затем вернитесь в игру.
         </p>
+        <div className="notice" aria-live="polite">
+          <strong>
+            {readiness.isFetching
+              ? 'Проверяю готовность…'
+              : readiness.data?.ready
+                ? 'Можно начинать запись'
+                : 'Проверьте готовность перед записью'}
+          </strong>
+          {readiness.error && <p>{readiness.error.message}</p>}
+          {readiness.data?.checks.map((check) => (
+            <p key={check.id}>
+              <strong>
+                {check.status === 'ok' ? '✓' : check.status === 'warning' ? '⚠' : '✕'} {check.label}
+              </strong>{' '}
+              — {check.detail}
+            </p>
+          ))}
+          <button
+            className="button"
+            disabled={recorder.blocked || readiness.isFetching}
+            onClick={() => void readiness.refetch()}
+          >
+            Проверить снова
+          </button>
+          <p className="muted">
+            Перед каждым стартом проверка повторяется. Windows может запросить права администратора.
+          </p>
+        </div>
         <div className="capture-form">
           <label>
             <span className="metric-label">Длительность</span>
@@ -128,7 +159,7 @@ export function CaptureSection({
             {startsIn !== null
               ? `Вернитесь в игру… ${startsIn}`
               : recording
-                ? 'Запись идёт…'
+                ? 'Запись обрабатывается…'
                 : runActive
                   ? 'Записать прогон'
                   : 'Начать запись'}
@@ -179,6 +210,7 @@ export function CaptureSection({
 
       {capture.isError && <ErrorState message={capture.error.message} />}
 
+      <SessionStorage />
       <SavedCaptures
         openedId={openedId}
         onOpen={(id) => {

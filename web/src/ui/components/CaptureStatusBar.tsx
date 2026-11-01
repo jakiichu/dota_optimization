@@ -34,19 +34,29 @@ export function CaptureStatusBar({
         <strong>
           {startsIn !== null
             ? `Запись начнётся через ${startsIn} с — вернитесь в игру`
-            : state?.phase === 'saving'
-              ? 'Сохраняю и разбираю запись…'
-              : stopping
-                ? 'Останавливаю запись…'
-                : recording
-                  ? state?.phase === 'recording'
-                    ? `Запись идёт · ${elapsedSeconds} с с момента запуска`
-                    : 'Запускаю запись…'
-                  : state?.phase === 'completed'
-                    ? 'Запись сохранена'
-                    : state?.phase === 'failed' || capture.isError
-                      ? 'Запись не завершена'
-                      : 'Статус записи недоступен'}
+            : stopping
+              ? 'Останавливаю запись…'
+              : state?.phase === 'checking'
+                ? 'Проверяю готовность…'
+                : state?.phase === 'starting'
+                  ? 'Запускаю сборщик…'
+                  : state?.phase === 'awaiting-permission'
+                    ? 'Ожидаю разрешения Windows — подтвердите или отмените запрос'
+                    : state?.phase === 'waiting-frames'
+                      ? 'Сборщик запущен · ожидаю первые кадры — вернитесь в игру'
+                      : state?.phase === 'analyzing'
+                        ? 'Разбираю собранные кадры…'
+                        : state?.phase === 'saving'
+                          ? 'Сохраняю запись…'
+                          : state?.phase === 'recording'
+                            ? `Первые кадры подтверждены · прошло ${elapsedSeconds} с`
+                            : recording
+                              ? 'Запрашиваю запуск записи…'
+                              : state?.phase === 'completed'
+                                ? 'Запись сохранена'
+                                : state?.phase === 'failed' || capture.isError
+                                  ? 'Запись не завершена'
+                                  : 'Статус записи недоступен'}
         </strong>
         {recording && (
           <div className="muted">
@@ -90,7 +100,7 @@ export function CaptureStatusBar({
         {recording && (
           <button
             className="button"
-            disabled={stopping || state?.phase !== 'recording'}
+            disabled={stopping || !['recording', 'waiting-frames'].includes(state?.phase ?? '')}
             onClick={recorder.stopRecording}
           >
             Остановить

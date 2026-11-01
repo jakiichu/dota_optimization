@@ -7,6 +7,7 @@ import type {
   NetworkSeverity,
   NoteSeverity,
   PacingSeverity,
+  ReviewVerdict,
   Severity,
   Verdict,
 } from './models.ts';
@@ -239,4 +240,18 @@ export const OUTCOME_COLOR: Record<HypothesisOutcome, string> = {
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {
   measured: 'видно прямо в записи',
   likely: 'следует из записи, но не прямо',
+};
+
+/**
+ * Что строка чужого конфига сделает у вас.
+ *
+ * «Уже так» и «перекрыта» — не ошибки, а ответ на вопрос, который гайд не
+ * задаёт: за эти строки обещают кадры, а движок их даже не заметит.
+ */
+export const REVIEW_VERDICT_LABEL: Record<ReviewVerdict, string> = {
+  changes: 'заменит ваше значение',
+  adds: 'добавит новую строку',
+  already: 'у вас уже так',
+  shadowed: 'ниже её перекрывает такая же строка',
+  command: 'команда, а не настройка',
 };

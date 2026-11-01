@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { toConfigView } from '../../src/adapters/http/config.view.ts';
+import { toConfigReviewView, toConfigView } from '../../src/adapters/http/config.view.ts';
+import { reviewForeignConfig } from '../../src/domain/gameconfig/config-review.ts';
 import { analyzeGameConfig } from '../../src/domain/gameconfig/config-analysis.ts';
 import { parseGameConfig } from '../../src/domain/gameconfig/game-config.ts';
 import type { GameConfigState } from '../../src/application/use-cases/manage-game-config.ts';
@@ -125,5 +126,37 @@ describe('toConfigView', () => {
     expect(view.exists).toBe(false);
     expect(view.settings).toHaveLength(0);
     expect(view.notes).toHaveLength(0);
+  });
+});
+
+describe('toConfigReviewView', () => {
+  function reviewed(foreign: readonly string[], own: readonly string[]) {
+    const config = parseGameConfig('', foreign.join('\n'));
+    const ownConfig = parseGameConfig('C:/dota/cfg/autoexec.cfg', own.join('\n'));
+    return toConfigReviewView(
+      {
+        config,
+        analysis: analyzeGameConfig(config, { pacingTimeShare: null, bottleneck: null }),
+        review: reviewForeignConfig(config, ownConfig),
+        ownExists: true,
+        ownPath: ownConfig.path,
+      },
+      MENU,
+    );
+  }
+
+  it('строка чужого конфига несёт и вердикт, и имя из меню', () => {
+    const line = reviewed(['dota_ambient_creatures 0'], ['dota_ambient_creatures 1']).lines[0];
+
+    expect(line?.verdict).toBe('changes');
+    expect(line?.ownValue).toBe('1');
+    expect(line?.inGame?.label).toBe('Фауна');
+  });
+
+  it('про повторы не заводит отдельных карточек: о них говорит «перекрыта»', () => {
+    const view = reviewed(['r_ssao 0', 'r_ssao 1'], []);
+
+    expect(view.lines.map((line) => line.verdict)).toEqual(['shadowed', 'adds']);
+    expect(view.notes.some((note) => note.kind === 'duplicate')).toBe(false);
   });
 });

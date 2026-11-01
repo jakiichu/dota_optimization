@@ -1,5 +1,6 @@
 import { SessionRecap } from './components/SessionRecap.tsx';
 import { AutoRecording } from './components/AutoRecording.tsx';
+import { GameControls } from './components/GameControls.tsx';
 import { useCallback, useEffect, useState } from 'react';
 import { useAudit, useSessions, useVersion, useSessionAnalysis } from '../application/queries.ts';
 import { LoadingBar } from './layout/LoadingBar.tsx';
@@ -82,6 +83,7 @@ export function AppShell(): React.JSX.Element {
           </span>
         </div>
         <CaptureStatusBar recorder={recorder} onOpen={() => setSection('capture')} />
+        <GameControls captureBlocked={recorder.blocked} />
         <ExperimentGuide onNavigate={setSection} onOpenInConfig={openInConfig} />
         {section === 'audit' && latest.data && !recorder.recording && (
           <SessionRecap

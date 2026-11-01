@@ -1,3 +1,4 @@
+import { sharedSessionsRoot } from './user-data.ts';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -79,6 +80,6 @@ export const RESOURCES = {
       ? resourcePath('collect-snapshot.ps1')
       : resourcePath('src', 'infrastructure', 'windows', 'collect-snapshot.ps1'),
   webRoot: (): string => (PACKAGED ? resourcePath('web') : resourcePath('web', 'dist')),
-  /** Записи кладём рядом с приложением, а не в профиль: папку носят целиком. */
-  sessionsRoot: (): string => process.env['KADROSKOP_SESSIONS'] ?? resourcePath('sessions'),
+  /** Единое хранилище для Electron, веб-версии и CLI. */
+  sessionsRoot: sharedSessionsRoot,
 } as const;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useConfigMutations, useGameConfig } from '../../application/queries.ts';
+import { useConfigMutations, useConfigReview, useGameConfig } from '../../application/queries.ts';
 import type { ConfigChange, ConfigEdit, ConfigSetting, GameConfig } from '../../domain/models.ts';
 import {
   IMPACT_COLOR,
@@ -11,6 +11,7 @@ import {
 } from '../../domain/presentation.ts';
 import { SettingRow } from '../components/SettingRow.tsx';
 import { AccountControlsTransfer } from '../components/AccountControlsTransfer.tsx';
+import { ForeignConfigReview } from '../components/ForeignConfigReview.tsx';
 import { EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/States.tsx';
 
 /**
@@ -161,6 +162,7 @@ export function ConfigSection({
             exists={data.exists}
             pending={replace.isPending}
             onReplace={(text) => replace.mutate(text)}
+            onTake={(changes) => setDraft((previous) => ({ ...previous, ...changes }))}
           />
         </>
       )}
@@ -358,23 +360,33 @@ function Groups({
  * Чтобы перенести конфиг между машинами, не нужно искать папку игры: текст
  * вставляется сюда, а файл ложится туда, куда игра смотрит. Прежний при этом
  * не пропадает — уезжает в резервную копию.
+ *
+ * Чужой конфиг из гайда сначала стоит разобрать, а не записывать: разбор
+ * показывает, что из него поменяет что-то у вас, и даёт перенести в черновик
+ * только выбранное.
  */
 function QuickLoad({
   exists,
   pending,
   onReplace,
+  onTake,
 }: {
   exists: boolean;
   pending: boolean;
   onReplace: (text: string) => void;
+  onTake: (changes: Record<string, string>) => void;
 }): React.JSX.Element {
   const [text, setText] = useState('');
+  const review = useConfigReview();
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = (file: File | undefined): void => {
     if (file === undefined) return;
-    void file.text().then(setText);
+    void file.text().then((loaded) => {
+      setText(loaded);
+      review.reset();
+    });
   };
 
   return (
@@ -385,7 +397,8 @@ function QuickLoad({
       <div className="muted">
         Перенос конфига между компьютерами: вставьте текст, перетащите файл или выберите его. Искать
         папку игры не нужно — файл ляжет туда, куда игра смотрит, а нынешний сохранится рядом
-        копией.
+        копией. Конфиг из гайда лучше сначала разобрать: станет видно, какие строки поменяют что-то
+        у вас, а какие нет.
       </div>
 
       <textarea
@@ -394,7 +407,11 @@ function QuickLoad({
         value={text}
         placeholder={'// autoexec.cfg\nfps_max 59\ndota_ambient_creatures 0'}
         spellCheck={false}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => {
+          setText(event.target.value);
+          // Разбор относится к тексту, который был, — с новым он только путает.
+          review.reset();
+        }}
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -420,6 +437,14 @@ function QuickLoad({
         </button>
         <button
           type="button"
+          className="button"
+          disabled={text.trim() === '' || review.isPending}
+          onClick={() => review.mutate(text)}
+        >
+          {review.isPending ? 'Разбираю…' : 'Разобрать, не записывая'}
+        </button>
+        <button
+          type="button"
           className="button primary"
           disabled={text.trim() === '' || pending}
           onClick={() => onReplace(text)}
@@ -427,6 +452,9 @@ function QuickLoad({
           {pending ? 'Записываю…' : exists ? 'Заменить целиком' : 'Создать конфиг'}
         </button>
       </div>
+
+      {review.error !== null && <div className="notice error">{review.error.message}</div>}
+      {review.data !== undefined && <ForeignConfigReview review={review.data} onTake={onTake} />}
     </div>
   );
 }

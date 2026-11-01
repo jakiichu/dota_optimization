@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Только уведомление о видимости; файловая система и произвольный IPC не доступны UI.
 contextBridge.exposeInMainWorld('kadroskopDesktop', {
+  sessionsFolder: () => ipcRenderer.invoke('sessions:folder'),
+  openSessionsFolder: () => ipcRenderer.invoke('sessions:open-folder'),
+  importSessions: () => ipcRenderer.invoke('sessions:import'),
   getAutoRecording: () => ipcRenderer.invoke('auto-recording:get'),
   setAutoRecording: (enabled: boolean) => ipcRenderer.invoke('auto-recording:set', enabled),
   onVisibility(callback: (visible: boolean) => void) {

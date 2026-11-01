@@ -1,3 +1,8 @@
+import {
+  checkCaptureReadiness,
+  type CaptureReadiness,
+} from '../infrastructure/presentmon/capture-readiness.ts';
+import type { CaptureProgress } from '../application/ports/frame-capture.port.ts';
 import { toCaptureView } from '../adapters/http/capture.view.ts';
 import { CaptureFrameSession } from '../application/use-cases/capture-frame-session.ts';
 import type { JsonRoute } from '../infrastructure/http/local-server.ts';
@@ -41,12 +46,15 @@ export function createCaptureRoutes(
   store: SessionStore,
   machine: MachineContextSource,
   replayRun: Pick<StartReplayRun, 'currentRun'>,
+  readiness = (processName: string) => checkCaptureReadiness(processName, sensors),
 ): readonly JsonRoute[] {
   const frames = new PresentMonCapture();
   const session = new CaptureFrameSession(frames, sensors, () => machine.get());
   let inFlight: Promise<unknown> | null = null;
   let state: {
-    phase: 'idle' | 'recording' | 'stopping' | 'saving' | 'completed' | 'failed';
+    phase: 'idle' | 'checking' | CaptureProgress | 'stopping' | 'saving' | 'completed' | 'failed';
+    recordingStartedAt: string | null;
+    readiness: CaptureReadiness | null;
     startedAt: string | null;
     processName: string;
     label: string;
@@ -56,6 +64,8 @@ export function createCaptureRoutes(
     error: string | null;
   } = {
     phase: 'idle',
+    recordingStartedAt: null,
+    readiness: null,
     startedAt: null,
     processName: '',
     label: '',
@@ -79,9 +89,21 @@ export function createCaptureRoutes(
         processName: query.get('process') ?? DEFAULT_PROCESS_NAME,
         seconds: wholeGame ? MAX_SECONDS : clampSeconds(query.get('seconds')),
         stopWhenGameExits: wholeGame,
+        onProgress: (phase: CaptureProgress) => {
+          if (state.phase === 'recording' && phase === 'waiting-frames') return;
+          if (state.phase === 'stopping' && phase !== 'analyzing') return;
+          state = {
+            ...state,
+            phase,
+            recordingStartedAt:
+              state.recordingStartedAt ?? (phase === 'recording' ? new Date().toISOString() : null),
+          };
+        },
       };
       state = {
-        phase: 'recording',
+        phase: 'checking',
+        recordingStartedAt: null,
+        readiness: null,
         startedAt: new Date().toISOString(),
         processName: request.processName,
         label: query.get('label') ?? '',
@@ -93,19 +115,33 @@ export function createCaptureRoutes(
 
       // Сохраняем всё, что записали: сравнение «до и после» разделено
       // перезагрузкой, и запись, оставшаяся только в памяти, для него бесполезна.
-      const running = session.execute(request).then(async (result) => {
-        state = { ...state, phase: 'saving' };
-        const summary = await store.save(
-          query.get('label') ?? '',
-          await sceneOf(replayRun, query),
-          await machine.passport(),
-          result.capture,
-          result.sensorSamples,
-        );
-        const view = { ...toCaptureView(result), sessionId: summary.id };
-        state = { ...state, phase: 'completed', sessionId: summary.id };
-        return view;
-      });
+      const running = Promise.resolve()
+        .then(async () => {
+          const report = await readiness(request.processName);
+          state = { ...state, readiness: report };
+          if (!report.ready)
+            throw new Error(
+              report.checks
+                .filter((item) => item.status === 'blocked')
+                .map((item) => `${item.label}: ${item.detail}`)
+                .join('\n'),
+            );
+          state = { ...state, phase: 'starting' };
+          return session.execute(request);
+        })
+        .then(async (result) => {
+          state = { ...state, phase: 'saving' };
+          const summary = await store.save(
+            query.get('label') ?? '',
+            await sceneOf(replayRun, query),
+            await machine.passport(),
+            result.capture,
+            result.sensorSamples,
+          );
+          const view = { ...toCaptureView(result), sessionId: summary.id };
+          state = { ...state, phase: 'completed', sessionId: summary.id };
+          return view;
+        });
       inFlight = running;
 
       const completion = (async () => {
@@ -148,7 +184,12 @@ export function createCaptureRoutes(
       if (inFlight === null) {
         throw new Error('Останавливать нечего: запись не идёт.');
       }
-      if (state.phase !== 'recording') return { stopping: true };
+      if (['checking', 'starting', 'awaiting-permission'].includes(state.phase))
+        throw new Error(
+          'Сборщик ещё запускается. Если открыт запрос Windows, отмените его для отмены записи.',
+        );
+      if (state.phase !== 'recording' && state.phase !== 'waiting-frames')
+        return { stopping: true };
       const current = state;
       state = { ...state, phase: 'stopping' };
       try {
@@ -167,7 +208,14 @@ export function createCaptureRoutes(
       return state;
     },
   };
-  return [capture, stop, status];
+  const ready: JsonRoute = {
+    path: '/api/capture/readiness',
+    async handle(query) {
+      if (inFlight) throw new Error('Дождитесь завершения текущей записи.');
+      return readiness(query.get('process') ?? DEFAULT_PROCESS_NAME);
+    },
+  };
+  return [capture, stop, status, ready];
 }
 
 /**

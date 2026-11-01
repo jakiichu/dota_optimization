@@ -1,6 +1,10 @@
 import type { FrameCapture } from '../../domain/telemetry/frame-sample.ts';
 
+export type CaptureProgress =
+  'starting' | 'awaiting-permission' | 'waiting-frames' | 'recording' | 'analyzing';
+
 export interface FrameCaptureRequest {
+  readonly onProgress?: (phase: CaptureProgress) => void;
   /** Имя исполняемого файла игры, например `dota2.exe`. */
   readonly processName: string;
   /**

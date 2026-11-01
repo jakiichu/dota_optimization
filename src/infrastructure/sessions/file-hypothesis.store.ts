@@ -23,10 +23,7 @@ export class FileHypothesisStore implements HypothesisStore {
     this.#path = join(root, 'hypotheses.json');
   }
 
-  async save(
-    recommendation: Recommendation,
-    beforeSessionId: string,
-  ): Promise<StoredHypothesis> {
+  async save(recommendation: Recommendation, beforeSessionId: string): Promise<StoredHypothesis> {
     const created: StoredHypothesis = {
       id: randomUUID(),
       createdAt: new Date().toISOString(),

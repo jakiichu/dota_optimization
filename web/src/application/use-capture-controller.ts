@@ -27,7 +27,7 @@ export function useCaptureController() {
   const [now, setNow] = useState(Date.now());
   const phase = status.data?.phase;
   const recording =
-    capture.isPending || phase === 'recording' || phase === 'stopping' || phase === 'saving';
+    capture.isPending || (phase !== undefined && !['idle', 'completed', 'failed'].includes(phase));
   const mutate = capture.mutate;
   useEffect(() => {
     if (pending === null && !recording) return undefined;
@@ -61,9 +61,9 @@ export function useCaptureController() {
     startsIn,
     blocked: recording || pending !== null || status.isPending || status.isError,
     elapsedSeconds:
-      status.data?.startedAt == null
+      status.data?.recordingStartedAt == null
         ? 0
-        : Math.max(0, Math.floor((now - Date.parse(status.data.startedAt)) / 1000)),
+        : Math.max(0, Math.floor((now - Date.parse(status.data.recordingStartedAt)) / 1000)),
     begin(request: CaptureRequest) {
       if (recording || pendingRef.current !== null || status.isPending || status.isError) return;
       capture.reset();

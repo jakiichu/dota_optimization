@@ -5,6 +5,7 @@ import type {
   AccountControls,
   BenchmarkOptions,
   Capture,
+  CaptureReadiness,
   Comparison,
   ControlTransferResult,
   SettingsBackup,
@@ -12,6 +13,7 @@ import type {
   SettingsTransferMode,
   RepeatedComparison,
   ConfigEdit,
+  ConfigReview,
   FrameWindow,
   GameConfig,
   Hypothesis,
@@ -268,6 +270,17 @@ export function useConfigMutations(): {
   return { apply, replace, remove, exportToDesktop };
 }
 
+/**
+ * Разбор чужого конфига.
+ *
+ * Мутация, а не запрос, хотя ничего не меняет: текст каждый раз новый, и
+ * держать его ключом кеша незачем. Сбрасывать после неё тоже нечего.
+ */
+export function useConfigReview(): UseMutationResult<ConfigReview, Error, string> {
+  const api = useApi();
+  return useMutation({ mutationFn: (text: string) => api.reviewConfig(text) });
+}
+
 export function useAccountControls(): {
   readonly backups: UseQueryResult<readonly SettingsBackup[]>;
   readonly restore: UseMutationResult<
@@ -355,5 +368,20 @@ export function useRunCapture(): UseMutationResult<Capture, Error, CaptureReques
       client.setQueryData(queryKeys.session(capture.sessionId), capture);
       void client.invalidateQueries({ queryKey: queryKeys.hypotheses });
     },
+  });
+}
+
+export function useCaptureReadiness(
+  processName: string,
+  enabled: boolean,
+): UseQueryResult<CaptureReadiness> {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['capture-readiness', processName],
+    queryFn: ({ signal }) => api.fetchCaptureReadiness(processName, signal),
+    enabled,
+    retry: false,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
   });
 }

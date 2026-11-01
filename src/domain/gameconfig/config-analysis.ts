@@ -15,7 +15,12 @@ import { findDuplicates, findSetting, type CvarSetting, type GameConfig } from '
 
 export type NoteSeverity = 'critical' | 'warning' | 'info';
 
+/** О чём заметка — чтобы её можно было отличить, не читая заголовок. */
+export type ConfigNoteKind =
+  'frame-cap' | 'bottleneck' | 'non-performance' | 'duplicate' | 'unparsed';
+
 export interface ConfigNote {
+  readonly kind: ConfigNoteKind;
   readonly severity: NoteSeverity;
   readonly title: string;
   readonly detail: string;
@@ -89,6 +94,7 @@ function noteFrameCap(config: GameConfig, measured: MeasuredContext): ConfigNote
 
   return [
     {
+      kind: 'frame-cap',
       severity: ragged ? 'critical' : 'warning',
       title: 'Конфиг снимает потолок кадров',
       detail: ragged
@@ -130,6 +136,7 @@ function noteBottleneckMismatch(config: GameConfig, measured: MeasuredContext): 
     {
       severity: 'info',
       title: 'Конфиг разгружает в основном видеокарту',
+      kind: 'bottleneck',
       detail:
         `${gpuOnly} строк снимают работу с видеокарты и только ${cpuAny} — с процессора, ` +
         'а в последней записи игра упиралась именно в процессор. Часть настроек на ' +
@@ -154,6 +161,7 @@ function noteNonPerformance(config: GameConfig): ConfigNote[] {
     {
       severity: 'info',
       title: 'Часть строк меняет игру, а не её скорость',
+      kind: 'non-performance',
       detail:
         'Эти строки кадров не добавляют и не отнимают — они меняют то, что вы видите ' +
         'и как играете: ' +
@@ -176,6 +184,7 @@ function noteDuplicates(config: GameConfig): ConfigNote[] {
   return duplicates.map((group) => {
     const last = group.at(-1);
     return {
+      kind: 'duplicate' as const,
       severity: 'warning' as const,
       title: `Настройка ${group[0]?.name ?? ''} задана несколько раз`,
       detail:
@@ -194,6 +203,7 @@ function noteUnparsed(config: GameConfig): ConfigNote[] {
     {
       severity: 'warning',
       title: 'Некоторые строки разобрать не вышло',
+      kind: 'unparsed',
       detail: 'Они не похожи на пару «настройка значение»: ' + config.unparsed.join('; ') + '.',
       remediation: [
         'Проверьте их глазами: движок такие строки, скорее всего, тоже пропустит, ' +

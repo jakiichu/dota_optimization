@@ -11,7 +11,8 @@ export function elevatedCommand(executable: string, args: readonly string[]): st
   return (
     `$ErrorActionPreference = 'Stop'; try { ` +
     `$captureProcess = Start-Process -FilePath ${psLiteral(executable)} ` +
-    `-ArgumentList ${psLiteral(argumentLine)} -Verb RunAs -WindowStyle Hidden -PassThru -Wait; ` +
+    `-ArgumentList ${psLiteral(argumentLine)} -Verb RunAs -WindowStyle Hidden -PassThru; ` +
+    `$null = $captureProcess.Handle; [Console]::Out.WriteLine('KADROSKOP_STARTED'); $captureProcess.WaitForExit(); ` +
     `exit $captureProcess.ExitCode ` +
     `} catch { if ($_.Exception.NativeErrorCode -eq 1223) { exit 1223 }; [Console]::Error.WriteLine($_.Exception.Message); exit 1 }`
   );

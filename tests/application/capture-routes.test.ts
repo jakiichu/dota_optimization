@@ -24,9 +24,18 @@ const frames: FrameCapture = {
   availableColumns: ['FrameTime'],
 };
 
-function setup() {
+function setup(
+  readiness = async () => ({
+    ready: true,
+    checkedAt: new Date().toISOString(),
+    checks: [] as { id: string; label: string; status: 'blocked'; detail: string }[],
+  }),
+) {
   const recording = deferred<FrameCapture>();
-  vi.spyOn(PresentMonCapture.prototype, 'capture').mockReturnValue(recording.promise);
+  vi.spyOn(PresentMonCapture.prototype, 'capture').mockImplementation((request) => {
+    request.onProgress?.('recording');
+    return recording.promise;
+  });
   const stop = vi.spyOn(PresentMonCapture.prototype, 'stop').mockResolvedValue();
   const save = vi.fn(async () => ({ id: 'saved-session' }) as SessionSummary);
   const unsubscribe = vi.fn();
@@ -41,6 +50,7 @@ function setup() {
     },
     { get: async () => UNKNOWN_MACHINE, passport: async () => EMPTY_PASSPORT, forget() {} },
     { currentRun: async () => null },
+    readiness,
   );
   const call = (path: string, query = '') => {
     const route = routes.find((item) => item.path === `/api/capture${path}`)!;
@@ -79,6 +89,9 @@ describe('статус записи независимо от страницы',
     const { call, recording, save, unsubscribe } = setup();
     expect(await call('/status')).toMatchObject({ phase: 'idle' });
     const running = call('', 'seconds=120&label=before');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     expect(await call('/status')).toMatchObject({
       phase: 'recording',
       seconds: 120,
@@ -100,6 +113,9 @@ describe('статус записи независимо от страницы',
   it('остановка доступна другому клиенту и не отправляется повторно', async () => {
     const { call, recording, stop } = setup();
     const running = call('', 'whole=1');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     expect(await call('/status')).toMatchObject({ wholeGame: true });
     await call('/stop');
     await call('/stop');
@@ -113,6 +129,9 @@ describe('статус записи независимо от страницы',
   it('после отказа в остановке разрешает попробовать снова', async () => {
     const { call, recording, stop } = setup();
     const running = call('');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     stop.mockRejectedValueOnce(new Error('UAC отменён'));
     await expect(call('/stop')).rejects.toThrow('UAC');
     expect(await call('/status')).toMatchObject({ phase: 'recording' });
@@ -124,6 +143,9 @@ describe('статус записи независимо от страницы',
   it('сохраняет ошибку для страницы, открытой заново, и разрешает новый запуск', async () => {
     const { call, recording } = setup();
     const running = call('');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     recording.reject(new Error('PresentMon недоступен'));
     await expect(running).rejects.toThrow('PresentMon');
     expect(await call('/status')).toMatchObject({
@@ -140,6 +162,9 @@ describe('статус записи независимо от страницы',
     const saving = deferred<SessionSummary>();
     save.mockReturnValue(saving.promise);
     const running = call('');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     recording.resolve(frames);
     await vi.waitFor(() => expect(save).toHaveBeenCalled());
     expect(await call('/status')).toMatchObject({ phase: 'saving', sessionId: null });
@@ -153,11 +178,69 @@ describe('статус записи независимо от страницы',
     const stopping = deferred<void>();
     stop.mockReturnValue(stopping.promise);
     const running = call('');
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'recording' }),
+    );
     const request = call('/stop');
     recording.resolve(frames);
     await running;
     stopping.reject(new Error('Поздняя ошибка'));
     await expect(request).rejects.toThrow('Поздняя ошибка');
     expect(await call('/status')).toMatchObject({ phase: 'completed' });
+  });
+});
+
+describe('готовность и подтверждённые этапы', () => {
+  it('блокирует запуск сборщика, если проверка не пройдена', async () => {
+    const { call, save } = setup(async () => ({
+      ready: false,
+      checkedAt: 'now',
+      checks: [{ id: 'game', label: 'Игра', status: 'blocked', detail: 'Запустите игру' }],
+    }));
+    await expect(call('')).rejects.toThrow('Запустите игру');
+    expect(PresentMonCapture.prototype.capture).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+    expect(await call('/status')).toMatchObject({
+      phase: 'failed',
+      readiness: { ready: false },
+      recordingStartedAt: null,
+    });
+  });
+  it('различает проверку, UAC, ожидание кадров и подтверждение записи', async () => {
+    const check = deferred<{ ready: boolean; checkedAt: string; checks: [] }>();
+    const { call, recording, stop } = setup(() => check.promise);
+    let progress:
+      | ((
+          phase: import('../../src/application/ports/frame-capture.port.ts').CaptureProgress,
+        ) => void)
+      | undefined;
+    vi.mocked(PresentMonCapture.prototype.capture).mockImplementation((request) => {
+      progress = request.onProgress;
+      progress?.('awaiting-permission');
+      return recording.promise;
+    });
+    const running = call('');
+    expect(await call('/status')).toMatchObject({ phase: 'checking', recordingStartedAt: null });
+    await expect(call('/stop')).rejects.toThrow('запускается');
+    expect(stop).not.toHaveBeenCalled();
+    check.resolve({ ready: true, checkedAt: 'now', checks: [] });
+    await vi.waitFor(async () =>
+      expect(await call('/status')).toMatchObject({ phase: 'awaiting-permission' }),
+    );
+    progress?.('waiting-frames');
+    expect(await call('/status')).toMatchObject({
+      phase: 'waiting-frames',
+      recordingStartedAt: null,
+    });
+    progress?.('recording');
+    expect(await call('/status')).toMatchObject({
+      phase: 'recording',
+      recordingStartedAt: expect.any(String),
+    });
+    await call('/stop');
+    progress?.('recording');
+    expect(await call('/status')).toMatchObject({ phase: 'stopping' });
+    recording.resolve(frames);
+    await running;
   });
 });

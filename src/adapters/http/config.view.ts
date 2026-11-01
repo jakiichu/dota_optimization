@@ -6,7 +6,11 @@ import {
   type SettingNames,
 } from '../../domain/gameconfig/setting-names.ts';
 import { valueKindOf, type CvarValueKind } from '../../domain/gameconfig/cvar-value.ts';
-import type { GameConfigState } from '../../application/use-cases/manage-game-config.ts';
+import type {
+  ForeignConfigReview,
+  GameConfigState,
+} from '../../application/use-cases/manage-game-config.ts';
+import type { ReviewVerdict } from '../../domain/gameconfig/config-review.ts';
 
 /**
  * Конфиг для интерфейса.
@@ -105,5 +109,48 @@ function toTallyView(entry: ConfigAnalysis['tally'][number]): ConfigTallyView {
     impact: entry.impact,
     label: entry.impact === 'unknown' ? 'не знаем' : IMPACT_LABEL[entry.impact],
     count: entry.count,
+  };
+}
+
+export interface ReviewLineView extends ConfigSettingView {
+  readonly verdict: ReviewVerdict;
+  /** Что стоит у вас сейчас. `null` — не задано. */
+  readonly ownValue: string | null;
+}
+
+export interface ConfigReviewView {
+  readonly lines: readonly ReviewLineView[];
+  readonly effective: number;
+  readonly idle: number;
+  readonly ownExists: boolean;
+  readonly unparsed: readonly string[];
+  readonly notes: readonly ConfigNote[];
+  readonly tally: readonly ConfigTallyView[];
+}
+
+/**
+ * Разбор чужого конфига для интерфейса.
+ *
+ * Строки приходят теми же карточками, что и свой конфиг, — с именем из меню и
+ * объяснением, — плюс ответ, что каждая из них поменяет у вас.
+ */
+export function toConfigReviewView(
+  reviewed: ForeignConfigReview,
+  names: SettingNames,
+): ConfigReviewView {
+  return {
+    lines: reviewed.review.lines.map((line) => ({
+      ...toSettingView(line.setting, names),
+      verdict: line.verdict,
+      ownValue: line.ownValue,
+    })),
+    effective: reviewed.review.effective,
+    idle: reviewed.review.idle,
+    ownExists: reviewed.ownExists,
+    unparsed: reviewed.config.unparsed,
+    // Про повторы разбор строк говорит сам — «перекрыта» у каждой лишней
+    // строки, — и отдельная карточка на каждый повтор дублировала бы это.
+    notes: reviewed.analysis.notes.filter((note) => note.kind !== 'duplicate'),
+    tally: reviewed.analysis.tally.map(toTallyView),
   };
 }

@@ -33,6 +33,26 @@ const PROCESS_CHECK_TIMEOUT_MS = 5000;
 export class SteamGameLauncher implements GameLauncher {
   #found: Promise<Found> | null = null;
 
+  async openGame(): Promise<void> {
+    const found = await this.#locate();
+    if (found.steamExecutable === null) {
+      this.#found = null;
+      throw new Error('Steam не найден. Откройте Steam и повторите запуск.');
+    }
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(found.steamExecutable!, ['-applaunch', '570'], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      child.once('error', reject);
+      child.once('spawn', () => {
+        child.unref();
+        resolve();
+      });
+    });
+  }
+
   async targets(): Promise<GameLaunchTargets> {
     const found = await this.#locate();
     const obstacles: string[] = [];

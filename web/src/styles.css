@@ -40,6 +40,20 @@ code {
 
 /* --- каркас --- */
 
+.game-controls {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  margin-bottom: 20px;
+}
+
+.game-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .app {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
@@ -2180,4 +2194,43 @@ select.input {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* --- разбор чужого конфига ------------------------------------------------- */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-note {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.review-row {
+  cursor: pointer;
+}
+
+.review-row input[type='checkbox'] {
+  margin: 0;
+}
+
+.review-value {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.review-idle summary {
+  cursor: pointer;
+  margin-bottom: 6px;
 }

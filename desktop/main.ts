@@ -1,3 +1,5 @@
+import { sharedSessionsRoot } from '../src/infrastructure/paths/user-data.ts';
+import { importSessions } from '../src/infrastructure/sessions/import-sessions.ts';
 import { AutoRecordingGate, dotaProcesses, retainAutoHistory } from './auto-recording.ts';
 import {
   app,
@@ -8,6 +10,7 @@ import {
   nativeImage,
   Notification,
   session,
+  shell,
   ipcMain,
 } from 'electron';
 import { fork, type ChildProcess } from 'node:child_process';
@@ -42,8 +45,7 @@ let autoEnabled = false;
 let autoMessage = 'Автозапись выключена';
 let autoPoll: ReturnType<typeof setTimeout> | undefined;
 const autoGate = new AutoRecordingGate();
-const sessionsDirectory = () =>
-  app.isPackaged ? join(app.getPath('userData'), 'sessions') : resolve(__dirname, '../../sessions');
+const sessionsDirectory = sharedSessionsRoot;
 function setAuto(enabled: boolean): void {
   writeFileSync(join(app.getPath('userData'), 'auto-recording.json'), JSON.stringify({ enabled }));
   autoEnabled = enabled;
@@ -154,15 +156,25 @@ function updateTray(): void {
   const active = starting || isRecording(last);
   const title = !healthy
     ? 'Подключение к сборщику…'
-    : last.phase === 'saving'
-      ? 'Сохраняю запись…'
-      : last.phase === 'stopping'
-        ? 'Останавливаю запись…'
-        : last.phase === 'recording'
-          ? 'Идёт запись'
-          : starting
-            ? 'Запускаю запись…'
-            : 'Готов к записи';
+    : last.phase === 'checking'
+      ? 'Проверяю готовность…'
+      : last.phase === 'starting'
+        ? 'Запускаю сборщик…'
+        : last.phase === 'awaiting-permission'
+          ? 'Ожидаю разрешения Windows…'
+          : last.phase === 'waiting-frames'
+            ? 'Ожидаю первые кадры…'
+            : last.phase === 'analyzing'
+              ? 'Разбираю кадры…'
+              : last.phase === 'saving'
+                ? 'Сохраняю запись…'
+                : last.phase === 'stopping'
+                  ? 'Останавливаю запись…'
+                  : last.phase === 'recording'
+                    ? 'Идёт запись'
+                    : starting
+                      ? 'Запускаю запись…'
+                      : 'Готов к записи';
   tray.setToolTip(`Кадроскоп — ${title}`);
   tray.setImage(join(assets, active ? 'recording.png' : 'icon.png'));
   tray.setContextMenu(
@@ -193,7 +205,7 @@ function updateTray(): void {
       },
       {
         label: 'Остановить и сохранить',
-        enabled: healthy && last.phase === 'recording' && !exitPending,
+        enabled: healthy && ['recording', 'waiting-frames'].includes(last.phase) && !exitPending,
         click: () => {
           void api('/api/capture/stop', true).catch(showError);
         },
@@ -331,9 +343,7 @@ async function launchBackend(): Promise<string> {
         ELECTRON_RUN_AS_NODE: '1',
         KADROSKOP_DESKTOP: '1',
         KADROSKOP_RESOURCES: assets,
-        KADROSKOP_SESSIONS: app.isPackaged
-          ? join(app.getPath('userData'), 'sessions')
-          : resolve(__dirname, '../../sessions'),
+        KADROSKOP_SESSIONS: sessionsDirectory(),
       },
     };
     const child = fork(join(__dirname, 'backend.cjs'), [], options);
@@ -383,11 +393,49 @@ async function boot(): Promise<void> {
     autoEnabled = false;
   }
   autoMessage = autoEnabled ? 'Ожидаю запуск Dota' : 'Автозапись выключена';
+  for (const legacy of [
+    join(app.getPath('userData'), 'sessions'),
+    join(app.getPath('exe'), '..', 'sessions'),
+    ...(!app.isPackaged ? [resolve(__dirname, '../../sessions')] : []),
+  ]) {
+    try {
+      await importSessions(legacy, sessionsDirectory());
+    } catch (error) {
+      log(String(error));
+    }
+  }
   url = await launchBackend();
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
     if (event.sender !== window?.webContents || event.senderFrame?.url !== `${url}/`)
       throw new Error('Недоступно');
   };
+  ipcMain.handle('sessions:folder', (event) => {
+    trusted(event);
+    return sessionsDirectory();
+  });
+  ipcMain.handle('sessions:open-folder', async (event) => {
+    trusted(event);
+    mkdirSync(sessionsDirectory(), { recursive: true });
+    const error = await shell.openPath(sessionsDirectory());
+    if (error) throw new Error(error);
+  });
+  let importing = false;
+  ipcMain.handle('sessions:import', async (event) => {
+    trusted(event);
+    if (importing || starting || isRecording(await readStatus()))
+      throw new Error('Дождитесь завершения записи или импорта.');
+    importing = true;
+    try {
+      const chosen = await dialog.showOpenDialog({
+        title: 'Выберите папку sessions старой версии',
+        properties: ['openDirectory'],
+      });
+      if (chosen.canceled || !chosen.filePaths[0]) return null;
+      return await importSessions(chosen.filePaths[0], sessionsDirectory());
+    } finally {
+      importing = false;
+    }
+  });
   ipcMain.handle('auto-recording:get', (event) => {
     trusted(event);
     return { enabled: autoEnabled, message: autoMessage };

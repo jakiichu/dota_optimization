@@ -345,6 +345,28 @@ export interface ConfigNote {
   readonly remediation: readonly string[];
 }
 
+/** Что строка чужого конфига поменяет у вас. */
+export type ReviewVerdict = 'already' | 'changes' | 'adds' | 'shadowed' | 'command';
+
+export interface ConfigReviewLine extends ConfigSetting {
+  readonly verdict: ReviewVerdict;
+  /** Что стоит у вас сейчас. `null` — не задано. */
+  readonly ownValue: string | null;
+}
+
+/** Чужой конфиг, разобранный против своего. Файл при этом не тронут. */
+export interface ConfigReview {
+  readonly lines: readonly ConfigReviewLine[];
+  /** Сколько строк что-то поменяют у вас. */
+  readonly effective: number;
+  /** Сколько строк не поменяют ничего: совпали или перекрыты. */
+  readonly idle: number;
+  readonly ownExists: boolean;
+  readonly unparsed: readonly string[];
+  readonly notes: readonly ConfigNote[];
+  readonly tally: readonly ConfigTally[];
+}
+
 export interface ConfigTally {
   readonly impact: CvarImpact | 'unknown';
   readonly label: string;
@@ -599,7 +621,20 @@ export interface CpuLoad {
   readonly summary: string;
 }
 export interface CaptureStatus {
-  readonly phase: 'idle' | 'recording' | 'stopping' | 'saving' | 'completed' | 'failed';
+  readonly recordingStartedAt?: string | null;
+  readonly readiness?: CaptureReadiness | null;
+  readonly phase:
+    | 'idle'
+    | 'checking'
+    | 'starting'
+    | 'awaiting-permission'
+    | 'waiting-frames'
+    | 'recording'
+    | 'analyzing'
+    | 'stopping'
+    | 'saving'
+    | 'completed'
+    | 'failed';
   readonly startedAt: string | null;
   readonly processName: string;
   readonly label: string;
@@ -621,4 +656,19 @@ export interface SettingsBackup {
 export interface SettingsRestoreResult {
   readonly backupPath: string;
   readonly restoredFiles: readonly string[];
+}
+
+export interface CaptureReadiness {
+  readonly ready: boolean;
+  readonly checkedAt: string;
+  readonly checks: readonly {
+    id: string;
+    label: string;
+    status: 'ok' | 'warning' | 'blocked';
+    detail: string;
+  }[];
+}
+export interface GameStatus {
+  readonly phase: 'running' | 'stopped' | 'starting' | 'closing';
+  readonly error: string | null;
 }

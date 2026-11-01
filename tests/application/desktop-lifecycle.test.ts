@@ -76,3 +76,19 @@ describe('выход настольного приложения', () => {
     await expect(fetch(`${server.url}/status`)).rejects.toThrow();
   });
 });
+
+it.each(['checking', 'starting', 'awaiting-permission'] as const)(
+  'не завершает приложение во время %s',
+  async (phase) => {
+    const stop = vi.fn();
+    expect(isRecording({ phase })).toBe(true);
+    await expect(
+      finishRecording(
+        async () => ({ phase }),
+        stop,
+        async () => {},
+      ),
+    ).rejects.toThrow('Дождитесь');
+    expect(stop).not.toHaveBeenCalled();
+  },
+);

@@ -4,6 +4,11 @@ import {
   type MeasuredContext,
 } from '../../domain/gameconfig/config-analysis.ts';
 import { withSetting, withoutSetting } from '../../domain/gameconfig/config-edit.ts';
+import {
+  isConsoleCommand,
+  reviewForeignConfig,
+  type ConfigReview,
+} from '../../domain/gameconfig/config-review.ts';
 import { parseGameConfig, type GameConfig } from '../../domain/gameconfig/game-config.ts';
 import type { GameConfigStore } from '../ports/game-config.port.ts';
 
@@ -32,6 +37,17 @@ export interface GameConfigState {
   readonly analysis: ConfigAnalysis | null;
   /** Куда сохранилась прежняя версия при последней правке. */
   readonly backupPath: string | null;
+}
+
+/** Чужой конфиг, разобранный против своего, — ничего не записано. */
+export interface ForeignConfigReview {
+  readonly config: GameConfig;
+  readonly analysis: ConfigAnalysis;
+  readonly review: ConfigReview;
+  /** Есть ли с чем сравнивать. Без своего конфига всё честно «добавится». */
+  readonly ownExists: boolean;
+  /** Где лежит свой конфиг — для названий из меню игры. */
+  readonly ownPath: string | null;
 }
 
 const NO_GAME: GameConfigState = {
@@ -87,6 +103,34 @@ export class ManageGameConfig {
   async replace(text: string): Promise<GameConfigState> {
     const written = await this.#store.write(text);
     return this.#describe(written.path, text, written.backupPath);
+  }
+
+  /**
+   * Разбор вставленного текста против своего конфига — без записи.
+   *
+   * Вставка раньше вела прямо к замене файла, и разбор приходил уже по
+   * записанному. Здесь ответ «что из этого поменяет что-то у меня» даётся
+   * до того, как файл тронут.
+   */
+  async review(text: string): Promise<ForeignConfigReview> {
+    const stored = await this.#store.read();
+    const own =
+      stored === null || stored.text === null ? null : parseGameConfig(stored.path, stored.text);
+    const config = parseGameConfig('', text);
+    // Бинды и вызовы файлов — не настройки: в составе по устройствам они
+    // числились бы «незнакомыми», хотя про них всё известно.
+    const settingsOnly = {
+      ...config,
+      settings: config.settings.filter((setting) => !isConsoleCommand(setting.name)),
+    };
+
+    return {
+      config,
+      analysis: analyzeGameConfig(settingsOnly, await this.#measured()),
+      review: reviewForeignConfig(config, own),
+      ownExists: own !== null,
+      ownPath: stored?.path ?? null,
+    };
   }
 
   async remove(): Promise<GameConfigState> {
