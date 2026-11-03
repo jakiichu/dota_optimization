@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import uPlot from 'uplot';
 import type { CaptureSeries, EvidenceKind, StutterMark } from '../../domain/models.ts';
 import { EVIDENCE_COLOR, EVIDENCE_SHORT } from '../../domain/presentation.ts';
@@ -116,7 +117,14 @@ export function FrameTimeChart({
   return (
     <div className="frame-chart-wrap">
       <div className="frame-chart" ref={container} />
-      {hovered !== null && <StutterTip mark={hovered.mark} left={hovered.left} top={hovered.top} />}
+      {hovered !== null && container.current !== null && (
+        <StutterTip
+          mark={hovered.mark}
+          left={hovered.left}
+          top={hovered.top}
+          anchor={container.current}
+        />
+      )}
     </div>
   );
 }
@@ -131,13 +139,51 @@ function StutterTip({
   mark,
   left,
   top,
+  anchor,
 }: {
   mark: StutterMark;
   left: number;
   top: number;
+  anchor: HTMLElement;
 }): React.JSX.Element {
-  return (
-    <div className="stutter-tip" style={{ left, top }}>
+  const tip = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const place = (): void => {
+      const element = tip.current;
+      if (element === null) return;
+
+      const rect = anchor.getBoundingClientRect();
+      const { width, height } = element.getBoundingClientRect();
+      const edge = 12;
+      const gap = 12;
+      const x = rect.left + left;
+      const y = rect.top + top;
+      const right = x + gap + width;
+      const preferredLeft = right <= window.innerWidth - edge ? x + gap : x - gap - width;
+
+      setPosition({
+        left: Math.max(edge, Math.min(preferredLeft, window.innerWidth - edge - width)),
+        top: Math.max(edge, Math.min(y - height / 2, window.innerHeight - edge - height)),
+      });
+    };
+
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [anchor, left, top, mark]);
+
+  return createPortal(
+    <div
+      className="stutter-tip"
+      ref={tip}
+      style={position === null ? { visibility: 'hidden' } : position}
+    >
       <div className="stutter-tip-head">
         <span className="dot" style={{ background: colorOf(mark.kind) }} />
         {ms(mark.frameTimeMs)} на {mark.atSeconds.toFixed(1)} с
@@ -151,7 +197,8 @@ function StutterTip({
           ))}
         </ul>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
